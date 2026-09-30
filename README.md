@@ -100,11 +100,22 @@ npm test               # тесты с заглушкой вместо мост�
 
 `npm run tauri:build` подписывает пакет обновления, поэтому ему нужны переменные окружения `TAURI_SIGNING_PRIVATE_KEY` и `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`. Свою пару ключей можно создать командой `npm run tauri signer generate`.
 
+**Linux.** Нужны те же Node.js и окружение Rust/Tauri плюс системные зависимости WebKitGTK 4.1: для Debian/Ubuntu — `libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev`, для Arch/CachyOS — `webkit2gtk-4.1 gtk3 libayatana-appindicator librsvg xdotool`.
+
+```bash
+npm install
+npm run tauri:build    # установщик → src-tauri/target/release/bundle/deb/
+```
+
+Запуск на Wayland-сессии — нативно: приложение само выбирает wayland-бэкенд GTK, когда доступен `WAYLAND_DISPLAY` (X11-сессии не трогает). На проприетарном NVIDIA оно же отключает explicit sync в `run()` — воркэраунд [WebKit bug 324551](https://bugs.webkit.org/show_bug.cgi?id=324551), отдельные переменные не нужны; если GPU-композитинг недоступен, фолбэк `WEBKIT_DISABLE_DMABUF_RENDERER=1` — путь по CPU, медленнее, но работает везде.
+
 Код разделён на слои: `src/shared/` — ядро (API, данные, кэш, мост к платформе), `src/app/` — экраны, компоненты и роутер, `src-tauri/` — нативная часть на Rust. Ядро ничего не знает об остальном приложении. Это проверяет `npm run typecheck:shared`: он собирает ядро без каталога `src/app` и падает, если ядро что-то импортирует оттуда.
 
 ## Выпуск
 
 Релиз запускается тегом вида `app-3.0.3`. Сборка на `windows-latest` сверяет номер версии в теге с `package.json`, компилирует Rust, собирает установщик, подписывает обновление и публикует рядом `latest.json`. Описание релиза берётся из верхнего раздела `CHANGELOG.md`.
+
+Тем же тегом на `ubuntu-latest` собирается Linux-пакет `AniMori_<версия>_amd64.deb`. Автообновление на нём не работает: обновление живёт на Windows-установщике.
 
 ## Документация
 
