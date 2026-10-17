@@ -1398,4 +1398,14 @@ html.am-lite {
   html {
     zoom: 1.08;
   }
+
+  /* Оверлеи прижимают содержимое от системной полосы вниз: навбар в три кнопки
+     накрывает нижнюю кромку шторки, и кнопки под ним недоступны. Боковые поля
+     держат вырез, когда оверлей открывается в альбомной стороне. */
+  .am-sheet,
+  .am-look,
+  .am-reel {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
+  }
 }

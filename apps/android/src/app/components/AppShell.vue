@@ -172,11 +172,6 @@ onBeforeUnmount(() => {
           </nav>
 
           <div class="am-drawer__acts">
-            <button v-if="canGoBack" class="am-drawer__item" type="button" @click="onBack">
-              <span class="am-drawer__icon"><RailIcon name="back" /></span>
-              <span class="am-drawer__text">Назад</span>
-            </button>
-
             <!-- Пункт обновления появляется сам, когда проверка при старте нашла выпуск новее,
          и живёт последним: он не действие на каждый день, а редкий случай. -->
             <button
