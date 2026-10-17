@@ -92,6 +92,9 @@ const LINE = {
   small: 'M4 9h5V4M20 9h-5V4M20 15h-5v5M4 15h5v5',
   again: 'M20 12a8 8 0 1 1-8-8',
   tick: 'M5 12.5l4.5 4.5L19 7.5',
+  // Поворот кадра: две дуги с засечками — знак вращения, тот же ход, что у «Обновить».
+  orient:
+    'M4.8 9.8A7.2 7.2 0 0 1 18.6 8.2M19.2 14.2A7.2 7.2 0 0 1 5.4 15.8M18.6 4.6v3.8h-3.8M5.4 19.4v-3.8h3.8',
   left: 'M15 5l-7 7 7 7',
   // Край списка: стрелка в упор к черте.
   first: 'M6.5 6h11M12 19V9M7.5 14l4.5-5 4.5 5',
@@ -900,6 +903,14 @@ function doFullscreen(): void {
   void setWide(!wide.value)
 }
 
+/** Портрет в плеере: кадр остаётся на месте, поворачивается окно. Обратно — той же кнопкой. */
+const portrait = ref(false)
+
+function flipOrient(): void {
+  portrait.value = !portrait.value
+  setOrientation(portrait.value ? 'portrait' : 'landscape')
+}
+
 /** Нажатие мимо меню закрывает его: так ведёт себя любое меню. */
 function onDown(event: PointerEvent): void {
   if (menu.value === '') return
@@ -952,6 +963,15 @@ const rightKeys = computed<Key[]>(() => {
       tip: wide.value ? 'Свернуть кадр' : 'Во весь экран',
       line: wide.value ? LINE.small : LINE.full,
       run: doFullscreen,
+    })
+  }
+
+  // На телефоне размер кадра бессмыслен, а вот вернуть портрет можно и нужно: кадр играет в альбомной стороне, и уход из плеера иногда хочется отложить.
+  if (lite) {
+    keys.push({
+      tip: portrait.value ? 'Альбомная сторона' : 'Портретная сторона',
+      line: LINE.orient,
+      run: flipOrient,
     })
   }
 

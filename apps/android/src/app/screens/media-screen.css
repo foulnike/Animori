@@ -505,6 +505,73 @@
   }
 }
 
+/* Телефон в портрете: шапка сжимается, чтобы постер, название и действия встали в один экран.
+   Порог — ширина карманного окна; выше него остаётся раскладка планшета и телевизора. */
+@media (max-width: 640px) {
+  .am-hero {
+    --am-hero-pad-y: clamp(20px, 5vw, 30px);
+    --am-hero-pad-x: 14px;
+    --am-hero-gap: 14px;
+  }
+
+  /* Кадр выше: баннер виден в портрете только узкой полосой, и точка съёмки подвинута к верху. */
+  .am-hero__art {
+    background-position: center 12%;
+  }
+
+  /* Постер теснее к кромке, но не мельче читаемой обложки: 2/3 от 122px на телефоне 360 — 183px высоты. */
+  .am-hero__cover {
+    width: min(34vw, 148px);
+  }
+
+  .am-hero__title {
+    font-size: clamp(19px, 5.4vw, 23px);
+  }
+
+  /* Ромадзи и оригинал — в одну строку с многоточием: два длинных строковых столба съедали пол-экрана шапки. */
+  .am-hero__sub {
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .am-hero__mark {
+    gap: 4px;
+    padding: 4px 7px;
+  }
+
+  .am-hero__markicon {
+    width: 15px;
+    height: 15px;
+  }
+
+  .am-hero__markval {
+    font-size: 14px;
+  }
+
+  .am-pill {
+    padding: 3px 9px;
+    font-size: 11.5px;
+  }
+
+  /* «Смотреть» тянется на всю строку, «В список» стоит по краю: главное действие не спорит
+     со вторым за узкую полосу под постером. */
+  .am-acts {
+    gap: 8px;
+  }
+
+  .am-acts__play {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .am-acts__play,
+  .am-acts__save {
+    padding: 0 16px;
+  }
+}
+
 /* Спокойное движение: системная просьба сильнее наших красот. */
 @media (prefers-reduced-motion: reduce) {
   .am-pill--studio:hover:where(:not(.am-lite *)),

@@ -177,11 +177,6 @@ onBeforeUnmount(() => {
               <span class="am-drawer__text">Назад</span>
             </button>
 
-            <button class="am-drawer__item" type="button" @click="onReload">
-              <span class="am-drawer__icon"><RailIcon name="reload" /></span>
-              <span class="am-drawer__text">Обновить</span>
-            </button>
-
             <!-- Пункт обновления появляется сам, когда проверка при старте нашла выпуск новее,
          и живёт последним: он не действие на каждый день, а редкий случай. -->
             <button
