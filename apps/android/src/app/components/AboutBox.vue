@@ -139,7 +139,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   width: min(680px, 100%);
-  max-height: min(760px, 88vh);
+  max-height: min(760px, 88vh, 100%);
   background: var(--am-panel-2);
   border: 1px solid var(--am-line);
   border-radius: var(--am-r-m);

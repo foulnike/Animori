@@ -213,7 +213,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   width: min(880px, 100%);
-  max-height: min(90vh, 940px);
+  max-height: min(90vh, 940px, 100%);
   overflow: hidden;
   background: var(--am-panel);
   border: 1px solid var(--am-line);
@@ -325,12 +325,15 @@ onBeforeUnmount(() => {
 @media (max-width: 640px) {
   .am-sheet {
     align-items: flex-end;
-    padding: 0;
+    /* Границы как у основных экранов: часы и навбар держат токены из темы. */
+    padding-block: var(--am-modal-top) var(--am-modal-bottom);
+    padding-inline: 0;
   }
 
   .am-sheet__box {
     width: 100%;
-    max-height: 92vh;
+    /* Поля корня уже вычли систему: потолок всей доступной высоты. */
+    max-height: 100%;
     border-right: 0;
     border-bottom: 0;
     border-left: 0;

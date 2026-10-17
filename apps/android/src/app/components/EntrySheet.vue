@@ -1003,9 +1003,12 @@ onBeforeUnmount(() => {
   .am-sheet {
     align-items: flex-end;
     justify-content: center;
-    /* Во всю ширину, но под системными полосами: часы и навбар держит мост. */
-    padding-block: max(env(safe-area-inset-top), var(--am-sys-top))
-      max(env(safe-area-inset-bottom), var(--am-sys-bottom));
+  }
+
+  /* Во всю ширину, но в границах шапки: правила ТВ позднее в файле и той же
+     специфике, поэтому класс продублирован — мобильное должно их перебивать. */
+  .am-sheet.am-sheet {
+    padding-block: var(--am-modal-top) var(--am-modal-bottom);
     padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
   }
 

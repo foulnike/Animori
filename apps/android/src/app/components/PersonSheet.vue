@@ -673,7 +673,7 @@ onBeforeUnmount(() => {
   gap: 16px;
   width: 100%;
   max-width: 820px;
-  max-height: min(90vh, 940px);
+  max-height: min(90vh, 940px, 100%);
   padding: clamp(18px, 2.2vw, 28px);
   overflow: hidden;
   background: linear-gradient(165deg, var(--am-glass-2), var(--am-glass));
@@ -1178,7 +1178,8 @@ onBeforeUnmount(() => {
 .am-sheet--tv .am-sheet__box {
   gap: 12px;
   max-width: min(1000px, 94vw);
-  max-height: min(92vh, 900px);
+  /* Три потолка: вьюпорт, кадр и высота контента — бокс не вылезает за поля корня. */
+  max-height: min(92vh, 900px, 100%);
   padding: 14px;
 }
 

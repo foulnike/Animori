@@ -707,7 +707,7 @@ watch(() => [props.mediaId, props.malId], load)
   display: flex;
   flex-direction: column;
   width: min(1080px, 100%);
-  max-height: min(86vh, 900px);
+  max-height: min(86vh, 900px, 100%);
   overflow: hidden;
   background: var(--am-panel);
   border: 1px solid var(--am-line);
