@@ -1,0 +1,67 @@
+[package]
+name = "animori"
+version = "3.1.1"
+description = "AniMori — Toolkit for AniList, shell for Android"
+authors = ["foulnike"]
+license = "MIT"
+repository = "https://github.com/foulnike/Animori"
+edition = "2021"
+rust-version = "1.77.2"
+
+[lib]
+name = "animori_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6.3", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+# Случайность для nonce входа (auth.rs): системные 16 байт. Крейт уже в дереве транзитивно, новых бинарей не тянет.
+getrandom = "0.3"
+tauri = { version = "2.11.3", features = [] }
+tauri-plugin-log = "2"
+
+# Плагин по умолчанию выбрасывает Referer, потому что спецификация fetch держит его запрещённым.
+# Kodik без него не работает: страница серии отдаёт заглушку без подписей.
+tauri-plugin-http = { version = "2", default-features = false, features = [
+  "rustls-tls",
+  "http2",
+  "charset",
+  "socks",
+  "unsafe-headers",
+] }
+
+tauri-plugin-store = "2"
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-opener = "2.5.4"
+# Память геометрии окна — объявлена ниже, в секции десктопных
+# зависимостей: плагин desktop-only, и под Android TV его нет вовсе.
+
+# dialog нужен ровно для одного: выбрать папку для выгрузки списка и трека темы (export.rs).
+# Дёргается ТОЛЬКО из Rust: dialog:default означал бы право открывать окна выбора файлов без нашего ведома.
+tauri-plugin-dialog = "2"
+
+# Шифр пропуска облака (secrets.rs): тело base64. Версия та же, что у windows-крейта.
+base64 = "0.22"
+
+# Десктопная зависимость одна — память геометрии окна. Под Android и iOS плагина нет вовсе, поэтому он
+# объявлен секцией по цели: иначе сборка падает внутри чужого крейта, и вина выглядит не нашей.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-window-state = "2"
+
+# DPAPI для secrets.rs. cfg(windows) обязателен: крейтов нет под другими ОС. CI гоняет и этот крейт
+# на windows-latest, поэтому windows-ветка шифра компилируется и здесь. Фича криптографии — как у windows.
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.61", features = [
+  "Win32_Foundation",
+  "Win32_Security_Cryptography",
+] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+

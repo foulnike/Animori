@@ -12,17 +12,32 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join, relative, sep } from 'node:path'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-// Две пары корней: интерфейсы продуктов и Rust-слой оболочки. Ключ пары — путь относительно
-// корня; префикс src-tauri/ держит два пространства имён раздельными в одном снимке.
+// Пары корней: интерфейсы продуктов и Rust-слой оболочки. Ключ пары — имя пары и путь
+// относительно корня; имя держит две пары раздельными в одном снимке, префикс src-tauri/
+// — два пространства имён одной пары.
 const GROUPS = [
   {
+    name: 'win~tv',
     left: join(root, 'apps', 'windows', 'src', 'app'),
     right: join(root, 'apps', 'android-tv', 'src', 'app'),
     prefix: '',
   },
   {
+    name: 'win~tv',
     left: join(root, 'apps', 'windows', 'src-tauri', 'src'),
     right: join(root, 'apps', 'android-tv', 'src-tauri', 'src'),
+    prefix: 'src-tauri/',
+  },
+  {
+    name: 'tv~phone',
+    left: join(root, 'apps', 'android-tv', 'src', 'app'),
+    right: join(root, 'apps', 'android', 'src', 'app'),
+    prefix: '',
+  },
+  {
+    name: 'tv~phone',
+    left: join(root, 'apps', 'android-tv', 'src-tauri', 'src'),
+    right: join(root, 'apps', 'android', 'src-tauri', 'src'),
     prefix: 'src-tauri/',
   },
 ]
@@ -98,16 +113,16 @@ for (const group of GROUPS) {
   }
 }
 
-// Ключ пары — путь относительно корня пары: он одинаков у обеих копий.
+// Ключ пары — имя пары и путь относительно корня пары: путь одинаков у обеих копий.
 const relKey = (full, dir) => relative(dir, full).split(sep).join('/')
 
 const current = {}
-for (const { left, right, prefix } of GROUPS) {
+for (const { name, left, right, prefix } of GROUPS) {
   for (const file of walk(left)) {
     const key = relKey(file, left)
     const twin = join(right, ...key.split('/'))
     if (!existsSync(twin)) continue
-    current[prefix + key] = measure(codeLines(file), codeLines(twin))
+    current[`${name}/${prefix}${key}`] = measure(codeLines(file), codeLines(twin))
   }
 }
 
@@ -172,8 +187,10 @@ if (gone.length) {
 
 // Синхронные копии держатся одинаковыми намеренно. Если они разошлись по коду,
 // значит правка попала на один край — и это тот случай, ради которого всё затевалось.
-const syncBroke = KEPT_IN_SYNC.filter((key) => current[key] > 0)
-const syncMissing = KEPT_IN_SYNC.filter((key) => current[key] === undefined)
+// Сверка по хвосту ключа: файл встречается в тех парах, где у него есть близнец.
+const syncHits = (entry) => Object.entries(current).filter(([key]) => key.endsWith(`/${entry}`))
+const syncBroke = KEPT_IN_SYNC.filter((entry) => syncHits(entry).some(([, value]) => value > 0))
+const syncMissing = KEPT_IN_SYNC.filter((entry) => syncHits(entry).length === 0)
 console.log(
   `\nСинхронных копий: ${KEPT_IN_SYNC.length - syncBroke.length - syncMissing.length} из ${KEPT_IN_SYNC.length}.`,
 )

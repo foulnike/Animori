@@ -1,0 +1,516 @@
+/* Оформление карточки тайтла. Вынесено из SFC: с разметкой и логикой в одном файле экран
+   перестал поддаваться точечной правке. Подключается через <style scoped src>. */
+
+.am-wait {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.am-wait__hero {
+  display: block;
+  height: clamp(240px, 26vh, 340px);
+  border-radius: var(--am-r-leaf);
+}
+
+.am-wait__line {
+  display: block;
+  width: 60%;
+  height: 14px;
+  border-radius: var(--am-r-s);
+}
+
+.am-wait__line--short {
+  width: 34%;
+}
+
+/* Герой карточки: баннер фоном, текст поверх тёмной завеси — цвет текста не тематический.
+   Поля и просвет шапки живут переменными: два независимых clamp() разошлись бы от правки одного. */
+.am-hero {
+  --am-on-art: #eef3fb;
+  --am-hero-pad-y: clamp(30px, 3.6vw, 56px);
+  --am-hero-pad-x: clamp(20px, 2vw, 34px);
+  --am-hero-gap: clamp(18px, 2vw, 30px);
+
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-leaf);
+  box-shadow: var(--am-sh-2);
+}
+
+/* Баннер гаснет маской к низу: резкий край картинки выдавал карточку
+   за коллаж из двух кусков. */
+.am-hero__art {
+  position: absolute;
+  inset: 0;
+  background-position: center 22%;
+  background-size: cover;
+  filter: saturate(1.06);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 46%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 46%, transparent 100%);
+}
+
+.am-hero__veil {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--am-veil) 30%, transparent) 0%,
+      color-mix(in srgb, var(--am-veil) 78%, transparent) 58%,
+      var(--am-bg-2) 100%
+    ),
+    linear-gradient(90deg, color-mix(in srgb, var(--am-veil) 72%, transparent) 0%, transparent 62%);
+}
+
+/* Постер с названием стоят по середине баннера. Равные поля плюс center — вся геометрия
+   центровки: высоту шапке задаёт сам блок, поэтому выравнивать его внутри неё нечем. */
+.am-hero__body {
+  position: relative;
+  display: flex;
+  gap: var(--am-hero-gap);
+  align-items: center;
+  padding: var(--am-hero-pad-y) var(--am-hero-pad-x);
+}
+
+/* Постер и текст — одной группой, потому что половину шапки занимают они вдвоём: порознь
+   текст рос по содержимому, ряд пилюль не переносился и вытеснял описание в узкую полосу. */
+.am-hero__lead {
+  display: flex;
+  gap: var(--am-hero-gap);
+  align-items: center;
+  min-width: 0;
+}
+
+/* Половина задана левой стороне, а описание добирает остаток само (flex: 1) — считать половину
+   от него нельзя. Просвет вычтен из левой доли, а не прибавлен к правой: иначе текст не от середины. */
+.am-hero--told .am-hero__lead {
+  flex: 0 0 calc(50% - var(--am-hero-gap));
+}
+
+/* Постер той же формы, что плитка в сетках: переход из списка в карточку
+   читается продолжением, а не другим приложением. */
+.am-hero__cover {
+  flex: none;
+  width: clamp(150px, 13vw, 226px);
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border: 1px solid color-mix(in srgb, var(--am-on-art) 16%, transparent);
+  border-radius: var(--am-r-leaf);
+  box-shadow: 0 26px 60px color-mix(in srgb, var(--am-veil) 80%, transparent);
+}
+
+.am-hero__cover--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 42px;
+  color: color-mix(in srgb, var(--am-on-art) 30%, transparent);
+  background: linear-gradient(160deg, var(--am-panel-2), var(--am-bg-2));
+}
+
+.am-hero__text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.am-hero__title {
+  margin: 0;
+  font-size: clamp(24px, 2.4vw, 36px);
+  font-weight: 700;
+  line-height: 1.12;
+  letter-spacing: -0.022em;
+  color: var(--am-on-art);
+  text-shadow: 0 2px 18px color-mix(in srgb, var(--am-veil) 70%, transparent);
+}
+
+.am-hero__sub {
+  margin: 0;
+  font-size: 13.5px;
+  color: color-mix(in srgb, var(--am-on-art) 62%, transparent);
+}
+
+/* Описание в шапке (только широкое окно): не панель поверх картинки, а правая полоса самого баннера.
+   Рамки сняты намеренно; слой размытия лежит за содержимым блока, поэтому тут свой контекст наложения. */
+.am-hero__note {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  align-self: stretch;
+  min-width: 0;
+  margin: calc(-1 * var(--am-hero-pad-y)) calc(-1 * var(--am-hero-pad-x))
+    calc(-1 * var(--am-hero-pad-y)) 0;
+  padding: 16px var(--am-hero-pad-x) 16px clamp(30px, 3.2vw, 56px);
+  isolation: isolate;
+}
+
+/* Размытие своим слоем, а не на самом блоке: маска гасит его влево, и стекло растворяется без
+   видимого края. Лёгкая подложка нужна только под буквы: на светлом кадре текст не читался. */
+.am-hero__note::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: '';
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--am-veil) 26%, transparent) 40%,
+    color-mix(in srgb, var(--am-veil) 44%, transparent) 100%
+  );
+  backdrop-filter: blur(var(--am-blur)) saturate(1.1);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 34%);
+  mask-image: linear-gradient(90deg, transparent 0%, #000 34%);
+}
+
+/* Внутри описания разметка чужая: её рисует RichText. Перекрываем не классы, а переменные —
+   они наследуются вниз через границу компонента. Цвета те же, что у завеси: выбирает цвет кадр. */
+.am-hero__note {
+  --am-text: var(--am-on-art);
+  --am-dim: color-mix(in srgb, var(--am-on-art) 76%, transparent);
+  --am-faint: color-mix(in srgb, var(--am-on-art) 58%, transparent);
+  --am-fill-1: color-mix(in srgb, var(--am-veil) 42%, transparent);
+  --am-fill-2: color-mix(in srgb, var(--am-veil) 34%, transparent);
+  --am-hover: color-mix(in srgb, var(--am-veil) 52%, transparent);
+  --am-line-soft: color-mix(in srgb, var(--am-on-art) 18%, transparent);
+}
+
+.am-hero__noteh {
+  flex: none;
+  margin: 0;
+  color: color-mix(in srgb, var(--am-on-art) 70%, transparent);
+}
+
+/* Прокручивается только текст: ссылки на источники лежат ниже прокрутки. Высоту задаёт сама шапка,
+   поэтому болтливый источник её не растягивает. overscroll-behavior держит колесо внутри. */
+.am-hero__scroll {
+  flex: 1;
+  min-height: 0;
+  padding-right: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--am-on-art) 30%, transparent) transparent;
+}
+
+/* В шапке длину строки задаёт сама полоса описания, а цвет берётся от текста поверх картинки.
+   Ограничение снимается селектором от самой шапки: одноклассный --art проигрывал по порядку. */
+.am-hero__note .am-about--art,
+.am-hero__note .am-about__tail--art {
+  max-width: none;
+  width: 100%;
+}
+
+/* Кегль плавающий и заметно крупнее панельного: полоса описания в шапке шириной в полбаннера,
+   и 13.5px терялись в ней мелочью, оставляя под коротким текстом пустую полосу. */
+.am-about--art {
+  font-size: clamp(14.5px, 1.05vw, 17px);
+  line-height: 1.62;
+  color: color-mix(in srgb, var(--am-on-art) 86%, transparent);
+}
+
+.am-about__tail--art {
+  flex: none;
+  margin: 0;
+  padding-top: 9px;
+  padding-right: 6px;
+  color: color-mix(in srgb, var(--am-on-art) 58%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--am-on-art) 12%, transparent);
+}
+
+.am-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Пилюли героя — стекло поверх баннера: плотная заливка на светлой
+   картинке читалась заплатками. */
+.am-pill {
+  padding: 4px 11px;
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--am-on-art);
+  background: color-mix(in srgb, var(--am-veil) 46%, transparent);
+  border: 1px solid color-mix(in srgb, var(--am-on-art) 14%, transparent);
+  border-radius: var(--am-r-cap);
+  backdrop-filter: blur(10px) saturate(1.2);
+}
+
+.am-pill--soft {
+  color: color-mix(in srgb, var(--am-on-art) 74%, transparent);
+  background: color-mix(in srgb, var(--am-veil) 30%, transparent);
+}
+
+.am-pill--adult {
+  color: var(--am-on-art);
+  background: color-mix(in srgb, var(--am-bad) 34%, transparent);
+  border-color: color-mix(in srgb, var(--am-bad) 52%, transparent);
+}
+
+/* Своя оценка — немая пилюля у заголовка: её ищут там, а не в сайдбаре. */
+.am-pill--mine {
+  color: var(--am-on-art);
+  background: rgb(var(--am-accent-rgb) / 0.3);
+  border-color: rgb(var(--am-accent-rgb) / 0.5);
+}
+
+/* Студии — пилюли героя: это мета тайтла, а не часть записи. */
+.am-pill--studio {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  font: inherit;
+  color: var(--am-on-art);
+  cursor: pointer;
+  transition:
+    background-color var(--am-fast) var(--am-ease),
+    border-color var(--am-fast) var(--am-ease),
+    transform var(--am-fast) var(--am-ease);
+}
+
+.am-pill--studio:hover:where(:not(.am-lite *)),
+.am-pill--studio:focus-visible {
+  background: color-mix(in srgb, var(--am-veil) 68%, transparent);
+  border-color: var(--am-accent);
+  transform: translateY(-1px);
+}
+
+/* Основная студия с акцентным краем: она и отвечает за постановку. */
+.am-pill--studio-main {
+  border-color: rgb(var(--am-accent-rgb) / 0.55);
+}
+
+.am-pill__logo {
+  height: 14px;
+  max-width: 26px;
+  object-fit: contain;
+}
+
+/* Ряд действий у постера: плеер и закладка. Главное действие в правой колонке оказывалось на
+   широком окне в полуметре от названия. */
+.am-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.am-acts__play,
+.am-acts__save {
+  display: inline-flex;
+  gap: 9px;
+  align-items: center;
+  min-height: var(--am-touch);
+  padding: 0 20px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  border-radius: var(--am-r-cap);
+  cursor: pointer;
+  transition:
+    background-color var(--am-fast) var(--am-ease),
+    border-color var(--am-fast) var(--am-ease),
+    box-shadow var(--am-mid) var(--am-ease),
+    transform var(--am-fast) var(--am-ease);
+}
+
+/* Главное действие карточки: акцентное стекло с ореолом. Ведёт
+   на экран просмотра; источники спрашиваются уже там. */
+.am-acts__play {
+  color: var(--am-on-art);
+  background: linear-gradient(
+    100deg,
+    rgb(var(--am-accent-rgb) / 0.42),
+    rgb(var(--am-accent-2-rgb) / 0.34)
+  );
+  border: 1px solid rgb(var(--am-accent-rgb) / 0.5);
+  box-shadow: 0 12px 30px rgb(var(--am-accent-rgb) / 0.24);
+  backdrop-filter: blur(10px);
+}
+
+.am-acts__play:hover:where(:not(.am-lite *)),
+.am-acts__play:focus-visible {
+  border-color: var(--am-accent);
+  box-shadow: 0 16px 38px rgb(var(--am-accent-rgb) / 0.34);
+  transform: translateY(-1px);
+}
+
+.am-acts__save {
+  color: var(--am-on-art);
+  background: color-mix(in srgb, var(--am-veil) 52%, transparent);
+  border: 1px solid color-mix(in srgb, var(--am-on-art) 18%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.am-acts__save:hover:where(:not(.am-lite *)) {
+  background: color-mix(in srgb, var(--am-veil) 70%, transparent);
+  border-color: var(--am-accent);
+  transform: translateY(-1px);
+}
+
+.am-acts__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  background: var(--am-accent);
+  border-radius: var(--am-r-cap);
+  box-shadow: 0 0 10px rgb(var(--am-accent-rgb) / 0.7);
+}
+
+/* Доска карточки: описание, кадры, франшиза и люди раскладываются рядом, а не по именованным
+   областям — те оставляли чёрный прогал в полэкрана. Число колонок и потолки — в MediaScreen.vue. */
+.am-board {
+  display: grid;
+  gap: var(--am-gap);
+  margin-top: var(--am-gap);
+  font-size: 12.5px;
+  color: var(--am-faint);
+}
+
+/* Обёртки логики сквозные: плиткой сетка считает саму панель. У половины тайтлов тем нет,
+   и пустая коробка не должна занимать место в потоке. */
+.am-split__main {
+  display: contents;
+}
+
+.am-board > *,
+.am-board .am-shots,
+.am-board .am-about-box {
+  min-width: 0;
+}
+
+/* Люди — полка во всю ширину доски: ряд портретов в одной колонке
+   вставал лестницей, а прокрутка полки теряла смысл. */
+.am-board__folk {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-direction: column;
+  gap: var(--am-gap);
+  min-width: 0;
+}
+
+/* Одна колонка с ограниченной длиной строки: разбивка на столбцы
+   короткое описание резала на три столбика по одной строке. */
+.am-about {
+  max-width: 78ch;
+  margin: 0;
+  line-height: 1.65;
+  color: color-mix(in srgb, var(--am-text) 88%, transparent);
+}
+
+/** В плитке описание идёт во всю её ширину: плитка тянется на всю доску (`grid-column: 1 / -1`),
+ *  а текст в ней держался 78 знаками, и справа оставалась пустая полоса в половину плитки. */
+.am-board .am-about {
+  max-width: none;
+}
+
+/* Плитка описания раскрывается окном крупным планом. Под мышью об этом говорит курсор,
+   пульту — кромка фокуса по контуру плитки (её правила в theme.css). Заливки по наведению
+   нет нарочно: на приставке `:hover` остаётся припаркованным, и абзац светился бы под чужим
+   курсором. Скругление не задаём: у панели своё, и признак обязан его сохранить. */
+.am-about__hit {
+  cursor: pointer;
+}
+
+/* Ожидание описания. Пока русский источник не ответил, английский текст не показывается: пустое
+   место читалось бы как «описания нет». Три строки угадывают высоту, и панель не дёргается. */
+.am-about__hold {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 2px 0;
+}
+
+.am-about__hold-line {
+  height: 12px;
+  border-radius: var(--am-r-m);
+}
+
+/* Последняя строка короткая: ровный столбик из трёх полос читается
+   таблицей, а не текстом. */
+.am-about__hold-line--short {
+  width: 62%;
+}
+
+/* Справка под описанием: откуда взят текст. Названием, а не ссылкой — открывать на
+   телевизоре нечем, и подчёркнутая подпись читалась бы как поломка. */
+.am-about__tail {
+  margin: 14px 0 0;
+  font-size: 12.5px;
+  color: var(--am-faint);
+}
+
+.am-about-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.am-about-box .am-about__tail {
+  margin-top: auto;
+  padding-top: 14px;
+}
+
+/* Франшиза — хронология строками. Полка больших постеров съедала полэкрана, а год, название
+   и метки под каждым постером вставали лесенкой. */
+.am-fran {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+}
+
+/* Знак доступности лежит поверх обложки в правом нижнем углу (место задаёт .am-face__mark,
+   здесь только выравнивание содержимого): размер и цвет знака — из scoped-блока MediaScreen. */
+/* Метка «можно / нельзя смотреть» лежит поверх обложки в правом нижнем углу. Белая, а не
+   акцентная: акцент на тёплой обложке теряется, и пульт переставал видеть, доступна ли эта часть.
+   Тень держит знак на любом кадре — на светлом постре без неё белый на белом не читается. */
+.am-fran__rail .am-part__play {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  color: #fff;
+  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.85));
+}
+
+/* «Нельзя» — та же белая, но на три четверти: чёрки сама по себе слабая, и её не надо тонуть. */
+.am-fran__rail .am-part__play--none {
+  color: rgb(255 255 255 / 0.72);
+}
+
+/* На подведении знак получает акцентное свечение: карточка и так приподнимается, и знак остаётся
+   главным признаком части. На телевизоре ту же роль играет `:focus-visible` — ховера там нет. */
+.am-fran__rail .am-face__hit:hover:where(:not(.am-lite *)) .am-part__play,
+.am-fran__rail .am-face__hit:focus-visible .am-part__play {
+  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.9))
+    drop-shadow(0 0 7px rgb(var(--am-accent-rgb) / 0.8));
+}
+
+.am-fran__hidden {
+  margin: 0;
+  font-size: 12px;
+  color: var(--am-faint);
+}
+
+@media (max-width: 1180px) {
+  .am-hero__cover {
+    width: clamp(132px, 30vw, 168px);
+  }
+}
+
+/* Спокойное движение: системная просьба сильнее наших красот. */
+@media (prefers-reduced-motion: reduce) {
+  .am-pill--studio:hover:where(:not(.am-lite *)),
+  .am-acts__play:hover:where(:not(.am-lite *)),
+  .am-acts__play:focus-visible,
+  .am-acts__save:hover:where(:not(.am-lite *)) {
+    transform: none;
+  }
+}

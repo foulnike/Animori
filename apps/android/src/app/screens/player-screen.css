@@ -1,0 +1,1157 @@
+/* Стили экрана просмотра через <style scoped src>: всё здесь живёт только внутри PlayerScreen.vue.
+   ПРАВАЯ КОЛОНКА НАЧИНАЕТСЯ ОТ КАДРА — на странице обёртка кадра отдаёт свой ящик (display: contents). */
+
+.am-play {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-areas:
+    'head .'
+    'stage side';
+  column-gap: var(--am-gap);
+  row-gap: 14px;
+  align-items: start;
+}
+
+@media (max-width: 1180px) {
+  .am-play {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'head'
+      'stage'
+      'side';
+  }
+}
+
+/* На странице обёртка своего ящика не держит: шапка и кадр встают в сетку экрана сами, и списки могут
+   встать ровно против кадра. Остальные свойства остаются для театра. */
+.am-play__main {
+  display: contents;
+  min-width: 0;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Шапка */
+
+.am-play__head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 14px;
+  grid-area: head;
+}
+
+.am-play__back {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px 8px 10px;
+  border: 1px solid var(--am-edge);
+  border-radius: var(--am-r-cap);
+  background: var(--am-fill-1);
+  color: var(--am-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--am-fast) var(--am-ease),
+    border-color var(--am-fast) var(--am-ease);
+}
+
+.am-play__back:hover:where(:not(.am-lite *)) {
+  background: var(--am-fill-2);
+  border-color: var(--am-line-soft);
+}
+
+.am-play__back .am-play__ico {
+  width: 18px;
+  height: 18px;
+  transition: transform var(--am-fast) var(--am-ease);
+}
+
+.am-play__back:hover:where(:not(.am-lite *)) .am-play__ico {
+  transform: translateX(-2px);
+}
+
+.am-play__title {
+  min-width: 0;
+}
+
+.am-play__name {
+  margin: 0;
+  overflow: hidden;
+  color: var(--am-text);
+  font-size: clamp(17px, 1.5vw, 21px);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-play__sub {
+  margin: 2px 0 0;
+  overflow: hidden;
+  color: var(--am-dim);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Кадр */
+
+.am-play__stage {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--am-r-l);
+  background: #000;
+  box-shadow: var(--am-sh-2);
+  grid-area: stage;
+}
+
+.am-play__frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  object-fit: contain;
+}
+
+/** КАДР УЕХАЛ ИЗ ОКНА: заглушка движка живёт в теневом дереве <video> и не перекрашивается —
+ *  тег гасится, а слово пишется своё. Document PiP увозит тег целиком. */
+.am-play__frame:picture-in-picture {
+  opacity: 0;
+}
+
+.am-play__stage:has(.am-play__frame:picture-in-picture)::after,
+.am-play__stage:not(:has(.am-play__frame))::after {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  padding: 24px;
+  color: rgb(255 255 255 / 0.68);
+  content: 'Кадр играет в отдельном окошке';
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  inset: 0;
+  place-items: center;
+  pointer-events: none;
+  text-align: center;
+}
+
+/* Весь кадр — одна большая кнопка пуска, как везде. */
+.am-play__tap {
+  position: absolute;
+  z-index: 1;
+  border: 0;
+  background: transparent;
+  inset: 0;
+  cursor: pointer;
+}
+
+.am-play--wide.am-play--calm .am-play__tap {
+  cursor: none;
+}
+
+/** Обёртка центра: одна клетка сетки на весь кадр. Знаки стоят ровно без transform, и поворот
+ *  колеса больше ничего не сбивает. */
+.am-play__mid {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  inset: 0;
+  place-items: center;
+  pointer-events: none;
+}
+
+.am-play__hold {
+  display: grid;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.44);
+  color: #fff;
+  animation: am-play-rise var(--am-mid) var(--am-ease) both;
+  backdrop-filter: blur(var(--am-blur));
+  grid-area: 1 / 1;
+  place-items: center;
+}
+
+.am-play__hold .am-play__ico {
+  width: 40px;
+  height: 40px;
+}
+
+/* Колесо посреди серии: сеть не поспевает, но всё ещё жива. */
+.am-play__wait {
+  width: 46px;
+  height: 46px;
+  border: 3px solid rgb(255 255 255 / 0.22);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: am-play-turn 0.9s linear infinite;
+  grid-area: 1 / 1;
+}
+
+/* Заслонка */
+
+.am-play__veil {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(6 8 12 / 0.74);
+  gap: 14px;
+  inset: 0;
+  text-align: center;
+}
+
+/** Под заслонкой кадр не виден: первый сегмент HLS у некоторых площадок — просто значок «Play».
+ *  Кадр грузится своим ходом, заслонка снимается с приходом первого кадра или отказа. */
+.am-play--veil .am-play__frame {
+  visibility: hidden;
+}
+
+/** Заслонка: сакура вместо колеса, тот же знак, что в рельсе и на ярлыке. Размер 96px — больше
+ *  колеса, но меньше строки подписей. Вращение три секунды: на быстром лепестки сливаются в пятно. */
+.am-play__spin {
+  --am-sakura-size: 96px;
+  position: relative;
+  width: 96px;
+  height: 96px;
+  color: #fff;
+  filter: drop-shadow(0 0 14px rgb(var(--am-sakura-rgb) / 0.55));
+  animation: am-play-turn 3s linear infinite;
+}
+
+.am-play__word {
+  position: relative;
+  max-width: 460px;
+  margin: 0;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.am-play__act {
+  position: relative;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: var(--am-r-cap);
+  background: rgb(var(--am-accent-rgb) / 0.9);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--am-fast) var(--am-ease);
+}
+
+.am-play__act:hover:where(:not(.am-lite *)) {
+  background: rgb(var(--am-accent-rgb) / 1);
+}
+
+/** Пропуск заставки и титров — над панелью справа. Анимация только по прозрачности и вертикали:
+ *  кнопка прибита к углу, и кадр с центральным сдвигом оставлял её смещённой навсегда. */
+.am-play__skip {
+  position: absolute;
+  right: 18px;
+  bottom: 92px;
+  z-index: 4;
+  padding: 10px 16px;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: var(--am-r-cap);
+  background: rgb(10 12 17 / 0.82);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  animation: am-play-pop var(--am-fast) var(--am-ease) both;
+  backdrop-filter: blur(var(--am-blur));
+  cursor: pointer;
+}
+
+.am-play__skip:hover:where(:not(.am-lite *)) {
+  background: rgb(18 22 30 / 0.92);
+}
+
+/** Плашка продолжения. Слева, на высоте пропуска: справа они могли бы появиться вместе и налезть
+ *  друг на друга на первых секундах заставки. */
+.am-play__resume {
+  position: absolute;
+  bottom: 92px;
+  left: 18px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  padding: 7px 7px 7px 14px;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: var(--am-r-cap);
+  background: rgb(10 12 17 / 0.82);
+  color: #fff;
+  font-size: 13px;
+  animation: am-play-pop var(--am-fast) var(--am-ease) both;
+  backdrop-filter: blur(var(--am-blur));
+  gap: 10px;
+}
+
+.am-play__resume-key {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: var(--am-r-cap);
+  background: rgb(var(--am-accent-rgb) / 0.9);
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--am-fast) var(--am-ease);
+}
+
+.am-play__resume-key:hover:where(:not(.am-lite *)) {
+  background: rgb(var(--am-accent-rgb) / 1);
+}
+
+.am-play__resume-key:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* Панель */
+
+.am-play__deck {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  padding: 40px 12px 10px;
+  background: linear-gradient(
+    to top,
+    rgb(0 0 0 / 0.86) 0%,
+    rgb(0 0 0 / 0.58) 44%,
+    rgb(0 0 0 / 0) 100%
+  );
+  gap: 4px;
+  inset: auto 0 0;
+  transition:
+    opacity var(--am-mid) var(--am-ease),
+    transform var(--am-mid) var(--am-ease);
+}
+
+.am-play--calm .am-play__deck,
+.am-play--wide.am-play--calm .am-play__head {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(10px);
+}
+
+/* Полоса времени */
+
+.am-play__seek {
+  position: relative;
+  display: flex;
+  height: 18px;
+  align-items: center;
+}
+
+.am-play__line {
+  position: relative;
+  height: 4px;
+  flex: 1 1 auto;
+  border-radius: var(--am-r-cap);
+  background: rgb(255 255 255 / 0.24);
+  cursor: pointer;
+  touch-action: none;
+  transition:
+    height var(--am-fast) var(--am-ease),
+    background var(--am-fast) var(--am-ease);
+}
+
+.am-play__seek:hover:where(:not(.am-lite *)) .am-play__line,
+.am-play__line:focus-visible {
+  height: 6px;
+}
+
+.am-play__line:focus-visible {
+  outline: 2px solid rgb(var(--am-accent-rgb) / 0.9);
+  outline-offset: 4px;
+}
+
+.am-play__buf,
+.am-play__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: inherit;
+}
+
+.am-play__buf {
+  background: rgb(255 255 255 / 0.26);
+}
+
+.am-play__fill {
+  background: rgb(var(--am-accent-rgb) / 1);
+}
+
+.am-play__knob {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.5);
+  transform: translate(-50%, -50%);
+  transition:
+    width var(--am-fast) var(--am-ease),
+    height var(--am-fast) var(--am-ease),
+    box-shadow var(--am-fast) var(--am-ease);
+}
+
+.am-play__seek:hover:where(:not(.am-lite *)) .am-play__knob {
+  width: 14px;
+  height: 14px;
+}
+
+/* Подпись времени под указателем: без неё перемотка — гадание. */
+.am-play__bubble {
+  position: absolute;
+  bottom: calc(100% + 2px);
+  padding: 4px 8px;
+  border-radius: var(--am-r-s);
+  background: rgb(8 10 14 / 0.94);
+  color: #fff;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* Ряд кнопок */
+
+.am-play__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.am-play__clip {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 2px;
+}
+
+.am-play__clip--end {
+  margin-left: auto;
+}
+
+/** Кнопка — квадрат со сеткой внутри: знак стоит ровно в центре всегда, у него нет базовой линии.
+ *  По наведению поднимается знак, а не кнопка. */
+.am-play__key {
+  position: relative;
+  display: grid;
+  width: var(--am-ctl);
+  height: var(--am-ctl);
+  border: 0;
+  border-radius: var(--am-r-m);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  place-items: center;
+  transition:
+    background var(--am-fast) var(--am-ease),
+    opacity var(--am-fast) var(--am-ease);
+}
+
+.am-play__key:hover:where(:not(.am-lite *)):not(:disabled) {
+  background: rgb(255 255 255 / 0.14);
+}
+
+.am-play__key:disabled {
+  cursor: default;
+  opacity: 0.34;
+}
+
+.am-play__key:focus-visible {
+  outline: 2px solid rgb(var(--am-accent-rgb) / 0.9);
+  outline-offset: 2px;
+}
+
+.am-play__key--on {
+  background: rgb(var(--am-accent-rgb) / 0.28);
+}
+
+.am-play__ico {
+  display: block;
+  width: 22px;
+  height: 22px;
+  transition: transform var(--am-fast) var(--am-ease);
+}
+
+.am-play__key:hover:where(:not(.am-lite *)):not(:disabled) .am-play__ico {
+  transform: translateY(-1px);
+}
+
+.am-play__key--main {
+  width: 48px;
+  height: 48px;
+}
+
+.am-play__key--main .am-play__ico {
+  width: 26px;
+  height: 26px;
+}
+
+.am-play__key--word {
+  width: auto;
+  min-width: 56px;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/** Кнопка озвучки тянется по длине названия студии. Обрезается подпись, а не кнопка: кнопка — сетка,
+ *  и многоточие на ней не сработало бы. */
+.am-play__cut {
+  max-width: 240px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Громкость: полоса раскрывается по наведению и по фокусу с пульта. */
+
+.am-play__sound {
+  display: flex;
+  align-items: center;
+}
+
+.am-play__vol {
+  position: relative;
+  width: 0;
+  height: 16px;
+  cursor: pointer;
+  opacity: 0;
+  touch-action: none;
+  transition:
+    width var(--am-mid) var(--am-ease),
+    opacity var(--am-fast) var(--am-ease),
+    margin var(--am-mid) var(--am-ease);
+}
+
+.am-play__sound:hover:where(:not(.am-lite *)) .am-play__vol,
+.am-play__sound:focus-within .am-play__vol {
+  width: 74px;
+  margin: 0 8px 0 4px;
+  opacity: 1;
+}
+
+.am-play__vol::before {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 4px;
+  border-radius: var(--am-r-cap);
+  background: rgb(255 255 255 / 0.26);
+  content: '';
+  transform: translateY(-50%);
+}
+
+.am-play__vol-fill {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  height: 4px;
+  border-radius: var(--am-r-cap);
+  background: #fff;
+  transform: translateY(-50%);
+}
+
+.am-play__vol-knob {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  transform: translate(-50%, -50%);
+}
+
+.am-play__vol:focus-visible {
+  outline: 2px solid rgb(var(--am-accent-rgb) / 0.9);
+  outline-offset: 3px;
+}
+
+/** Отклик на фокусе в плеере — тише общего: общая подсветка заливает площадь акцентом и на чёрном
+ *  кадре читается пятном. В плеере фокус даёт тонкое светлое кольцо, как наведение. */
+.am-lite .am-play :focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.55);
+}
+
+/* Полосам кольцо ни к чему: у них свой отклик (см. ниже). Обводку гасим вместе с тенью: коробка
+   у полосы — прямоугольник вокруг узкой дорожки, а не сама дорожка. */
+.am-lite .am-play__line:focus-visible,
+.am-lite .am-play__vol:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/** Полоса времени под фокусом: кнопку выдаёт кольцо, полосу — толщина и бегунок, тот же язык, что
+ *  на компьютере, только крупнее. Порядок «дорожка — буфер — просмотренное» держим. */
+.am-lite .am-play__line:focus-visible {
+  height: 8px;
+  background: rgb(255 255 255 / 0.32);
+}
+
+.am-lite .am-play__line:focus-visible .am-play__buf {
+  background: rgb(255 255 255 / 0.5);
+}
+
+.am-lite .am-play__line:focus-visible .am-play__knob {
+  width: 16px;
+  height: 16px;
+  box-shadow:
+    0 0 0 3px rgb(255 255 255 / 0.22),
+    0 1px 4px rgb(0 0 0 / 0.5);
+}
+
+/* Кнопке кольца мало: она крошечная рядом с кадром. Добавляем ту же
+   подсветку, что по наведению, — как в плеере на компьютере. */
+.am-lite .am-play__key:focus-visible,
+.am-lite .am-play__opt:focus-visible,
+.am-lite .am-play__jump-key:focus-visible,
+.am-lite .am-play__back:focus-visible {
+  background: rgb(255 255 255 / 0.16);
+}
+
+.am-play__clock {
+  margin-left: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.am-play__clock-all {
+  color: rgb(255 255 255 / 0.6);
+}
+
+/* Меню панели: качество и скорость живут в одной разметке. */
+
+.am-play__pick {
+  position: relative;
+  display: flex;
+}
+
+/** Меню раскрывается ВЫШЕ ПОЛОСЫ ВРЕМЕНИ, а не над своей кнопкой: прижатое к кнопке, оно накрывало
+ *  полосу ровно тогда, когда человек смотрит, сколько осталось. Отступ 38px. */
+.am-play__menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 38px);
+  z-index: 6;
+  max-height: 40vh;
+  min-width: 136px;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: var(--am-r-m);
+  background: rgb(10 12 17 / 0.96);
+  box-shadow: var(--am-sh-2);
+  animation: am-play-pop var(--am-fast) var(--am-ease) both;
+  list-style: none;
+  overscroll-behavior: contain;
+  scrollbar-color: rgb(255 255 255 / 0.28) transparent;
+  scrollbar-width: thin;
+}
+
+.am-play__opt {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--am-r-s);
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  gap: 8px;
+  text-align: left;
+}
+
+.am-play__opt:hover:where(:not(.am-lite *)) {
+  background: rgb(255 255 255 / 0.12);
+}
+
+.am-play__opt--on {
+  color: rgb(var(--am-accent-rgb) / 1);
+  font-weight: 600;
+}
+
+.am-play__opt-tick {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+}
+
+.am-play__opt-tick .am-play__ico {
+  width: 16px;
+  height: 16px;
+}
+
+/** Края списка серий. У длинных тайтлов больше тысячи серий, и дойти стрелками до конца нельзя: две
+ *  кнопки ведут сразу на первую и на последнюю, отдельной коробкой справа от списка. */
+
+.am-play__jump {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 38px);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border: 1px solid rgb(255 255 255 / 0.12);
+  border-radius: var(--am-r-m);
+  background: rgb(10 12 17 / 0.96);
+  box-shadow: var(--am-sh-2);
+  animation: am-play-pop var(--am-fast) var(--am-ease) both;
+  gap: 6px;
+}
+
+.am-play__jump-key {
+  display: grid;
+  width: var(--am-ctl);
+  height: var(--am-ctl);
+  border: 0;
+  border-radius: var(--am-r-s);
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  place-items: center;
+}
+
+.am-play__jump-key:hover:where(:not(.am-lite *)) {
+  background: rgb(255 255 255 / 0.12);
+}
+
+.am-play__jump-key .am-play__ico {
+  width: 22px;
+  height: 22px;
+}
+
+/* Список уступает кнопкам их ширину: они стоят вплотную к правому краю кнопки панели,
+   а за её пределы выходить нельзя — там край кадра. */
+
+.am-play__pick--jump .am-play__menu {
+  right: 60px;
+}
+
+/* Списки */
+
+.am-play__side {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 12px;
+  grid-area: side;
+}
+
+.am-play__box {
+  padding: 12px;
+  border: 1px solid var(--am-edge);
+  border-radius: var(--am-r-l);
+  background: var(--am-glass);
+  backdrop-filter: blur(var(--am-blur));
+}
+
+.am-play__h {
+  margin: 0 0 8px;
+  color: var(--am-dim);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.am-play__list {
+  display: flex;
+  max-height: 320px;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  gap: 2px;
+  list-style: none;
+  scrollbar-color: var(--am-scroll) transparent;
+  scrollbar-width: thin;
+}
+
+.am-play__item {
+  position: relative;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--am-r-m);
+  background: transparent;
+  color: var(--am-text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  gap: 8px;
+  text-align: left;
+  transition: background var(--am-fast) var(--am-ease);
+}
+
+.am-play__item:hover:where(:not(.am-lite *)) {
+  background: var(--am-fill-1);
+}
+
+.am-play__item:focus-visible {
+  outline: 2px solid rgb(var(--am-accent-rgb) / 0.9);
+  outline-offset: -2px;
+}
+
+.am-play__item--on {
+  background: rgb(var(--am-accent-rgb) / 0.16);
+  color: var(--am-text);
+  font-weight: 600;
+}
+
+.am-play__num {
+  min-width: 26px;
+  color: var(--am-dim);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.am-play__item--on .am-play__num {
+  color: rgb(var(--am-accent-rgb) / 1);
+}
+
+.am-play__word-cut {
+  overflow: hidden;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.am-play__src,
+.am-play__time {
+  flex: 0 0 auto;
+  color: var(--am-faint);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/** Полоска просмотра внизу строки. Тонкая намеренно: подсказка на краю глаза, а не вторая полоса. */
+.am-play__seen {
+  position: absolute;
+  right: 10px;
+  bottom: 3px;
+  left: 10px;
+  height: 2px;
+  border-radius: var(--am-r-cap);
+  background: var(--am-fill-2);
+  pointer-events: none;
+}
+
+.am-play__seen-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: rgb(var(--am-accent-rgb) / 0.85);
+}
+
+.am-play__none {
+  margin: 0;
+  padding: 6px 2px;
+  color: var(--am-faint);
+  font-size: 13px;
+}
+
+/** Театр. Узел лежит прямо в body, поэтому его не зажимает ни один чужой контекст наложения. Окно
+ *  разворачивает оболочка, а не браузер. */
+.am-play--wide {
+  position: fixed;
+  z-index: 90;
+  display: block;
+  background: #000;
+  gap: 0;
+  inset: 0;
+}
+
+/* В театре обёртка снова колонка: шапка ложится накладкой поверх кадра,
+   а кадр тянется на всю высоту окна. */
+.am-play--wide .am-play__main {
+  display: flex;
+  height: 100%;
+  gap: 0;
+}
+
+.am-play--wide .am-play__stage {
+  height: 100%;
+  border-radius: 0;
+  aspect-ratio: auto;
+  box-shadow: none;
+}
+
+.am-play--wide .am-play__head {
+  position: absolute;
+  z-index: 5;
+  padding: 18px 24px 40px;
+  background: linear-gradient(to bottom, rgb(0 0 0 / 0.7) 0%, rgb(0 0 0 / 0) 100%);
+  inset: 0 0 auto;
+  transition:
+    opacity var(--am-mid) var(--am-ease),
+    transform var(--am-mid) var(--am-ease);
+}
+
+.am-play--wide .am-play__back {
+  border-color: rgb(255 255 255 / 0.18);
+  background: rgb(255 255 255 / 0.12);
+  color: #fff;
+}
+
+.am-play--wide .am-play__back:hover:where(:not(.am-lite *)) {
+  background: rgb(255 255 255 / 0.2);
+}
+
+.am-play--wide .am-play__name {
+  color: #fff;
+  text-shadow: 0 1px 6px rgb(0 0 0 / 0.6);
+}
+
+.am-play--wide .am-play__sub {
+  color: rgb(255 255 255 / 0.72);
+  text-shadow: 0 1px 6px rgb(0 0 0 / 0.6);
+}
+
+.am-play--wide .am-play__deck {
+  padding: 64px 28px 22px;
+  gap: 6px;
+}
+
+.am-play--wide .am-play__seek {
+  height: 22px;
+}
+
+.am-play--wide .am-play__line {
+  height: 5px;
+}
+
+.am-play--wide .am-play__seek:hover:where(:not(.am-lite *)) .am-play__line {
+  height: 8px;
+}
+
+.am-play--wide .am-play__key {
+  width: 46px;
+  height: 46px;
+}
+
+.am-play--wide .am-play__ico {
+  width: 24px;
+  height: 24px;
+}
+
+.am-play--wide .am-play__key--main {
+  width: 56px;
+  height: 56px;
+}
+
+.am-play--wide .am-play__key--main .am-play__ico {
+  width: 30px;
+  height: 30px;
+}
+
+.am-play--wide .am-play__key--word {
+  width: auto;
+  font-size: 14px;
+}
+
+.am-play--wide .am-play__clock {
+  font-size: 14px;
+}
+
+/* В театре панель выше, и плашки садятся на ряд кнопок. */
+.am-play--wide .am-play__skip {
+  right: 30px;
+  bottom: 148px;
+}
+
+.am-play--wide .am-play__resume {
+  bottom: 148px;
+  left: 30px;
+}
+
+/** Ящик со списками — парящая чёлка со всеми четырьмя углами: прибитый к краям, он обрывался о
+ *  панель ровной линией. Снизу заканчивается выше панели, иначе накрыл бы кнопку, его открывшую. */
+.am-play--wide .am-play__side {
+  position: absolute;
+  z-index: 3;
+  width: min(390px, 84vw);
+  padding: 10px 12px 14px;
+  overflow-y: auto;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: var(--am-r-xl);
+  background: rgb(8 10 14 / 0.88);
+  box-shadow: var(--am-sh-2);
+  animation: am-play-slide var(--am-mid) var(--am-ease) both;
+  backdrop-filter: blur(var(--am-blur-strong)) saturate(1.2);
+  gap: 0;
+  inset: 84px 18px 128px auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgb(255 255 255 / 0.28) transparent;
+  scrollbar-width: thin;
+}
+
+/* Внутри чёлки коробки теряют рамки: двойное стекло читается грязью. */
+.am-play--wide .am-play__box {
+  flex: 0 0 auto;
+  padding: 4px 2px 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.am-play--wide .am-play__box + .am-play__box {
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgb(255 255 255 / 0.08);
+}
+
+.am-play--wide .am-play__list {
+  max-height: none;
+  overflow: visible;
+}
+
+/* Заголовки липкие: в длинном списке иначе непонятно, что перебираешь. */
+.am-play--wide .am-play__h {
+  position: sticky;
+  top: -10px;
+  z-index: 1;
+  margin: 0 0 8px;
+  padding: 8px;
+  border-radius: var(--am-r-s);
+  background: rgb(8 10 14 / 0.92);
+  color: rgb(255 255 255 / 0.56);
+}
+
+.am-play--wide .am-play__item {
+  color: rgb(255 255 255 / 0.9);
+}
+
+.am-play--wide .am-play__item:hover:where(:not(.am-lite *)) {
+  background: rgb(255 255 255 / 0.1);
+}
+
+.am-play--wide .am-play__seen {
+  background: rgb(255 255 255 / 0.18);
+}
+
+@media (max-width: 620px) {
+  .am-play__back-word {
+    display: none;
+  }
+
+  .am-play__back {
+    padding: 8px 10px;
+  }
+
+  .am-play__clock {
+    font-size: 12px;
+  }
+}
+
+@keyframes am-play-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/** Всплытие без сдвига: старые кадры несли в себе translate(-50%,-50%), и любой элемент с этой
+ *  анимацией оставался смещённым навсегда. */
+@keyframes am-play-rise {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes am-play-pop {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes am-play-slide {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .am-play__deck,
+  .am-play__key,
+  .am-play__ico,
+  .am-play__line,
+  .am-play__knob,
+  .am-play__vol,
+  .am-play__item,
+  .am-play__back {
+    transition: none;
+  }
+
+  .am-play__hold,
+  .am-play__menu,
+  .am-play__jump,
+  .am-play__side,
+  .am-play__resume,
+  .am-play__skip {
+    animation: none;
+  }
+
+  .am-play__spin,
+  .am-play__wait {
+    animation-duration: 2.4s;
+  }
+}

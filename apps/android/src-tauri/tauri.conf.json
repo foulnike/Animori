@@ -1,0 +1,26 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "AniMori",
+  "version": "../package.json",
+  "identifier": "com.foulnike.animori.mobile",
+  "build": {
+    "frontendDist": "../dist/app",
+    "beforeBuildCommand": "npm run build:app",
+    "beforeDevCommand": {
+      "script": "npm run build:app",
+      "wait": true
+    }
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; media-src 'self' blob: http: https:; connect-src 'self' ipc: http://ipc.localhost blob: data: http: https:; worker-src 'self' blob:; frame-src https://www.youtube.com https://www.dailymotion.com; object-src 'none'; base-uri 'self'; form-action 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"]
+  }
+}

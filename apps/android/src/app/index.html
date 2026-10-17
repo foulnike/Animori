@@ -1,0 +1,65 @@
+<!doctype html>
+<!-- Тема стоит в разметке дефолтом: настройки читаются асинхронно, и без неё
+     первый кадр был бы белым. startAppearance() из main.ts перепишет атрибут,
+     когда выбор человека прочитан, и делает это до первой отрисовки. -->
+<html lang="ru" data-am-skin="amoled">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AniMori</title>
+    <style>
+      /* Пока читаются настройки, окно пусто и читается как поломка. Знак в разметке, а не во Vue:
+         тот не стирает корень. Стиль встроен: theme.css приходит позже этой разметки. */
+      .am-start {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        background: var(--am-bg, #000);
+      }
+
+      .am-start__mark {
+        width: 72px;
+        height: 72px;
+        object-fit: contain;
+        animation: am-start-breathe 1.9s var(--am-ease-soft, cubic-bezier(0.4, 0, 0.2, 1)) infinite;
+      }
+
+      @keyframes am-start-breathe {
+        from {
+          opacity: 0.5;
+          transform: scale(0.93);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        to {
+          opacity: 0.5;
+          transform: scale(0.93);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .am-start__mark {
+          animation: none;
+          opacity: 0.85;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Корень из src/app/main.ts. Имя id менять нельзя в одном месте. -->
+    <div id="app"></div>
+
+    <!-- Заставка: см. стиль выше. Стоит последней в body, а не внутри #app:
+         Vue не стирает содержимое корня, и внутри она осталась бы под окном
+         до конца сеанса. Классы не совпадают ни с одним классом приложения
+         нарочно — она живёт до него и не должна с ним пересечься. -->
+    <div id="boot" class="am-start">
+      <img class="am-start__mark" src="../../src-tauri/icons/128x128.png" alt="" />
+    </div>
+
+    <script type="module" src="/main.ts"></script>
+  </body>
+</html>

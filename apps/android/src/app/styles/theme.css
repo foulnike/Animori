@@ -1,0 +1,1386 @@
+/* Основа: токены тем, формы, движение. Тёмная повторена на голом :root: — иначе окно
+   вспыхнет белым. --am-accent-rgb держит триплет «r,g,b», а --am-accent — готовый hex. */
+
+:root {
+  /* Формы. Кроме обычных радиусов есть три несимметричные: сетка из
+     одинаковых скруглённых прямоугольников читается шаблоном. */
+  --am-r-s: 10px;
+  --am-r-m: 14px;
+  --am-r-l: 20px;
+  --am-r-xl: 28px;
+  --am-r-cap: 999px;
+  --am-r-leaf: var(--am-r-xl) var(--am-r-xl) var(--am-r-xl) var(--am-r-s);
+  --am-r-drop: var(--am-r-xl) var(--am-r-s) var(--am-r-xl) var(--am-r-s);
+  --am-r-blob: 46% 54% 40% 60% / 52% 44% 56% 48%;
+
+  /* Размеры окна. Потолок ширины поднят с 1720: на 4K по триста пикселей
+     с каждого края просто пустовало. */
+  --am-page-max: 2280px;
+  --am-side: 248px;
+  --am-side-slim: 84px;
+  --am-tile: clamp(148px, 11.5vw, 216px);
+  /* Портрет в полке: персонажи и части франшизы — карточки одного вида, и размер у них один.
+     Раньше размер жил в scoped-стиле PeopleBox, и вторая полка брала свой — из-за этого карточки
+     на одном экране были разной величины и читались сломанными. */
+  --am-face: clamp(128px, 9.2vw, 176px);
+  --am-ctl: 40px;
+  --am-touch: 44px;
+  --am-gap: 18px;
+  --am-blur: 18px;
+  --am-blur-strong: 34px;
+
+  /* Движение. Одни и те же длительности на всё приложение: разнобой
+     в 0.12s и 0.16s по файлам читался дёрганьем. */
+  --am-fast: 0.14s;
+  --am-mid: 0.28s;
+  --am-slow: 0.55s;
+  --am-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --am-ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --am-drift: 46s;
+}
+
+/* Тёмная: основная тема приложения. */
+:root,
+[data-am-skin='dark'] {
+  color-scheme: dark;
+
+  --am-bg: #070a10;
+  --am-bg-2: #0a0f18;
+  --am-panel: #10161f;
+  --am-panel-2: #141c27;
+  --am-hover: #1a2432;
+  --am-line: #1e2836;
+  --am-line-soft: rgb(255 255 255 / 0.07);
+
+  --am-fill-1: rgb(255 255 255 / 0.04);
+  --am-fill-2: rgb(255 255 255 / 0.07);
+  --am-fill-3: rgb(255 255 255 / 0.11);
+  --am-glass: rgb(19 26 37 / 0.62);
+  --am-glass-2: rgb(255 255 255 / 0.07);
+  /* Плотное стекло — для полосы музыки: полоса едет поверх содержимого, и сквозь обычное
+     стекло читались строки карточки. */
+  --am-glass-deep: rgb(17 23 33 / 0.9);
+  --am-edge: rgb(255 255 255 / 0.08);
+  --am-veil: rgb(6 9 15 / 0.78);
+
+  --am-text: #e9eef8;
+  --am-dim: #96a5bd;
+  --am-faint: #7486a1;
+
+  --am-accent: #58a6ff;
+  --am-accent-rgb: 88 166 255;
+  --am-accent-2: #a486ff;
+  --am-accent-2-rgb: 164 134 255;
+  --am-accent-soft: rgb(88 166 255 / 0.14);
+
+  /* Розовый знака приложения. Отдельным токеном, а не через акцент: акцент всех трёх тем
+     синий. Живёт здесь, а не только в AppMark.vue, потому что цветок взял крестик витрины. */
+  --am-sakura: #f5b3c8;
+  --am-sakura-rgb: 245 179 200;
+
+  --am-good: #3ddc97;
+  --am-warn: #ffc75a;
+  --am-bad: #ff7a7a;
+
+  --am-sh-1: 0 1px 2px rgb(0 0 0 / 0.45);
+  --am-sh-2: 0 18px 40px rgb(2 5 10 / 0.55);
+
+  /* Кромка выбранного и раскрытого. Прежде был ореол на сорок пикселей: он не подсвечивал,
+     а мутил фон и лез на соседей по ряду. Кромка обводит форму по её скруглению и стоит ноль. */
+  --am-sh-ring: 0 0 0 1px rgb(88 166 255 / 0.45);
+
+  --am-aurora-1: rgb(88 166 255 / 0.16);
+  --am-aurora-2: rgb(164 134 255 / 0.14);
+  --am-aurora-3: rgb(61 220 151 / 0.08);
+
+  --am-bar: rgb(9 13 20 / 0.72);
+  --am-scroll: #24313f;
+  --am-scroll-on: #33445a;
+}
+
+/* Светлая. Завеса остаётся тёмной: она лежит поверх баннеров и постеров,
+   а не поверх фона окна. */
+[data-am-skin='light'] {
+  color-scheme: light;
+
+  --am-bg: #f2f5fb;
+  --am-bg-2: #e9eef7;
+  --am-panel: #ffffff;
+  --am-panel-2: #f4f7fc;
+  --am-hover: #e6ecf7;
+  --am-line: #d8e0ee;
+  --am-line-soft: rgb(16 24 40 / 0.1);
+
+  --am-fill-1: rgb(16 24 40 / 0.04);
+  --am-fill-2: rgb(16 24 40 / 0.07);
+  --am-fill-3: rgb(16 24 40 / 0.11);
+  --am-glass: rgb(255 255 255 / 0.7);
+  --am-glass-2: rgb(255 255 255 / 0.86);
+  --am-glass-deep: rgb(255 255 255 / 0.94);
+  --am-edge: rgb(255 255 255 / 0.9);
+  --am-veil: rgb(12 18 30 / 0.72);
+
+  --am-text: #101828;
+  --am-dim: #55637c;
+  --am-faint: #606b7c;
+
+  --am-accent: #2a60e5;
+  --am-accent-rgb: 42 96 229;
+  --am-accent-2: #6d51e0;
+  --am-accent-2-rgb: 109 81 224;
+  --am-accent-soft: rgb(42 96 229 / 0.12);
+
+  /* Лепестки на тон глубже: светлый розовый рядом со светлым окном
+     читается выцветшим. Те же значения, что у остановок знака. */
+  --am-sakura: #f2a6bf;
+  --am-sakura-rgb: 242 166 191;
+
+  --am-good: #0d784e;
+  --am-warn: #916018;
+  --am-bad: #bb3e3e;
+
+  --am-sh-1: 0 1px 2px rgb(16 24 40 / 0.08);
+  --am-sh-2: 0 18px 40px rgb(16 24 40 / 0.14);
+  --am-sh-ring: 0 0 0 1px rgb(42 96 229 / 0.4);
+
+  --am-aurora-1: rgb(42 96 229 / 0.12);
+  --am-aurora-2: rgb(109 81 224 / 0.1);
+  --am-aurora-3: rgb(13 120 78 / 0.07);
+
+  --am-bar: rgb(246 248 253 / 0.78);
+  --am-scroll: #c9d4e6;
+  --am-scroll-on: #aebfd8;
+}
+
+/* AMOLED: чёрный ноль и никакой авроры. Смысл темы в том, что пиксель
+   на таком экране не светится вовсе; серые подложки это съедают. Поэтому фон любой
+   поверхности здесь — чистый чёрный, а не «погуще тёмный»: света дают только рамки,
+   текст и акцент. */
+[data-am-skin='amoled'] {
+  color-scheme: dark;
+
+  --am-bg: #000000;
+  --am-bg-2: #000000;
+  --am-panel: #000000;
+  --am-panel-2: #000000;
+  --am-hover: rgb(255 255 255 / 0.07);
+  --am-line: rgb(255 255 255 / 0.16);
+  --am-line-soft: rgb(255 255 255 / 0.08);
+
+  --am-fill-1: transparent;
+  --am-fill-2: rgb(255 255 255 / 0.05);
+  --am-fill-3: rgb(255 255 255 / 0.09);
+  /* Плотная заливка под пилюлями: на стекле поверх баннера или в шапке пилюлю без
+     подложки читает только её рамка. */
+  --am-fill-strong: rgb(255 255 255 / 0.11);
+  --am-glass: #000000;
+  --am-glass-2: #000000;
+  /* Плотное стекло — для полосы музыки: полоса едет поверх содержимого, и попавшая
+     под неё строка на чистом чёрном читалась бы. Поэтому плотное — чистый чёрный,
+     а не просвечивающее. */
+  --am-glass-deep: #000000;
+  --am-edge: rgb(255 255 255 / 0.08);
+  --am-veil: rgb(0 0 0 / 0.9);
+
+  --am-text: #f1f5fc;
+  --am-dim: #93a2ba;
+  --am-faint: #67788f;
+
+  --am-accent: #63a8ff;
+  --am-accent-rgb: 99 168 255;
+  --am-accent-2: #a486ff;
+  --am-accent-2-rgb: 164 134 255;
+  --am-accent-soft: rgb(99 168 255 / 0.16);
+
+  --am-sakura: #f0a6bf;
+  --am-sakura-rgb: 240 166 191;
+
+  --am-good: #3ddc97;
+  --am-warn: #ffc75a;
+  --am-bad: #ff7a7a;
+
+  --am-sh-1: 0 1px 2px rgb(0 0 0 / 0.8);
+  --am-sh-2: 0 18px 44px rgb(0 0 0 / 0.9);
+  --am-sh-ring: 0 0 0 1px rgb(99 168 255 / 0.5);
+
+  --am-aurora-1: transparent;
+  --am-aurora-2: transparent;
+  --am-aurora-3: transparent;
+
+  --am-bar: rgb(0 0 0 / 0.82);
+  --am-scroll: #1c2430;
+  --am-scroll-on: #2b3646;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    'Inter',
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--am-text);
+  background: var(--am-bg);
+  -webkit-font-smoothing: antialiased;
+  transition:
+    color var(--am-mid) var(--am-ease-soft),
+    background-color var(--am-mid) var(--am-ease-soft);
+}
+
+#app {
+  position: relative;
+  min-height: 100%;
+  isolation: isolate;
+}
+
+/* Аврора под всем окном: три пятна, которые неспешно ездят. Без неё стекло панелей
+   нечего размывать. На AMOLED пятна прозрачные: там цель — истинный чёрный. */
+body::before {
+  position: fixed;
+  inset: -20vmax;
+  z-index: -1;
+  content: '';
+  background:
+    radial-gradient(38vmax 32vmax at 12% 8%, var(--am-aurora-1), transparent 60%),
+    radial-gradient(34vmax 30vmax at 88% 14%, var(--am-aurora-2), transparent 62%),
+    radial-gradient(30vmax 26vmax at 62% 92%, var(--am-aurora-3), transparent 64%);
+  filter: blur(28px);
+  pointer-events: none;
+  animation: am-drift var(--am-drift) var(--am-ease-soft) infinite alternate;
+}
+
+@keyframes am-drift {
+  from {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(2%, 2%, 0) scale(1.08);
+  }
+}
+
+/* Полосы прокрутки. Хромиум, встречив на элементе scrollbar-width или scrollbar-color,
+   выбрасывает на нём наши ::-webkit-scrollbar — поэтому стандартные свойства объявлены на
+   всё окно, а псевдоэлементы оставлены запасом для старого WebKit. */
+html {
+  scrollbar-color: var(--am-scroll) transparent;
+}
+
+*,
+*::before,
+*::after {
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--am-scroll);
+  border: 2px solid transparent;
+  border-radius: var(--am-r-cap);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--am-scroll-on);
+  background-clip: content-box;
+}
+
+::selection {
+  background: rgb(var(--am-accent-rgb) / 0.32);
+}
+
+/* Фокус виден всегда и одинаково: без этого клавиатурный обход окна
+   превращается в угадывание. Гасится только там, где есть своя рамка. */
+:focus-visible {
+  outline: 2px solid var(--am-accent);
+  outline-offset: 2px;
+}
+
+.am-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--am-gap);
+}
+
+.am-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Заголовок в шапке не несёт своего нижнего отступа: с ним выравнивание по центру
+   поднимало заголовок на пять пикселей выше соседей. */
+.am-bar > .am-h3 {
+  margin-bottom: 0;
+}
+
+.am-bar__gap {
+  flex: 1 1 auto;
+}
+
+.am-h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 680;
+  letter-spacing: -0.015em;
+}
+
+.am-h3 {
+  margin: 0 0 10px;
+  font-size: 14.5px;
+  font-weight: 650;
+  letter-spacing: -0.005em;
+}
+
+.am-dim {
+  color: var(--am-dim);
+}
+
+.am-meta {
+  font-size: 12.5px;
+  color: var(--am-faint);
+}
+
+/* Ошибка — обоюдоскруглённая плашка, а не полоса с обрезанным краем и не красная во всю
+   ширину: при двух ошибках плашки во всю ширину читались катастрофой, а срезанный левый
+   край — как обрыв вёрстки. */
+.am-error {
+  margin: 0;
+  padding: 11px 14px;
+  font-size: 13px;
+  color: var(--am-bad);
+  background: color-mix(in srgb, var(--am-bad) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--am-bad) 34%, transparent);
+  border-radius: var(--am-r-m);
+}
+
+.am-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  padding: clamp(40px, 9vh, 90px) 20px;
+  font-size: 13.5px;
+  color: var(--am-dim);
+  text-align: center;
+}
+
+/* Знак рисует EmptyMark.vue, здесь только кегль: прежде стоял символ
+   шрифта, и шесть символов выходили шестью штрихами. opacity убрана —
+   у вектора штрих втрое тоньше. */
+.am-empty__mark {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 34px;
+  color: var(--am-faint);
+  animation: am-mark-in var(--am-mid) var(--am-ease) both;
+}
+
+/* Знак проявляется, а не появляется: короткий подъём сообщает, что ответ на
+   действие пришёл. В кадрах объявлено только «откуда»: «куда» — это свойства знака. */
+@keyframes am-mark-in {
+  from {
+    opacity: 0;
+    transform: scale(0.84);
+  }
+}
+
+/* Панель — стекло над авророй. Псевдоэлементов здесь нет нарочно:
+   общий класс с ::before ломал бы разметку всюду, где он уже использован. */
+.am-panel {
+  padding: 16px 18px;
+  background: var(--am-glass);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-l);
+  box-shadow:
+    var(--am-sh-1),
+    inset 0 1px 0 var(--am-edge);
+  backdrop-filter: blur(var(--am-blur)) saturate(1.4);
+}
+
+/* Стекло без отступов: для своих кластеров на экранах. */
+.am-glass {
+  background: var(--am-glass);
+  border: 1px solid var(--am-line-soft);
+  box-shadow: inset 0 1px 0 var(--am-edge);
+  backdrop-filter: blur(var(--am-blur)) saturate(1.4);
+}
+
+.am-btn {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--am-ctl);
+  padding: 0 16px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--am-text);
+  cursor: pointer;
+  background: var(--am-fill-2);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-cap);
+  transition:
+    color var(--am-fast) var(--am-ease),
+    background-color var(--am-fast) var(--am-ease),
+    border-color var(--am-fast) var(--am-ease),
+    transform var(--am-fast) var(--am-ease);
+}
+
+/* Ховер — не для приставки. Указатель пульта остаётся там, где его оставили: браузер
+   не пересчитывает наведённое без настоящего движения, и подсветка остаётся на элементе,
+   над которого курсора уже нет — человек видит ложный курсор рядом с настоящим фокусом.
+   Страж `:hover:where(:not(.am-lite *))` гасит ховерные правила под `am-lite` целиком;
+   вес его нулевой, на ПК ничего не меняется. На приставке «здесь ты» говорит только
+   кромка фокуса. Подробнее — INTERFACE.md, раздел «Ховер». */
+.am-btn:hover:where(:not(.am-lite *)) {
+  background: var(--am-fill-3);
+  border-color: rgb(var(--am-accent-rgb) / 0.45);
+  transform: translateY(-1px);
+}
+
+.am-btn:active {
+  transform: translateY(0);
+}
+
+.am-btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+  transform: none;
+}
+
+.am-btn--ghost {
+  color: var(--am-dim);
+  background: none;
+}
+
+.am-btn--ghost:hover:where(:not(.am-lite *)) {
+  color: var(--am-text);
+  background: var(--am-fill-1);
+}
+
+/* Главное действие экрана: акцентный градиент и кромка. */
+.am-btn--soft {
+  color: var(--am-text);
+  background: linear-gradient(
+    100deg,
+    rgb(var(--am-accent-rgb) / 0.26),
+    rgb(var(--am-accent-2-rgb) / 0.18)
+  );
+  border-color: rgb(var(--am-accent-rgb) / 0.4);
+}
+
+/* Отклик — кромка, а не ореол: кнопка и так стоит на акцентном градиенте,
+   и размытое пятно под ней только мутило фон. */
+.am-btn--soft:hover:where(:not(.am-lite *)) {
+  border-color: rgb(var(--am-accent-rgb) / 0.7);
+  box-shadow: var(--am-sh-ring);
+}
+
+.am-btn--wide {
+  width: 100%;
+}
+
+.am-input {
+  width: 100%;
+  min-height: var(--am-ctl);
+  padding: 0 14px;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--am-text);
+  background: var(--am-fill-1);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-cap);
+  transition:
+    background-color var(--am-fast) var(--am-ease),
+    border-color var(--am-fast) var(--am-ease);
+}
+
+.am-input::placeholder {
+  color: var(--am-faint);
+}
+
+/* У поля ввода своя рамка при фокусе: обводка поверх капсулы давала
+   два кольца одно в другом. */
+.am-input:focus {
+  background: var(--am-fill-2);
+  border-color: var(--am-accent);
+  outline: none;
+}
+
+/* Поиск: обёртка со значком внутри поля. */
+.am-search {
+  position: relative;
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.am-search .am-input {
+  padding-left: 38px;
+}
+
+.am-search__mark {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  font-size: 14px;
+  color: var(--am-faint);
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.am-chip {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 13px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--am-dim);
+  cursor: pointer;
+  background: var(--am-fill-1);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-cap);
+  transition:
+    color var(--am-fast) var(--am-ease),
+    background-color var(--am-fast) var(--am-ease),
+    border-color var(--am-fast) var(--am-ease),
+    transform var(--am-fast) var(--am-ease);
+}
+
+/* Отклик чипа: рамка уходит в акцент, сам чип берёт полшага вверх.
+   Прежде менялся только фон — на сером поле это читалось как грязь,
+   а не как отклик, и было непонятно, наведён ли чип. */
+.am-chip:hover:where(:not(.am-lite *)) {
+  color: var(--am-text);
+  background: var(--am-fill-2);
+  border-color: rgb(var(--am-accent-rgb) / 0.5);
+  transform: translateY(-1px);
+}
+
+.am-chip--on {
+  color: var(--am-text);
+  background: var(--am-accent-soft);
+  border-color: rgb(var(--am-accent-rgb) / 0.45);
+}
+
+.am-chip__num {
+  font-size: 11.5px;
+  color: var(--am-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.am-chip--on .am-chip__num {
+  color: var(--am-accent);
+}
+
+/* Переключатель из двух-трёх кнопок в одной капсуле. */
+.am-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--am-fill-1);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-cap);
+}
+
+.am-seg__btn {
+  min-height: 30px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--am-dim);
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: var(--am-r-cap);
+  transition:
+    color var(--am-fast) var(--am-ease),
+    background-color var(--am-mid) var(--am-ease);
+}
+
+.am-seg__btn:hover:where(:not(.am-lite *)) {
+  color: var(--am-text);
+}
+
+.am-seg__btn--on {
+  color: var(--am-text);
+  background: var(--am-glass-2);
+  box-shadow:
+    var(--am-sh-1),
+    inset 0 1px 0 var(--am-edge);
+}
+
+/* Нативный выбор: appearance не сбрасываем — без стрелки список
+   перестаёт читаться списком. Фон обязан быть плотным: полупрозрачную
+   заливку система переносит в выпадающее меню, и оно белеет вместе
+   с белым текстом на тёмных темах. */
+.am-pick {
+  min-height: var(--am-ctl);
+  padding: 0 12px;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--am-text);
+  cursor: pointer;
+  background: var(--am-panel-2);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-cap);
+}
+
+.am-pick:hover:where(:not(.am-lite *)),
+.am-pick:focus {
+  border-color: var(--am-accent);
+  outline: none;
+}
+
+/* Пункты красим отдельно: выпадающее меню рисует система, и наш фон
+   она не наследует. */
+.am-pick option,
+.am-pick optgroup {
+  color: var(--am-text);
+  background: var(--am-panel);
+}
+
+/* Сетка плиток: ширина плитки тянется за окном, а не заколочена в 168px:
+   на фуллскрине крошки постеров терялись. */
+/* Лента подбора — те же плитки, что на полке, и потому той же ширины. Раньше колонки были
+   `minmax(var(--am-tile), 1fr)`, а `1fr` растягивал их на всю свободную ширину: постеры выходили
+   крупнее полочных (245 px против 216 px на 1920), и блок без бокового поля был шире остальных.
+   Фиксированная колонка и те же отступы, что у `.am-rail`, делают ленту неотличимой от полки. */
+.am-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--am-tile));
+  gap: 14px;
+  margin: 0;
+  padding: 0 6px;
+  list-style: none;
+}
+
+/* Полка в один ряд с горизонтальной прокруткой. Отступы сверху и по
+   бокам — не украшение: плитка под курсором приподнимается и растёт,
+   а горизонтальная прокрутка режет всё, что вышло за край. */
+.am-rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: var(--am-tile);
+  gap: 14px;
+  margin: 0;
+  padding: 14px 6px 16px;
+  overflow-x: auto;
+  list-style: none;
+  overscroll-behavior-x: contain;
+}
+
+/* ПОЛКА КАРТОЧЕК-ПОРТРЕТОВ. Одна на всё приложение: персонажи, части франшизы — что угодно, где
+   в ряд стоят обложка и подпись под ней. Живёт в общем слое, а не в компоненте, потому что этим
+   видом пользуются двое, и в scoped-стиле одного компонента второй его не видит: любая правка
+   тогда заводит вторую, «почти такую же» карточку, и они расходятся. Так уже было с франшизой —
+   она полгода рисовалась своим набором правил и выглядела сломанной рядом с персонажами.
+   Разметка карточки: article.am-face > (.am-face__hit) > .am-face__frame (.am-face__art + метки)
+   и .am-face__name; вторая подпись — .am-face__voice. */
+.am-cards {
+  grid-auto-columns: var(--am-face);
+  justify-content: start;
+}
+
+.am-face {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.am-face__hit {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}
+
+/* Обойма портрета держит капсулу роли и режет её по форме. */
+.am-face__frame {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-leaf);
+  transition:
+    transform var(--am-mid) var(--am-ease),
+    border-color var(--am-fast) var(--am-ease),
+    border-radius var(--am-mid) var(--am-ease);
+}
+
+.am-face__hit:hover:where(:not(.am-lite *)) .am-face__frame,
+.am-face__hit:focus-visible .am-face__frame {
+  transform: translateY(-3px);
+  border-color: rgb(var(--am-accent-rgb) / 0.55);
+  border-radius: var(--am-r-drop);
+}
+
+.am-face__art {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  background: var(--am-fill-2);
+}
+
+.am-face__art--empty {
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  color: var(--am-faint);
+}
+
+/* Роль — капсула на портрете, а не третья серая строка под именем. */
+.am-face__role {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  max-width: calc(100% - 12px);
+  padding: 2px 8px;
+  overflow: hidden;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--am-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--am-veil) 72%, transparent);
+  border-radius: var(--am-r-cap);
+  backdrop-filter: blur(6px);
+}
+
+/* «Вы здесь» — та же капсула, но акцентом: это не роль, а место человека в списке. */
+.am-face__role--here {
+  color: var(--am-accent);
+  background: rgb(var(--am-accent-rgb) / 0.18);
+}
+
+/* Карточка, которая никуда не ведёт: это «вы здесь», а не переход. Подсветку даёт капсула на
+   обложке, поэтому подъём и акцентная кромка сняты — иначе такая карточка выглядела бы кнопкой. */
+.am-face__hit--still {
+  cursor: default;
+}
+
+.am-face__hit--still:hover:where(:not(.am-lite *)) .am-face__frame,
+.am-face__hit--still:focus-visible .am-face__frame {
+  transform: none;
+  border-color: var(--am-line-soft);
+  border-radius: var(--am-r-leaf);
+}
+
+/* Две строки и ни пикселем больше. anywhere рвёт слитное имя без пробелов: без этого такое слово
+   шире трека и ложится поверх соседней плитки. Целиком имя остаётся в подсказке. */
+.am-face__name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+/* Вторая подпись бледнее имени и режется так же. Это подпись, а не кнопка: `cursor` и цвет по
+   наведению убраны — подпись, похожую на кнопку, на пульте принимают за цель. */
+.am-face__voice {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  width: 100%;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--am-dim);
+  overflow-wrap: anywhere;
+}
+
+.am-line {
+  display: block;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  background: var(--am-fill-2);
+  border-radius: var(--am-r-cap);
+}
+
+.am-line__fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--am-accent), var(--am-accent-2));
+  border-radius: var(--am-r-cap);
+  transition: width var(--am-slow) var(--am-ease);
+}
+
+/* Заглушка на время загрузки: блик вместо пульса прозрачности —
+   мигание целой сетки было бы рябью. */
+.am-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--am-fill-1);
+  border-radius: var(--am-r-m);
+}
+
+.am-skeleton::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: linear-gradient(100deg, transparent 20%, var(--am-fill-2) 50%, transparent 80%);
+  animation: am-shine 1.5s var(--am-ease-soft) infinite;
+}
+
+@keyframes am-shine {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.am-hold {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--am-tile), 1fr));
+  gap: var(--am-gap);
+}
+
+.am-hold__art {
+  display: block;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--am-r-leaf);
+}
+
+.am-hold__line {
+  display: block;
+  height: 12px;
+  margin-top: 9px;
+  border-radius: var(--am-r-s);
+}
+
+/* Стекло без поддержки размытия — просто панель: полупрозрачный фон
+   без blur даёт нечитаемый текст поверх авроры. */
+@supports not (backdrop-filter: blur(1px)) {
+  .am-panel,
+  .am-glass {
+    background: var(--am-panel);
+  }
+}
+
+@media (max-width: 1080px) {
+  :root {
+    --am-gap: 14px;
+  }
+}
+
+/* Слабая платформа: телевизор, приставка, телефон (класс ставит app/platform.ts).
+   Дорого backdrop-filter (38 мест) и ездящая аврора: каждый кадр браузер заново снимает
+   подложку под стеклом, и медиана кадра на телевизоре — 105 мс при свободном видеочипе. */
+/* Стекло без размытия обязано стать плотным: `--am-glass` — это 62 % под размытую
+   подложку, а без размытия подписи сливаются с фоном. Меняем переменные, а не фон. */
+html.am-lite {
+  --am-glass: var(--am-panel);
+  --am-glass-2: var(--am-panel-2);
+  --am-glass-deep: var(--am-panel);
+
+  /* Переходы короче. На телевизоре каждая анимация — это кадры, а кадр
+     здесь дорог: полсекунды плавности оборачиваются тридцатью
+     перерисовками. Восьми сотых хватает, чтобы движение читалось. */
+  --am-fast: 0.08s;
+  --am-mid: 0.14s;
+  --am-slow: 0.22s;
+
+  /* Тени выключены. `--am-sh-2` это размытие на сорок пикселей, и оно
+     висит на каждом постере, а постеров на главной десятки:Skia считает
+     его заново при всякой перерисовке. С трёх метров эта тень всё равно
+     не читается, а стоит дороже всего остального в кадре. */
+  --am-sh-1: none;
+  --am-sh-2: none;
+
+  /* Пульт листает страницу рывками, если прокрутка мгновенная: за один
+     раз уезжает пол-экрана, и непонятно, куда попал. */
+  scroll-behavior: smooth;
+}
+
+/* Дальний слой россыпи на плашке (screens/home-spray.ts) идёт с `filter: blur(2px)`. На приставке это
+   самая дорогая часть россыпи: размытие каждого цветка пересчитывается на кадр, а их там десятки.
+   Слой и так самый бледный (opacity 0.1) — без размытия он читается теми же пятнами, кадр выигрывает. */
+.am-lite .am-hey__grain--far {
+  filter: none !important;
+}
+
+/* Отклик на фокусе — обводка, а не тень по коробке: тень ложится ПОД содержимое, и у
+   кадра с картинкой во всю площадь кольца не видно вовсе. Обводка повторяет текущее
+   скругление и идёт внутрь: наружу она наезжает на соседей, а в галерее просвет пять
+   пикселей. Где форму рисует потомок, кромку рисует он — см. ниже. */
+.am-lite :focus-visible {
+  outline: 2px solid rgb(var(--am-accent-rgb) / 0.9);
+  outline-offset: -2px;
+
+  /* Засветка остаётся тенью: `inset` с огромным распором заливает площадь поверх
+     собственного фона, в отличие от подмены `background-image`. */
+  box-shadow: inset 0 0 0 999px rgb(var(--am-accent-rgb) / 0.18);
+}
+
+/* Постеру кромка не нужна: у него свой отклик — форма перетекает в каплю,
+   постер приподнимается, подпись уходит в акцент. Кромка поверх этого
+   только портила вид. */
+.am-lite .am-tile__hit:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Плитке человека — тоже не по коробке. Коробка у неё — портрет вместе с
+   подписью под ним, а форма одна: обойма портрета. Кромка переезжает на
+   обойму, она и скругляется, и меняет скругление под фокусом. */
+.am-lite .am-face__hit:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.am-lite .am-face__hit:focus-visible .am-face__frame {
+  outline: 2px solid rgb(var(--am-accent-rgb) / 0.9);
+  outline-offset: -2px;
+}
+
+/* Кадру кромка снаружи: внутри она шла бы по живописи и терялась. Просвет пять
+   пикселей, кромке нужно два. */
+.am-lite .am-shots__cell:focus-visible,
+.am-lite .am-shots__reel:focus-visible {
+  outline-offset: 2px;
+}
+
+/* Кнопке под цветком сакуры — тем более: форму рисует цветок, и кромка
+   приходит от него (см. SakuraBloom.vue). Заливка площади тут тоже лишняя:
+   она легла бы прямоугольником за лепестками. */
+.am-lite :has(> .am-bloom):focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Полю внутри капсулы рисовать нечего: кромка по его коробке режет капсулу
+   прямоугольником. Отклик даёт капсула по `:focus-within`. */
+.am-lite .am-find__field:focus-visible,
+.am-lite .am-hunt__field:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Пульту эти две кнопки только мешают. Крестик «Не интересует» стоит в
+   переходах между полками: подъём наверх натыкается на него вместо
+   постера. Переключатель тем есть в настройках — в шапке он лишний,
+   и до него ещё надо дойти. */
+.am-lite .am-tile__hide,
+.am-lite .am-skin {
+  display: none !important;
+}
+
+/* Постер, потерявший фокус, обязан вернуться на место: на телевизоре
+   `:focus-visible` снимается не вовремя, и полка выглядит взъерошенной.
+   Метку `am-tile--key` ставит dpad. */
+.am-lite .am-tile:not(.am-tile--key) .am-tile__art {
+  transform: none !important;
+  border-color: var(--am-line-soft) !important;
+  border-radius: var(--am-r-leaf) !important;
+  box-shadow: none !important;
+}
+
+/* Имя ходит за той же меткой: `:focus-visible` на телевизоре снимается с опозданием —
+   как у постера выше. Ховер, который тут же светил бы под чужим курсором, закрыт стражем
+   от приставки (см. «Ховер» у .am-btn). Метку `am-tile--key` ставит dpad. */
+.am-lite .am-tile:not(.am-tile--key) .am-tile__name {
+  color: var(--am-text) !important;
+}
+
+.am-lite .am-tile--key .am-tile__name {
+  color: var(--am-accent) !important;
+}
+
+/* Чипу заливка площади не идёт: он мелкий, и акцент поверх серого читается пятном.
+   Кромка лишняя: у чипа своя рамка, и вторая рядом читается двойной рамкой. */
+.am-lite .am-chip:focus-visible {
+  color: var(--am-text);
+  background: var(--am-fill-3);
+  border-color: var(--am-accent);
+  outline: none;
+  box-shadow: none;
+}
+
+/* Рельс держим раскрытым сами. Он раскрывался по `:focus-within`, но на
+   телевизоре тот снимается с опозданием, и рельс оставался разложенным
+   поверх содержимого. Метку ставит dpad. */
+.am-lite .am-side:not(.am-side--open) {
+  width: calc(var(--am-side-slim) - 14px) !important;
+}
+
+/* Служебные пункты рельса переехали сюда с шапки: над содержимым они отбирали
+   фокус. Это действия над экраном, не новый раздел навигации, и отдельная
+   «зона действий» их только отрывает от списка. */
+
+.am-lite .am-side:not(.am-side--open) .am-side__name,
+.am-lite .am-side:not(.am-side--open) .am-side__text,
+.am-lite .am-side:not(.am-side--open) .am-side__foot {
+  transform: translateX(-6px) !important;
+  opacity: 0 !important;
+}
+
+/* Рельс — единственное место на телевизоре, где размытие стоит своих денег. Погашено оно
+   ради сорока мест, снимающих подложку каждый кадр (`.am-lite *` ниже), а тут место одно и
+   подложка под ним почти всегда статична: под свёрнутый рельс содержимое не заезжает вовсе
+   (отступ `--am-side-slim`), а под раскрытым стоит постер, а не видео. Без размытия
+   раскрытый рельс показывал содержимое как есть — второй картинкой, а не пятнами. Плотность
+   держим панельную, но не в ноль: остаток затемнения и превращает постер в пятна.
+   Отсчёт от `html` — чтобы перебить `!important` общего правила: между двумя важными
+   объявлениями решает вес, а не порядок в файле. */
+html.am-lite .am-side {
+  background-color: color-mix(in srgb, var(--am-glass) 95%, transparent);
+}
+
+/* Плотность под размытие. Сборка без `backdrop-filter` остаётся на плотной подложке:
+   размытия там нет, и всё, что просвечивает, читается резким. */
+@supports (backdrop-filter: blur(1px)) {
+  html.am-lite .am-side {
+    background-color: color-mix(in srgb, var(--am-glass) 80%, transparent);
+    backdrop-filter: blur(var(--am-blur-strong)) saturate(1.3) !important;
+    -webkit-backdrop-filter: blur(var(--am-blur-strong)) saturate(1.3) !important;
+  }
+}
+
+/* Обводка с отступом занимает шесть пикселей, а у карусели сбоку ровно
+   шесть и было — край срезал бы рамку у крайних плиток. */
+.am-lite .am-rail {
+  padding-right: 12px;
+  padding-left: 12px;
+}
+
+/* Полка — сама себе крепость: `contain` запирает раскладку, отрисовку и область
+   видимости. Числа замеров с приставки годятся только чередующиеся. Обрезка
+   (`paint`) безопасна: постер под фокусом держится в 31 px внутри полки. */
+.am-lite .am-shelf {
+  contain: layout paint style;
+}
+
+.am-lite *,
+.am-lite *::before,
+.am-lite *::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.am-lite body::before {
+  inset: -10vmax !important;
+  filter: none !important;
+  animation: none !important;
+}
+
+.am-lite [class*='blob'] {
+  display: none !important;
+}
+
+/* Карточка аниме на ТВ. Сводка правил здесь, а не в файле экрана: `am-lite` стоит на
+   `<html>`, а scoped-блок до любого потомка не достаёт. Мерка окна — 960x540, и один
+   CSS-пиксель это четыре физических: уменьшают геометрию, а не кегли. */
+
+/* Шапка: постер и поля. */
+.am-lite .am-hero {
+  --am-hero-pad-y: 10px !important;
+  --am-hero-pad-x: 12px !important;
+  --am-hero-gap: 10px !important;
+  box-shadow: none !important;
+}
+
+/* Постер шириной в ряд ярлычков оценок: от края первого до края третьего. Ширину задаёт
+   колонка, а не картинка, — ярлычки раскладываются по её краям. 150 даёт 225 по высоте:
+   постер — главное в шапке, а не четверть кадра. Просвет колонки — четыре пикселя: ряд
+   стоит вплотную под постером, но не касается его — иначе грань постера и верх ярлычков
+   сливались в одну линию (см. `__marks`). */
+.am-lite .am-hero__stack {
+  width: 150px !important;
+  gap: 4px !important;
+}
+
+.am-lite .am-hero__cover {
+  box-shadow: none !important;
+}
+
+.am-lite .am-hero__cover--empty {
+  font-size: 30px !important;
+}
+
+/* Кегли почти не тронуты: см. мерку выше. Подзаголовки (ромадзи и
+   оригинал) урезаны сильнее — это вторая и третья строка названия. */
+.am-lite .am-hero__title {
+  font-size: 17px !important;
+  line-height: 1.15 !important;
+  text-shadow: none !important;
+}
+
+.am-lite .am-hero__sub {
+  font-size: 10.5px !important;
+  line-height: 1.25 !important;
+}
+
+/* Пилюли: та же высота, что у букв вокруг, без лишней обкладки. */
+.am-lite .am-pill {
+  padding: 1px 6px !important;
+  font-size: 10.5px !important;
+  font-weight: 500 !important;
+}
+
+.am-lite .am-pills {
+  gap: 4px !important;
+  margin: 2px 0 0 !important;
+}
+
+.am-lite .am-pill--studio:focus-visible {
+  transform: none !important;
+}
+
+.am-lite .am-pill__logo {
+  height: 10px !important;
+  max-width: 18px !important;
+}
+
+/* Ярлычки оценок площадок: ряд во всю ширину постера, крайние — по его краям. Ряд начинается
+   ровно на нижней грани постера: заходить на обложку ему не даём — подъём на треть ярлычка
+   прятал под стеклом нижнюю кромку постера, и тот читался обрезанным. Переносов нет — три
+   знака укладываются в ряд, а перенос сбил бы расчёт краёв. */
+.am-lite .am-hero__marks {
+  flex-wrap: nowrap !important;
+  justify-content: space-between !important;
+  gap: 3px !important;
+}
+
+.am-lite .am-hero__mark {
+  padding: 1px 5px !important;
+  gap: 3px !important;
+}
+
+.am-lite .am-hero__markicon {
+  width: 12px !important;
+  height: 12px !important;
+}
+
+.am-lite .am-hero__markval {
+  font-size: 11.5px !important;
+}
+
+/* Кнопки действий: 44 пикселя при кадре в 540 — это восьмая часть экрана
+   на одну кнопку. */
+.am-lite .am-acts {
+  gap: 6px !important;
+  margin-top: 6px !important;
+}
+
+.am-lite .am-acts__play,
+.am-lite .am-acts__save {
+  min-height: 32px !important;
+  padding: 0 11px !important;
+  font-size: 11.5px !important;
+}
+
+.am-lite .am-acts__play {
+  box-shadow: none !important;
+}
+
+.am-lite .am-acts__play:focus-visible {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Описание в правой части шапки на широком окне. */
+.am-lite .am-hero__note {
+  padding: 10px 12px !important;
+}
+
+.am-lite .am-about--art {
+  font-size: 11.5px !important;
+  line-height: 1.45 !important;
+}
+
+.am-lite .am-hero__noteh {
+  font-size: 11.5px !important;
+}
+
+.am-lite .am-about__tail--art {
+  padding-top: 5px !important;
+  font-size: 10.5px !important;
+}
+
+/* Описание в шапке не должно вытягивать баннер: болтливый источник иначе
+   раздвигал бы его на весь кадр, а описание — не главное на карточке.
+   Дальше своего потолка текст идёт прокруткой внутри полосы. */
+.am-lite .am-hero__scroll {
+  max-height: 148px !important;
+}
+
+/* Доска: одна колонка и плотнее. Две колонки хороши для мыши; пультом
+   по плиткам разной высоты ходить неудобно. */
+.am-lite .am-board {
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 8px !important;
+  margin-top: 8px !important;
+  font-size: 11.5px !important;
+}
+
+.am-lite .am-h3 {
+  font-size: 12.5px !important;
+  margin: 0 0 4px !important;
+}
+
+/* Заголовкам плиток доски тесно у левого края: отступ плитки 8 пикселей, а скругление 20 —
+   буква встаёт почти на дугу угла и читается надкушенной. Сдвиг мал, но возвращает ей поле. */
+.am-lite .am-board .am-h3 {
+  padding-left: 4px !important;
+}
+
+/* В ряду заголовку нечего отбивать. Правило выше весит `!important`, поэтому его 4 px снизу
+   доживают и здесь: ряд ровняет по внешней коробке, заголовок уходит на 2 px вверх,
+   и счётчик рядом стоит ниже его строки. */
+.am-lite .am-bar > .am-h3 {
+  margin-bottom: 0 !important;
+}
+
+.am-lite .am-panel,
+.am-lite .am-about-box {
+  padding: 8px !important;
+}
+
+.am-lite .am-about {
+  font-size: 11.5px !important;
+  line-height: 1.45 !important;
+}
+
+.am-lite .am-about__tail {
+  font-size: 10.5px !important;
+  margin-top: 8px !important;
+}
+
+/* Описание крупным планом: то же, что в плитке, но крупнее в полтора раза — окно открывают
+   ради чтения с трёх метров, и плиточный кегль в нём был бы насмешкой над затеей. */
+.am-lite .am-about--zoom {
+  font-size: 16px !important;
+  line-height: 1.55 !important;
+}
+
+/* Описание раскрывается всей плиткой: цель — панель, и кромка фокуса обходит её контур, а не
+   абзац. Заливку площади снимаем — акцент залил бы весь абзац; своя тень панели при этом
+   остаётся, иначе плитка на фокусе проседала бы. */
+.am-lite .am-about__hit:focus-visible {
+  box-shadow:
+    var(--am-sh-1),
+    inset 0 1px 0 var(--am-edge);
+}
+
+/* Просвет внутри панели франшизы на телевизоре: заголовок и полка встают плотнее. */
+.am-lite .am-fran {
+  gap: 8px !important;
+}
+
+/* Плитки в полке на телевизоре: 104 пикселя — постер и подпись под ним читаются с трёх метров,
+   а в ряд на всю ширину доски влезает около пятнадцати. Тот же размер идёт и на полку франшизы,
+   поэтому правило вешаем на саму платформу, а не на блок людей, и берём его с `html`: класс стоит
+   на documentElement, то есть на том же узле, что и `:root`, и при равной специфичности побеждал бы
+   только порядок в файле. `html.am-lite` сильнее `:root` и ни от чего не зависит. */
+html.am-lite {
+  --am-face: 104px;
+}
+
+/* Подписи под карточкой — размер задан ниже, в общем блоке `.am-lite .am-face*`:
+   там же сжатие скруглений и прочие поправки телевизора, и второй набор кеглей только спорил бы. */
+.am-lite .am-fran__hidden {
+  font-size: 10.5px !important;
+}
+
+.am-lite .am-face__name {
+  font-size: 12px !important;
+  line-height: 1.3 !important;
+}
+
+.am-lite .am-face__voice {
+  font-size: 9.5px !important;
+}
+
+.am-lite .am-face__role {
+  font-size: 9px !important;
+  padding: 0 5px !important;
+  bottom: 3px !important;
+  left: 3px !important;
+}
+
+.am-lite .am-face__hit:focus-visible .am-face__frame {
+  transform: none !important;
+}
+
+.am-lite .am-face__frame {
+  border-radius: var(--am-r-s) !important;
+}
+
+/* Кадры: четыре в ряд, как на десктопе — при 960 это 203x114, разумный
+   размер превью. Пропорцию оставляю 16:9: ниже 16:10 она не читается. */
+.am-lite .am-shots__grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+}
+
+.am-lite .am-shots__cell {
+  aspect-ratio: 16 / 9 !important;
+}
+
+.am-lite .am-shots__cell:focus-visible {
+  transform: none !important;
+}
+
+.am-lite .am-shots__more {
+  font-size: 12px !important;
+}
+
+/* Системная просьба о покое сильнее наших красот: гасим всё движение,
+   а не только часть. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+
+  body::before {
+    animation: none;
+  }
+}

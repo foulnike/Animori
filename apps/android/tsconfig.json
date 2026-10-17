@@ -1,0 +1,47 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    // greasemonkey убран: это описания GM_*, которые даёт менеджер скриптов. Здесь их нет и быть не может: своё окно, свой мост, свои права.
+    "types": ["vite/client", "node"],
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "useDefineForClassFields": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Этап 2: SFC компилирует vue-tsc, ему нужен preserve.
+    "jsx": "preserve",
+
+    "noEmit": true,
+    "sourceMap": true,
+
+    "baseUrl": ".",
+    "paths": {
+      // Те же соответствия, что в resolve.alias. Правятся в четырёх файлах разом:
+      // расхождение даёт сборку, которая идёт, а проверка типов падает.
+      // Сверяет npm run sync:check.
+      "@/api/*": ["../../packages/core/src/api/*"],
+      "@/bridge": ["../../packages/core/src/bridge/index"],
+      "@/bridge/*": ["../../packages/core/src/bridge/*"],
+      "@/core/*": ["../../packages/core/src/core/*"],
+      "@/utils/*": ["../../packages/core/src/utils/*"],
+      "@core-tests/*": ["../../packages/core/tests/mocks/*"],
+      "@/*": ["src/*"],
+      // Этап 3.4: реальную цель '@bridge-impl' выбирает resolve.alias: целей теперь одна, и тайпчекеру больше не нужно выбирать между ними.
+      "@bridge-impl": ["../../packages/core/src/bridge/TauriBridge"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.vue", "tests/**/*.ts", "vite.config.ts"],
+  "exclude": ["node_modules", "dist", "src-tauri"]
+}

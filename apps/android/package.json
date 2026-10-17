@@ -1,0 +1,38 @@
+{
+  "name": "@animori/android",
+  "private": true,
+  "version": "3.1.1",
+  "type": "module",
+  "description": "AniMori — Toolkit for AniList. Мобильное приложение для Android.",
+  "license": "MIT",
+  "author": "foulnike",
+  "scripts": {
+    "dev:app": "vite",
+    "build:app": "npm run typecheck:all && vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit",
+    "typecheck:shared": "vue-tsc --noEmit -p tsconfig.shared.json",
+    "typecheck:all": "npm run typecheck:shared && vue-tsc --noEmit",
+    "test": "vitest run",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
+    "@tauri-apps/plugin-http": "^2.5.9",
+    "hls.js": "^1.6.0",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.11.4",
+    "@types/node": "^24",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "happy-dom": "^20.12.0",
+    "typescript": "^5.6.2",
+    "vite": "^8.3.2",
+    "vitest": "^4.1.11",
+    "vue-tsc": "^2.1.10"
+  }
+}

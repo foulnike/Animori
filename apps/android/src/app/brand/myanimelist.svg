@@ -1,0 +1,17 @@
+<!-- Знак MyAnimeList: буквы MAL плотным набором, растром внутри файла.
+
+     Растр, а не пути: открытого вектора у MAL нет, а нарисованные
+     путями буквы выходили кривыми: плотную «M» и перекладину «A»
+     на высоте 15 пикселей не спасала никакая правка штриха.
+     Картинка вчетверо крупнее знака на плите, поэтому дробный
+     масштаб окна её не мылит.
+
+     Буквы белые с прозрачным фоном: цвет плиты даёт BrandMark.vue,
+     и знак не носит с собой синего квадрата.
+
+     Строка с данными длиннее принятых 100 знаков намеренно:
+     в base64 внутри адреса переносы ставить нельзя, и раз оборванная
+     при вставке строка уже стоила нам сломанной картинки в ярлычке. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132 75">
+  <image width="132" height="75" href="data:image/png;base64,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" />
+</svg>

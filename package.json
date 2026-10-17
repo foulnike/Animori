@@ -5,21 +5,25 @@
   "description": "AniMori: общее ядро и два приложения — настольное и приставка",
   "workspaces": [
     "apps/windows",
-    "apps/android-tv"
+    "apps/android-tv",
+    "apps/android"
   ],
   "engines": {
     "node": ">=24"
   },
   "scripts": {
-    "test": "npm run test:core && npm run test:windows && npm run test:android-tv",
+    "test": "npm run test:core && npm run test:windows && npm run test:android-tv && npm run test:android",
     "test:core": "npm --prefix apps/windows run test:core",
     "test:windows": "npm --prefix apps/windows test",
     "test:android-tv": "npm --prefix apps/android-tv test",
-    "typecheck": "npm run typecheck:windows && npm run typecheck:android-tv",
+    "test:android": "npm --prefix apps/android test",
+    "typecheck": "npm run typecheck:windows && npm run typecheck:android-tv && npm run typecheck:android",
     "typecheck:windows": "npm --prefix apps/windows run typecheck:all",
     "typecheck:android-tv": "npm --prefix apps/android-tv run typecheck:all",
+    "typecheck:android": "npm --prefix apps/android run typecheck:all",
     "build:windows": "npm --prefix apps/windows run build:app",
     "build:android-tv": "npm --prefix apps/android-tv run build:app",
+    "build:android": "npm --prefix apps/android run build:app",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",

@@ -1,0 +1,84 @@
+# Зависимости
+node_modules/
+.pnpm-store/
+
+# Сборка
+dist/
+dist-tauri/
+*.local
+# Сборка и подпись APK вне dist: конвейер пишет сюда ключ и промежуточные файлы.
+out/
+coverage/
+
+# Tauri (Этап 4)
+src-tauri/target/
+src-tauri/permissions/
+
+# Вывод сборки Android — мусор, восстанавливается сборкой. А само дерево
+# исходников android-проекта нужно: там манифест с android:banner, ресурсы
+# (баннер, mipmap-*) и точки входа. Без этого правка манифеста и баннер не
+# защищены ничем: они не выводятся ни из tauri.conf.json, ни из
+# src-tauri/icons, а tauri android init перезапишет их шаблоном.
+#
+# Запись идёт через gen/*, а не gen/: с gen/ git вообще не спускается
+# внутрь каталога, и никакое последующее отрицание уже не сработает.
+src-tauri/gen/*
+!src-tauri/gen/android/
+!src-tauri/gen/android/**
+src-tauri/gen/android/.gradle/
+src-tauri/gen/android/build/
+src-tauri/gen/android/app/build/
+src-tauri/gen/android/app/src/main/jniLibs/
+
+# Бандл фронтенда внутри Android-дерева. Это вывод `npm run build:app`, который
+# tauri android build кладёт рядом с исходниками, и восстанавливается каждой
+# сборкой: в именах файлов хеши содержимого, поэтому в индексе они и лежали
+# мёртвым грузом на киломбайт. Источник правды — dist/app, а он под dist/.
+src-tauri/gen/android/app/src/main/assets/
+
+# Логи
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Кэш инструментов
+.vite/
+.cache/
+*.tsbuildinfo
+vite.config.ts.timestamp-*.mjs
+
+# Редакторы и ОС
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# Рабочие заметки инструмента: память проекта, а не его исходники
+.workbuddy-ai/
+
+# Секреты (токены подписи обновлений Tauri и пр.)
+.env
+.env.*
+!.env.example
+*.key
+# Ключ подписи Android. Эталонный лежит в ~/.android/, но apksigner и
+# gradle подписывают откуда угодно, а gradle читает keystore.properties
+# из корня, если он там есть.
+*.jks
+*.keystore
+keystore.properties
+
+# Локальные артефакты сборки в корне. Подписанный APK — следы нашей сборки,
+# а не исходники: в репозиторий попадают только файлы из конвейера. `.idsig`
+# apksigner кладёт рядом с APK (подпись 4-й схемы, для adb install --incremental),
+# на приставку он не нужен.
+*.apk
+*.idsig
+*.aab
+
+# Python-мусор (вспомогательные скрипты в корне)
+__pycache__/
+*.pyc

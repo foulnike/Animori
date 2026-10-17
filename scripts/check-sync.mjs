@@ -13,7 +13,7 @@ import { loadConfigFromFile } from 'vite'
 process.env.VITE_CONFIG_NATIVE_IGNORE_WARNING = 'true'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const APPS = ['windows', 'android-tv']
+const APPS = ['windows', 'android-tv', 'android']
 const errors = []
 
 const read = (...parts) => readFileSync(join(...parts), 'utf8')

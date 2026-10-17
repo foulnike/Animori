@@ -1,0 +1,23 @@
+{
+  // Сторож границы ядра (typecheck:shared). Кода надстройки нет: файл из packages/core/src, потянувшийся в src/app, не найдётся. Алиас ядра — в трёх файлах.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    // Список умышленно короче общего: нет общего @/* — именно он раньше позволял ядру дотянуться до надстройки незаметно. Блокировщик убран вместе с гибридом.
+    "paths": {
+      "@/api/*": ["../../packages/core/src/api/*"],
+      "@/bridge": ["../../packages/core/src/bridge/index"],
+      "@/bridge/*": ["../../packages/core/src/bridge/*"],
+      "@/core/*": ["../../packages/core/src/core/*"],
+      "@/utils/*": ["../../packages/core/src/utils/*"],
+      "@bridge-impl": ["../../packages/core/src/bridge/TauriBridge"]
+    }
+  },
+  // vite-env.d.ts нужен ради объявлений подставляемых сборкой значений: это описание типов, а не код надстройки.
+  "include": [
+    "../../packages/core/src/**/*.ts",
+    "../../packages/core/src/**/*.d.ts",
+    "src/vite-env.d.ts"
+  ],
+  "exclude": ["node_modules", "dist", "src-tauri", "src/app"]
+}
