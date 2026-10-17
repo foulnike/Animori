@@ -592,12 +592,11 @@
     padding: 0 16px;
   }
 
-  /* Описание режется строками: хвост читается в окне крупного плана. */
+  /* Семь строк и срез: line-clamp не берёт блочные абзацы разметки, поэтому потолок
+     задан высотой — замер «читать дальше» в скрипте живёт от неё же. */
   .am-about-box .am-about__clip {
-    display: -webkit-box;
     overflow: hidden;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 7;
+    max-height: 152px;
   }
 
   .am-about__more {

@@ -8,6 +8,7 @@ import { partsWord, statusList, statusWord } from '../labels'
 import { isWeakPlatform } from '../platform'
 
 import DateField from './DateField.vue'
+import PickBox, { type PickItem } from './PickBox.vue'
 import SakuraBloom from './SakuraBloom.vue'
 import StarBloom from './StarBloom.vue'
 
@@ -59,6 +60,9 @@ const emit = defineEmits<{
 
 const statuses = statusList()
 const partsName = partsWord()
+
+/** Строки выбора закладки: «Не в списке» первым, как в прежнем списке оболочки. */
+const statusPicks = computed<PickItem[]>(() => [{ key: '', title: 'Не в списке' }, ...statuses])
 
 // Открытое окно замирает фон: список под шторкой не едет пальцем мимо.
 useScrollLock(() => true)
@@ -394,13 +398,10 @@ onBeforeUnmount(() => {
               </button>
             </div>
 
-            <!-- Телефон: системный список — колесо ОС вместо капсул, по которым надо прицеливаться. -->
-            <select v-model="pickStatus" class="am-input am-status" aria-label="Закладка">
-              <option value="">Не в списке</option>
-              <option v-for="item in statuses" :key="item.key" :value="item.key">
-                {{ item.title }}
-              </option>
-            </select>
+            <!-- Телефон: свой список — системный рисует оболочка окна, а не наши стили. -->
+            <div class="am-status">
+              <PickBox v-model="pickStatus" :items="statusPicks" wide label="Закладка" />
+            </div>
           </section>
 
           <section class="am-field am-field--wide">
@@ -1054,25 +1055,9 @@ onBeforeUnmount(() => {
     display: none;
   }
 
+  /* Список закладок — свой компонент (PickBox), тут только дверь в него. */
   .am-status {
     display: block;
-    width: 100%;
-    min-height: 52px;
-    /* Стрелка списка — своя, подальше от края: системная стояла на самой кромке. */
-    padding: 0 42px 0 14px;
-    font: inherit;
-    font-size: 16px;
-    font-weight: 550;
-    color: var(--am-text);
-    background-color: var(--am-fill-2);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%237486a1' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-    background-size: 16px 16px;
-    border: 1px solid var(--am-line-soft);
-    border-radius: var(--am-r-m);
-    appearance: none;
-    -moz-appearance: none;
   }
 
   /* Оценка — точка на отрезке: число слева, штрих во всю оставшуюся строку. */

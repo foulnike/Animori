@@ -60,7 +60,7 @@ export const SCREEN_TITLES: Record<ScreenName, string> = {
   lists: 'Моё',
   history: 'История',
   search: 'Поиск',
-  media: 'Тайтл',
+  media: 'Аниме',
   studio: 'Студия',
   player: 'Просмотр',
   settings: 'Настройки',
