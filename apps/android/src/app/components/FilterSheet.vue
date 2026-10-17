@@ -575,7 +575,11 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(12px, 3vw, 32px);
+  /* Системные полосы прибавлены к полю: навбар в три кнопки в env() не приходит. */
+  padding: calc(clamp(12px, 3vw, 32px) + max(env(safe-area-inset-top), var(--am-sys-top)))
+    calc(clamp(12px, 3vw, 32px) + env(safe-area-inset-right))
+    calc(clamp(12px, 3vw, 32px) + max(env(safe-area-inset-bottom), var(--am-sys-bottom)))
+    calc(clamp(12px, 3vw, 32px) + env(safe-area-inset-left));
 }
 
 /* Занавес — кнопка: клик мимо коробки закрывает, и это доступно с клавиатуры. */

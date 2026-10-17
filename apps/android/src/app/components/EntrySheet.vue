@@ -3,6 +3,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { pushBackStop } from '../back-stop'
+import { useScrollLock } from '../scroll-lock'
 import { partsWord, statusList, statusWord } from '../labels'
 import { isWeakPlatform } from '../platform'
 
@@ -58,6 +59,9 @@ const emit = defineEmits<{
 
 const statuses = statusList()
 const partsName = partsWord()
+
+// Открытое окно замирает фон: список под шторкой не едет пальцем мимо.
+useScrollLock(() => true)
 
 // Черновик записи: правится только он, наружу уходит по «Готово». Даты держатся строкой, а не string | null: пустая строка у DateField — законный ответ «даты нет».
 const pickStatus = ref(props.status)
@@ -605,9 +609,12 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   /* Отступ по высоте отдельно от ширины: кадр узкий и низкий чаще, чем широкий, и поле
-     в 3vw по вертикали отбирало у записи места больше, чем нужно. */
-  padding-block: clamp(12px, 2.4vh, 40px);
-  padding-inline: clamp(12px, 3vw, 40px);
+     в 3vw по вертикали отбирало у записи места больше, чем нужно. Системные полосы
+     прибавляются к полю: мост даёт их там, где env() молчит (навбар в три кнопки). */
+  padding-block: calc(clamp(12px, 2.4vh, 40px) + max(env(safe-area-inset-top), var(--am-sys-top)))
+    calc(clamp(12px, 2.4vh, 40px) + max(env(safe-area-inset-bottom), var(--am-sys-bottom)));
+  padding-inline: calc(clamp(12px, 3vw, 40px) + env(safe-area-inset-left))
+    calc(clamp(12px, 3vw, 40px) + env(safe-area-inset-right));
   background: var(--am-veil);
   backdrop-filter: blur(8px);
   animation: am-veil-in var(--am-mid) var(--am-ease-soft) both;
@@ -995,17 +1002,16 @@ onBeforeUnmount(() => {
   .am-sheet {
     align-items: flex-end;
     justify-content: center;
-    padding: 0;
+    /* Во всю ширину, но под системными полосами: часы и навбар держит мост. */
+    padding-block: max(env(safe-area-inset-top), var(--am-sys-top))
+      max(env(safe-area-inset-bottom), var(--am-sys-bottom));
+    padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
   }
 
   .am-sheet__box {
     gap: 14px;
-    /* Потолок упирается в оба края: низ и верх держат боксовые поля из темы (margin
-       по правилу у корня), зазор сверху — кусок поля, а не шестая высоты. */
-    max-height: calc(
-      100% - max(env(safe-area-inset-bottom), var(--am-sys-bottom)) -
-        max(env(safe-area-inset-top), var(--am-sys-top)) - 8px
-    );
+    /* Потолок — вся доступная высота: поля полос уже вычтены корнем. */
+    max-height: 100%;
     padding: 18px 16px 16px;
     border-radius: var(--am-r-xl) var(--am-r-xl) 0 0;
     transform: none;
@@ -1052,14 +1058,21 @@ onBeforeUnmount(() => {
     display: block;
     width: 100%;
     min-height: 52px;
-    padding: 0 14px;
+    /* Стрелка списка — своя, подальше от края: системная стояла на самой кромке. */
+    padding: 0 42px 0 14px;
     font: inherit;
     font-size: 16px;
     font-weight: 550;
     color: var(--am-text);
-    background: var(--am-fill-2);
+    background-color: var(--am-fill-2);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%237486a1' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 16px 16px;
     border: 1px solid var(--am-line-soft);
     border-radius: var(--am-r-m);
+    appearance: none;
+    -moz-appearance: none;
   }
 
   /* Оценка — точка на отрезке: число слева, штрих во всю оставшуюся строку. */
@@ -1117,11 +1130,13 @@ onBeforeUnmount(() => {
     border-radius: 50%;
   }
 
-  /* Серии — ручной ввод: число нужен любое, кнопки шага его не добирают. */
+  /* Серии — ручной ввод: число нужен любое, кнопки шага его не добирают.
+     Ряд центрируется — плитка одинакова с любой заполненностью. */
   .am-count {
     display: flex;
     gap: 10px;
     align-items: center;
+    justify-content: center;
   }
 
   .am-count__in {

@@ -4,6 +4,7 @@
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 import { pushBackStop } from '../back-stop'
+import { useScrollLock } from '../scroll-lock'
 
 const props = defineProps<{
   /** Открыто ли окно. */
@@ -13,6 +14,9 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ close: [] }>()
+
+// Открытое окно замирает фон под собой.
+useScrollLock(() => props.open)
 
 /** Коробка окна: её ищет above() среди всех открытых диалогов. */
 const sheet = ref<HTMLElement | null>(null)
@@ -186,7 +190,11 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(12px, 3vw, 32px);
+  /* Системные полосы прибавлены к полю: навбар в три кнопки в env() не приходит. */
+  padding: calc(clamp(12px, 3vw, 32px) + max(env(safe-area-inset-top), var(--am-sys-top)))
+    calc(clamp(12px, 3vw, 32px) + env(safe-area-inset-right))
+    calc(clamp(12px, 3vw, 32px) + max(env(safe-area-inset-bottom), var(--am-sys-bottom)))
+    calc(clamp(12px, 3vw, 32px) + env(safe-area-inset-left));
 }
 
 .am-sheet__veil {

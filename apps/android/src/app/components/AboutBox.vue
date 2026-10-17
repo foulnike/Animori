@@ -5,6 +5,7 @@
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 import { pushBackStop } from '../back-stop'
+import { useScrollLock } from '../scroll-lock'
 
 import RichText from './RichText.vue'
 
@@ -16,6 +17,9 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ close: [] }>()
+
+// Открытая модалка замирает фон под собой.
+useScrollLock(() => props.open)
 
 /** Тело описания: его листают стрелками. */
 const body = ref<HTMLElement | null>(null)
@@ -115,7 +119,11 @@ onBeforeUnmount(() => {
   z-index: 60;
   display: grid;
   place-items: center;
-  padding: 24px;
+  /* Системные полосы прибавлены к полю: навбар в три кнопки в env() не приходит. */
+  padding: calc(24px + max(env(safe-area-inset-top), var(--am-sys-top)))
+    calc(24px + env(safe-area-inset-right))
+    calc(24px + max(env(safe-area-inset-bottom), var(--am-sys-bottom)))
+    calc(24px + env(safe-area-inset-left));
 }
 
 /* Подложка красится темой, а не чёрным литералом: на светлой теме чёрная вуаль читалась провалом в экране. */

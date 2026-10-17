@@ -9,6 +9,7 @@ import type { MediaClip, MediaShot, MediaTrailer } from '@/core/types'
 import { Logger } from '@/utils/logger'
 
 import { canOpenOutside, isWeakPlatform } from '../platform'
+import { useScrollLock } from '../scroll-lock'
 
 const props = defineProps<{
   mediaId: number
@@ -34,6 +35,9 @@ const look = ref(-1)
 const reel = ref(false)
 
 const gal = ref(false)
+
+// Любое окно кадров замирает фон: галерея, крупный кадр и трейлер.
+useScrollLock(() => gal.value || reel.value || look.value >= 0)
 
 /** Картинки, которые уже отработали — приехали или отвалились. Файлы едут с чужого
  *  CDN: без заглушки плитка на секунду показывает пустые клетки. */
@@ -679,7 +683,11 @@ watch(() => [props.mediaId, props.malId], load)
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(12px, 3vw, 32px);
+  /* Системные полосы прибавлены к полю: навбар в три кнопки в env() не приходит. */
+  padding: calc(clamp(12px, 3vw, 32px) + max(env(safe-area-inset-top), var(--am-sys-top)))
+    calc(clamp(12px, 3vw, 32px) + env(safe-area-inset-right))
+    calc(clamp(12px, 3vw, 32px) + max(env(safe-area-inset-bottom), var(--am-sys-bottom)))
+    calc(clamp(12px, 3vw, 32px) + env(safe-area-inset-left));
 }
 
 /* Занавес — кнопка: клик мимо коробки закрывает, и это доступно с клавиатуры. */
@@ -769,7 +777,11 @@ watch(() => [props.mediaId, props.malId], load)
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(12px, 3vw, 32px);
+  /* Системные полосы прибавлены к полю: навбар в три кнопки в env() не приходит. */
+  padding: calc(clamp(12px, 3vw, 32px) + max(env(safe-area-inset-top), var(--am-sys-top)))
+    calc(clamp(12px, 3vw, 32px) + env(safe-area-inset-right))
+    calc(clamp(12px, 3vw, 32px) + max(env(safe-area-inset-bottom), var(--am-sys-bottom)))
+    calc(clamp(12px, 3vw, 32px) + env(safe-area-inset-left));
 }
 
 .am-look__veil,

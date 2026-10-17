@@ -12,11 +12,15 @@
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 import { pushBackStop } from '../back-stop'
+import { useScrollLock } from '../scroll-lock'
 import { canOpenOutside } from '../platform'
 import { Bridge } from '@/bridge'
 
 /** Открыто ли окно. */
 const open = ref(false)
+
+// Открытое окно замирает фон под собой.
+useScrollLock(() => open.value)
 
 /** Есть ли куда уводить ссылки: на приставке браузера нет, адрес показывается текстом. */
 const outside = canOpenOutside()
@@ -193,7 +197,11 @@ onBeforeUnmount(() => {
   z-index: 60;
   display: grid;
   place-items: center;
-  padding: 24px;
+  /* Системные полосы прибавлены к полю: навбар в три кнопки в env() не приходит. */
+  padding: calc(24px + max(env(safe-area-inset-top), var(--am-sys-top)))
+    calc(24px + env(safe-area-inset-right))
+    calc(24px + max(env(safe-area-inset-bottom), var(--am-sys-bottom)))
+    calc(24px + env(safe-area-inset-left));
 }
 
 /* Подложка красится темой, а не чёрным литералом: на светлой теме чёрная вуаль читалась провалом в экран. */

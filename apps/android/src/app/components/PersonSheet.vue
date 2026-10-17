@@ -22,6 +22,7 @@ import { settings } from '@/core/settings'
 import { Logger } from '@/utils/logger'
 
 import { pushBackStop } from '../back-stop'
+import { useScrollLock } from '../scroll-lock'
 import { genderWord, langWord, occupationWord } from '../labels'
 import { isWeakPlatform } from '../platform'
 import { navigate } from '../router'
@@ -30,6 +31,9 @@ import RichText from './RichText.vue'
 import SakuraBloom from './SakuraBloom.vue'
 
 const props = defineProps<{ start: PersonTarget }>()
+
+// Окно открыто, пока смонтировано: фон замирает весь этот срок.
+useScrollLock(() => true)
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 /** Телевизор: окно собирается теснее и шире, чтобы влезало в кадр. */
@@ -651,7 +655,11 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(12px, 3vw, 40px);
+  /* Системные полосы прибавлены к полю: навбар в три кнопки в env() не приходит. */
+  padding: calc(clamp(12px, 3vw, 40px) + max(env(safe-area-inset-top), var(--am-sys-top)))
+    calc(clamp(12px, 3vw, 40px) + env(safe-area-inset-right))
+    calc(clamp(12px, 3vw, 40px) + max(env(safe-area-inset-bottom), var(--am-sys-bottom)))
+    calc(clamp(12px, 3vw, 40px) + env(safe-area-inset-left));
   background: var(--am-veil);
   backdrop-filter: blur(8px);
   animation: am-veil-in var(--am-mid) var(--am-ease-soft) both;

@@ -5,6 +5,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { pushBackStop, runBackStop } from '../back-stop'
+import { useScrollLock } from '../scroll-lock'
 import { currentRoute, goBack, navigate, navDirection } from '../router'
 import { MENU, SCREEN_TITLES } from '../router/routes'
 import { updateOffer, updateOpen } from '../update'
@@ -27,6 +28,9 @@ const canGoBack = computed(() => BACK_SCREENS.includes(active.value))
 const drawer = ref(false)
 const menuBtn = ref<HTMLButtonElement | null>(null)
 const panel = ref<HTMLElement | null>(null)
+
+// Шторка замирает фон, пока открыта.
+useScrollLock(() => drawer.value)
 
 let dropStop: (() => void) | null = null
 

@@ -156,12 +156,13 @@ class MainActivity : TauriActivity() {
           }
         }
 
-        /** Текущие системные поля для CSS: навбар и вырез в пикселях. */
+        /** Текущие системные поля для CSS: навбар и вырез. Приходят физическими пикселями,
+         *  делятся на плотность — в CSS живут dp, и сырое число давало тройное поле. */
         @JavascriptInterface
-        fun insetTop(): Int = sysTop
+        fun insetTop(): Int = Math.round(sysTop / resources.displayMetrics.density)
 
         @JavascriptInterface
-        fun insetBottom(): Int = sysBottom
+        fun insetBottom(): Int = Math.round(sysBottom / resources.displayMetrics.density)
       },
       "AnimoriOrient",
     )
