@@ -18,6 +18,7 @@ import { pushBackStop } from '../back-stop'
 import EmptyMark from '../components/EmptyMark.vue'
 import SakuraMark from '../components/SakuraMark.vue'
 import { isWeakPlatform } from '../platform'
+import { setOrientation } from '../orient'
 import { currentRoute } from '../router'
 import { SAKURA_PETAL, SAKURA_TURNS } from '../sakura'
 
@@ -1074,6 +1075,8 @@ function onKeyUp(event: KeyboardEvent): void {
 }
 
 onMounted(() => {
+  setOrientation('landscape')
+
   const el = videoEl.value
   if (el !== null) {
     playback = attachPlayback(el, {
@@ -1149,6 +1152,8 @@ watch(wide, (on) => {
 })
 
 onBeforeUnmount(() => {
+  setOrientation('portrait')
+
   const el = videoEl.value
   if (el !== null) {
     if (spot !== '') {

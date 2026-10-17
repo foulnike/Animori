@@ -1,6 +1,7 @@
 package com.foulnike.animori.mobile
 
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -87,6 +88,20 @@ class MainActivity : TauriActivity() {
         }
       },
       "AnimoriUpdate",
+    )
+
+    // Мост ориентации: приложение портретное, альбомную сторону просит только плеер.
+    webView.addJavascriptInterface(
+      object {
+        @JavascriptInterface
+        fun set(name: String) {
+          val mode =
+            if (name == "landscape") ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+            else ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+          runOnUiThread { requestedOrientation = mode }
+        }
+      },
+      "AnimoriOrient",
     )
   }
 
