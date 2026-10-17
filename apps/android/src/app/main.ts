@@ -6,6 +6,7 @@ import { startAppearance } from './appearance'
 import { seen } from './see-tile'
 import { tip } from './tip'
 import { startDpad } from './dpad'
+import { startInsets } from './insets'
 import { isWeakPlatform, markPlatform } from './platform'
 import { startUpdateCheck } from './update'
 import { initCollection } from '@/core/collection'
@@ -24,6 +25,9 @@ if (!root) throw new Error('AniMori: корень #app не найден в inde
 
 // До первой отрисовки: класс нужен на <html> раньше, чем браузер начнёт считать стили.
 markPlatform()
+
+// Системные поля моста — в CSS-переменные: навбар в env() не приходит.
+startInsets()
 
 // Пульт: на десктопе не нужен — там стрелками крутят страницу.
 if (isWeakPlatform()) startDpad()

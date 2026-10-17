@@ -19,9 +19,30 @@ import java.io.File
 import java.net.URL
 
 class MainActivity : TauriActivity() {
+  /** Системные поля в пикселях. Chromium не всегда отдаёт их в env(): нижний навбар
+     в три кнопки до CSS не доходит, и содержимое уезжает под него. */
+  @Volatile private var sysTop = 0
+
+  @Volatile private var sysBottom = 0
+
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+
+    window.decorView.setOnApplyWindowInsetsListener { _, insets ->
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        val bars =
+          insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+        sysTop = bars.top
+        sysBottom = bars.bottom
+      } else {
+        @Suppress("DEPRECATION")
+        sysTop = insets.systemWindowInsetTop
+        @Suppress("DEPRECATION")
+        sysBottom = insets.systemWindowInsetBottom
+      }
+      insets
+    }
   }
 
   /**
@@ -134,6 +155,13 @@ class MainActivity : TauriActivity() {
             }
           }
         }
+
+        /** Текущие системные поля для CSS: навбар и вырез в пикселях. */
+        @JavascriptInterface
+        fun insetTop(): Int = sysTop
+
+        @JavascriptInterface
+        fun insetBottom(): Int = sysBottom
       },
       "AnimoriOrient",
     )

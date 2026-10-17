@@ -270,4 +270,22 @@ watch(
 .am-date__label--bad {
   color: var(--am-bad);
 }
+
+/* Телефон: поле во всю ширину — подпись ДД/ММ/ГГГГ и кнопки в две строки.
+   Рядом с кнопками место под маску не оставалось. */
+@media (max-width: 640px) {
+  .am-date {
+    grid-template-areas:
+      'field'
+      'acts'
+      'label';
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .am-date__input {
+    padding-left: 32px;
+    font-size: 16px;
+    letter-spacing: 0.06em;
+  }
+}
 </style>

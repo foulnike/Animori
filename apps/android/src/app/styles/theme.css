@@ -37,6 +37,10 @@
   --am-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --am-ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
   --am-drift: 46s;
+
+  /* Системные поля с устройства: JS кладёт их сюда мостом, стили берут максимум с env(). */
+  --am-sys-top: 0px;
+  --am-sys-bottom: 0px;
 }
 
 /* Тёмная: основная тема приложения. */
@@ -226,6 +230,16 @@ body {
    дублирует нажатие и режет глаз: фокус у кнопок и так виден по-своему. */
 html {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Боксы оверлеев прижаты к системным полосам: подложка остаётся во весь экран,
+   поля держит бокс. Верх уводит строку состояния, низ — навбар в три кнопки,
+   которого в env() не бывает. */
+.am-sheet__box,
+.am-look__box,
+.am-reel__box {
+  margin-top: max(env(safe-area-inset-top), var(--am-sys-top));
+  margin-bottom: max(env(safe-area-inset-bottom), var(--am-sys-bottom));
 }
 
 body {
@@ -1397,15 +1411,5 @@ html.am-lite {
 @media (max-width: 640px) {
   html {
     zoom: 1.08;
-  }
-
-  /* Оверлеи прижимают содержимое от системной полосы вниз: навбар в три кнопки
-     накрывает нижнюю кромку шторки, и кнопки под ним недоступны. Боковые поля
-     держат вырез, когда оверлей открывается в альбомной стороне. */
-  .am-sheet,
-  .am-look,
-  .am-reel {
-    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
-      env(safe-area-inset-left);
   }
 }

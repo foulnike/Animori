@@ -214,7 +214,8 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 8px;
   align-items: center;
-  padding: calc(env(safe-area-inset-top) + 8px) clamp(12px, 4vw, 20px) 8px;
+  /* Поля берут максимум из env и моста: навбар в три кнопки в env() не приходит. */
+  padding: calc(max(env(safe-area-inset-top), var(--am-sys-top)) + 8px) clamp(12px, 4vw, 20px) 8px;
 }
 
 /* Граница шапки — перетекание вниз, а не линия: жёсткий край резал уезжающие плитки.
@@ -378,7 +379,8 @@ onBeforeUnmount(() => {
   flex-direction: column;
   width: min(300px, 82vw);
   height: 100%;
-  padding: calc(env(safe-area-inset-top) + 14px) 12px calc(env(safe-area-inset-bottom) + 12px)
+  padding: calc(max(env(safe-area-inset-top), var(--am-sys-top)) + 14px) 12px
+    calc(max(env(safe-area-inset-bottom), var(--am-sys-bottom)) + 12px)
     max(env(safe-area-inset-left), 12px);
   overflow-y: auto;
   background: var(--am-panel);
@@ -523,7 +525,7 @@ onBeforeUnmount(() => {
   width: 100%;
   /* Низ дополнен системным полем: жестовая полоса накрывает содержимое. */
   padding: clamp(14px, 1.6vw, 30px) clamp(14px, 4vw, 20px)
-    calc(clamp(16px, 1.6vw, 30px) + env(safe-area-inset-bottom));
+    calc(clamp(16px, 1.6vw, 30px) + max(env(safe-area-inset-bottom), var(--am-sys-bottom)));
 }
 
 /* Потолок ширины с центровкой: без него на широком окне строка текста тянулась бы метрами. */

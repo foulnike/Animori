@@ -166,6 +166,19 @@ function fillParts(): void {
 }
 
 /** Пересмотры. Потолка у них нет, а ниже нуля уходить бессмысленно. */
+/** Ручной ввод серий: тот же зажим по краям, что у кнопок шага, и ровный показ числа. */
+function onPartsInput(event: Event): void {
+  const el = event.target
+  if (!(el instanceof HTMLInputElement)) return
+
+  const raw = Number.parseInt(el.value, 10)
+  const top = props.partsTotal ?? Number.MAX_SAFE_INTEGER
+  const next = Number.isFinite(raw) ? Math.min(Math.max(raw, 0), top) : 0
+
+  pickProgress.value = next
+  el.value = String(next)
+}
+
 function bumpRepeat(delta: number): void {
   pickRepeat.value = Math.max(0, pickRepeat.value + delta)
 }
@@ -364,7 +377,7 @@ onBeforeUnmount(() => {
         <div class="am-sheet__body">
           <section class="am-field am-field--wide">
             <span class="am-field__name">Закладка</span>
-            <div class="am-picks">
+            <div class="am-picks am-picks--status">
               <button
                 v-for="item in statuses"
                 :key="item.key"
@@ -376,11 +389,34 @@ onBeforeUnmount(() => {
                 {{ item.title }}
               </button>
             </div>
+
+            <!-- Телефон: системный список — колесо ОС вместо капсул, по которым надо прицеливаться. -->
+            <select v-model="pickStatus" class="am-input am-status" aria-label="Закладка">
+              <option value="">Не в списке</option>
+              <option v-for="item in statuses" :key="item.key" :value="item.key">
+                {{ item.title }}
+              </option>
+            </select>
           </section>
 
           <section class="am-field am-field--wide">
             <span class="am-field__name">Оценка</span>
-            <div class="am-step-row">
+
+            <!-- Телефон: точка на отрезке — вся шкала бьётся одним пальцем. -->
+            <div class="am-range">
+              <span class="am-range__val">{{ markText(pickScore) }}</span>
+              <input
+                v-model.number="pickScore"
+                class="am-range__in"
+                type="range"
+                min="0"
+                max="10"
+                step="0.5"
+                aria-label="Оценка"
+              />
+            </div>
+
+            <div class="am-step-row am-step-row--score">
               <button
                 class="am-step"
                 type="button"
@@ -420,6 +456,21 @@ onBeforeUnmount(() => {
 
           <section class="am-field">
             <span class="am-field__name">{{ partsName }}</span>
+
+            <!-- Телефон: серию набирают числом — кнопки шага редкие серии не добирают. -->
+            <div class="am-count">
+              <input
+                class="am-input am-count__in"
+                type="number"
+                inputmode="numeric"
+                min="0"
+                :max="partsTotal ?? undefined"
+                :value="pickProgress"
+                :aria-label="`${partsName}: набранное число серий`"
+                @change="onPartsInput"
+              />
+              <span v-if="partsTotal !== null" class="am-count__of">из {{ partsTotal }}</span>
+            </div>
 
             <!-- Прыжок к потолку живёт только при известном потолке: без итога кнопка-обманка хуже её отсутствия. -->
             <div class="am-step-row am-step-row--ends">
@@ -732,6 +783,13 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 
+/* Телефонные виды полей: прячутся до нижней шторки внизу файла. */
+.am-status,
+.am-range,
+.am-count {
+  display: none;
+}
+
 /* Цель нажатия 44 пикселя по высоте: правило пульта и пальца заодно. */
 .am-pick {
   display: inline-flex;
@@ -942,8 +1000,13 @@ onBeforeUnmount(() => {
 
   .am-sheet__box {
     gap: 14px;
-    max-height: 88%;
-    padding: 18px 16px calc(16px + env(safe-area-inset-bottom));
+    /* Потолок упирается в оба края: низ и верх держат боксовые поля из темы (margin
+       по правилу у корня), зазор сверху — кусок поля, а не шестая высоты. */
+    max-height: calc(
+      100% - max(env(safe-area-inset-bottom), var(--am-sys-bottom)) -
+        max(env(safe-area-inset-top), var(--am-sys-top)) - 8px
+    );
+    padding: 18px 16px 16px;
     border-radius: var(--am-r-xl) var(--am-r-xl) 0 0;
     transform: none;
     animation-name: am-sheet-up;
@@ -975,6 +1038,118 @@ onBeforeUnmount(() => {
   /* Шкала баллов — пять в ряд, два ряда: палец попадает без прицеливания. */
   .am-picks--mid {
     grid-template-columns: repeat(5, 1fr);
+  }
+
+  /* Три старых вида уходят: капсулы закладки, штрихи оценки и кнопки серий. */
+  .am-picks--status,
+  .am-step-row--score,
+  .am-picks--mid,
+  .am-step-row--ends {
+    display: none;
+  }
+
+  .am-status {
+    display: block;
+    width: 100%;
+    min-height: 52px;
+    padding: 0 14px;
+    font: inherit;
+    font-size: 16px;
+    font-weight: 550;
+    color: var(--am-text);
+    background: var(--am-fill-2);
+    border: 1px solid var(--am-line-soft);
+    border-radius: var(--am-r-m);
+  }
+
+  /* Оценка — точка на отрезке: число слева, штрих во всю оставшуюся строку. */
+  .am-range {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+
+  .am-range__val {
+    flex: none;
+    width: 64px;
+    font-size: 26px;
+    font-weight: 700;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .am-range__in {
+    appearance: none;
+    flex: 1;
+    min-width: 0;
+    height: 52px;
+    background: none;
+  }
+
+  .am-range__in::-webkit-slider-runnable-track {
+    height: 6px;
+    background: var(--am-fill-3);
+    border-radius: var(--am-r-cap);
+  }
+
+  .am-range__in::-webkit-slider-thumb {
+    appearance: none;
+    width: 30px;
+    height: 30px;
+    margin-top: -12px;
+    background: linear-gradient(135deg, var(--am-accent), var(--am-accent-2));
+    border: 2px solid var(--am-glass-deep);
+    border-radius: 50%;
+    box-shadow: var(--am-sh-1);
+  }
+
+  .am-range__in::-moz-range-track {
+    height: 6px;
+    background: var(--am-fill-3);
+    border-radius: var(--am-r-cap);
+  }
+
+  .am-range__in::-moz-range-thumb {
+    width: 30px;
+    height: 30px;
+    background: linear-gradient(135deg, var(--am-accent), var(--am-accent-2));
+    border: 2px solid var(--am-glass-deep);
+    border-radius: 50%;
+  }
+
+  /* Серии — ручной ввод: число нужен любое, кнопки шага его не добирают. */
+  .am-count {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .am-count__in {
+    width: 128px;
+    min-height: 52px;
+    padding: 0 14px;
+    font: inherit;
+    font-size: 18px;
+    font-weight: 650;
+    color: var(--am-text);
+    text-align: center;
+    background: var(--am-fill-2);
+    border: 1px solid var(--am-line-soft);
+    border-radius: var(--am-r-m);
+    font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+
+  .am-count__in::-webkit-inner-spin-button,
+  .am-count__in::-webkit-outer-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+
+  .am-count__of {
+    font-size: 15px;
+    color: var(--am-faint);
   }
 
   .am-pick--num {

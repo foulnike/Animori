@@ -18,6 +18,7 @@ import { pushBackStop } from '../back-stop'
 import EmptyMark from '../components/EmptyMark.vue'
 import SakuraMark from '../components/SakuraMark.vue'
 import { isWeakPlatform } from '../platform'
+import { syncInsets } from '../insets'
 import { setImmersive, setOrientation } from '../orient'
 import { currentRoute } from '../router'
 import { SAKURA_PETAL, SAKURA_TURNS } from '../sakura'
@@ -1077,6 +1078,8 @@ function onKeyUp(event: KeyboardEvent): void {
 onMounted(() => {
   setOrientation('landscape')
   setImmersive(true)
+  // Поля моста догоняют погружение: полосы ушли, инсеты обновились асинхронно.
+  window.setTimeout(syncInsets, 250)
 
   const el = videoEl.value
   if (el !== null) {
@@ -1155,6 +1158,7 @@ watch(wide, (on) => {
 onBeforeUnmount(() => {
   setImmersive(false)
   setOrientation('portrait')
+  window.setTimeout(syncInsets, 250)
 
   const el = videoEl.value
   if (el !== null) {

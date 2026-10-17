@@ -333,7 +333,8 @@
   flex-direction: column;
   /* Боковые поля держат системные вырезы: в альбомной стороне фронталка врезана в край,
      и кнопка под ней недоступна. Низ держит навбар, когда погружение снято. */
-  padding: 40px calc(12px + env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom))
+  padding: 40px calc(12px + env(safe-area-inset-right))
+    calc(10px + max(env(safe-area-inset-bottom), var(--am-sys-bottom)))
     calc(12px + env(safe-area-inset-left));
   background: linear-gradient(
     to top,
@@ -924,8 +925,8 @@
   position: absolute;
   z-index: 5;
   /* Боковые поля держат системные вырезы, как у панели: в альбомной стороне фронталка в краю. */
-  padding: calc(18px + env(safe-area-inset-top)) calc(24px + env(safe-area-inset-right)) 40px
-    calc(24px + env(safe-area-inset-left));
+  padding: calc(18px + max(env(safe-area-inset-top), var(--am-sys-top)))
+    calc(24px + env(safe-area-inset-right)) 40px calc(24px + env(safe-area-inset-left));
   background: linear-gradient(to bottom, rgb(0 0 0 / 0.7) 0%, rgb(0 0 0 / 0) 100%);
   inset: 0 0 auto;
   transition:
