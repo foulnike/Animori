@@ -272,6 +272,10 @@ const box = ref<HTMLElement | null>(null)
 let fitWatch: ResizeObserver | null = null
 
 function fitSheet(): void {
+  // Телефон: окно прижато к низу и прокручивается серединой — ужатие масштабом не нужно
+  // и мешало бы: fitSheet снял бы потолок высоты, а прокрутка его заменяет.
+  if (lite) return
+
   const host = veil.value
   const el = box.value
   if (host === null || el === null) return
@@ -602,6 +606,14 @@ onBeforeUnmount(() => {
   }
 }
 
+/* Подъём снизу: нижняя шторка выезжает, а не всплывает из центра. */
+@keyframes am-sheet-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
 .am-sheet__top {
   display: flex;
   gap: 14px;
@@ -915,6 +927,110 @@ onBeforeUnmount(() => {
 @media (max-width: 760px) {
   .am-sheet__body {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ТЕЛЕФОН. Нижняя шторка вместо центральной коробки: палец живёт внизу, середина
+   прокручивается, кнопки в фиксированном подвале. Масштабное ужатие не нужно —
+   fitSheet на слабой платформе молчит, место держит max-height. */
+@media (max-width: 640px) {
+  .am-sheet {
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .am-sheet__box {
+    gap: 14px;
+    max-height: 88%;
+    padding: 18px 16px calc(16px + env(safe-area-inset-bottom));
+    border-radius: var(--am-r-xl) var(--am-r-xl) 0 0;
+    transform: none;
+    animation-name: am-sheet-up;
+  }
+
+  .am-sheet__body {
+    gap: 10px;
+    padding-right: 0;
+  }
+
+  .am-field {
+    gap: 10px;
+    padding: 14px;
+  }
+
+  /* Закладка — сетка ячеек под палец, а не лента капсул. */
+  .am-picks {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+    gap: 8px;
+  }
+
+  .am-pick {
+    min-height: 48px;
+    padding: 0 10px;
+    font-size: 15px;
+  }
+
+  /* Шкала баллов — пять в ряд, два ряда: палец попадает без прицеливания. */
+  .am-picks--mid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+
+  .am-pick--num {
+    min-width: 0;
+    min-height: 52px;
+    font-size: 16px;
+  }
+
+  .am-step-row {
+    gap: 8px;
+  }
+
+  .am-step {
+    width: 52px;
+    height: 52px;
+    font-size: 22px;
+  }
+
+  /* Счётчики держат число по центру между кнопками: серия показывает «7 из 12» целиком. */
+  .am-step-row .am-step__value {
+    flex: 1;
+    min-width: 0;
+    font-size: 18px;
+    text-align: center;
+  }
+
+  .am-note {
+    height: 120px;
+    min-height: 120px;
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  /* Подвал колонкой: «Готово» большим кирпичом под большим пальцем,
+     «Убрать» — тихой строкой над ним. */
+  .am-sheet__foot {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .am-sheet__foot .am-bar__gap {
+    display: none;
+  }
+
+  .am-sheet__foot > .am-btn {
+    justify-content: center;
+    width: 100%;
+    min-height: 52px;
+  }
+
+  .am-sheet__foot > .am-btn:first-child {
+    order: 1;
+  }
+
+  .am-sheet__foot > .am-btn:last-child {
+    order: 2;
   }
 }
 
