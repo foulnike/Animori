@@ -505,12 +505,13 @@
   }
 }
 
-/* Телефон в портрете: шапка сжимается, чтобы постер, название и действия встали в один экран.
-   Порог — ширина карманного окна; выше него остаётся раскладка планшета и телевизора. */
+/* Телефон в портрете: шапка колонкой — постер и оценки сверху, под ними название и мета
+   по центру. Ряд «постер слева, текст справа» оставлял узкую колонку, где заголовок
+   ломался на три строки, а пилюли жались в кучу. */
 @media (max-width: 640px) {
   .am-hero {
-    --am-hero-pad-y: clamp(20px, 5vw, 30px);
-    --am-hero-pad-x: 14px;
+    --am-hero-pad-y: clamp(22px, 6vw, 34px);
+    --am-hero-pad-x: 16px;
     --am-hero-gap: 14px;
   }
 
@@ -519,21 +520,39 @@
     background-position: center 12%;
   }
 
-  /* Постер теснее к кромке, но не мельче читаемой обложки: 2/3 от 122px на телефоне 360 — 183px высоты. */
-  .am-hero__cover {
-    width: min(34vw, 148px);
+  .am-hero__lead {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+
+  /* Постер крупнее прежнего: в центре он читается и с вытянутого расстояния. */
+  .am-hero__stack {
+    width: min(44vw, 164px);
+  }
+
+  .am-hero__text {
+    align-items: center;
+    width: 100%;
+    text-align: center;
   }
 
   .am-hero__title {
-    font-size: clamp(19px, 5.4vw, 23px);
+    font-size: clamp(20px, 6vw, 26px);
+    text-align: center;
   }
 
   /* Ромадзи и оригинал — в одну строку с многоточием: два длинных строковых столба съедали пол-экрана шапки. */
   .am-hero__sub {
     overflow: hidden;
+    max-width: 100%;
     font-size: 12px;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .am-pills {
+    justify-content: center;
   }
 
   .am-hero__mark {
@@ -558,7 +577,9 @@
   /* «Смотреть» тянется на всю строку, «В список» стоит по краю: главное действие не спорит
      со вторым за узкую полосу под постером. */
   .am-acts {
+    width: 100%;
     gap: 8px;
+    margin-top: 14px;
   }
 
   .am-acts__play {
@@ -569,6 +590,21 @@
   .am-acts__play,
   .am-acts__save {
     padding: 0 16px;
+  }
+
+  /* Описание режется строками: хвост читается в окне крупного плана. */
+  .am-about-box .am-about__clip {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 7;
+  }
+
+  .am-about__more {
+    margin-top: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--am-accent);
   }
 }
 

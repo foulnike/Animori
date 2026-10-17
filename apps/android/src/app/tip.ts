@@ -2,6 +2,8 @@
 
 import type { Directive } from 'vue'
 
+import { isWeakPlatform } from './platform'
+
 /** Задержка перед показом: проход мышью по сетке не должен мигать плашками. */
 const SHOW_DELAY_MS = 240
 
@@ -140,6 +142,9 @@ function onLeave(): void {
  *  значат «подписи нет» — условие в разметке не нужно. */
 export const tip: Directive<HTMLElement, string | null | undefined> = {
   mounted(el, binding) {
+    // На слабой платформе подписи отключены целиком: плашка липнет к пальцу, закрывается касанием мимо и мешает.
+    if (isWeakPlatform()) return
+
     words.set(el, textOf(binding.value))
 
     el.addEventListener('pointerenter', onEnter)
@@ -150,6 +155,8 @@ export const tip: Directive<HTMLElement, string | null | undefined> = {
   },
 
   updated(el, binding) {
+    if (isWeakPlatform()) return
+
     const text = textOf(binding.value)
     words.set(el, text)
 

@@ -21,6 +21,17 @@ const sheetOpen = ref(false)
 /** Открыто ли описание крупным планом: в плитке карточки текст идёт 11.5px. */
 const aboutOpen = ref(false)
 
+/** Корень обрезанного описания: для замера, не обрезано ли. */
+const aboutText = ref<HTMLElement | null>(null)
+
+/** Обрезано ли описание строками: хвост читается в окне крупного плана. */
+const aboutMore = ref(false)
+
+function measureAbout(): void {
+  const el = aboutText.value
+  aboutMore.value = el !== null && el.scrollHeight > el.clientHeight + 2
+}
+
 /** Какой знак сервиса ставить ярлычку оценки. Ключи приходят из media-card.ts, а имена
  * знаков — из BrandMark: словарь держит их вместе, чтобы разметка не знала ни о тех, ни о других. */
 const MARK_BRAND: Record<string, 'anilist' | 'shikimori' | 'myanimelist'> = {
@@ -133,6 +144,7 @@ onMounted(() => {
   watchWide = mq
 
   void load()
+  void nextTick(measureAbout)
 })
 
 onBeforeUnmount(() => {
@@ -146,6 +158,9 @@ watch(mediaId, () => {
   aboutOpen.value = false
   void load()
 })
+
+// Текст описания обрезается строками только на телефоне: мера снимается после его отрисовки.
+watch([about, wide], () => void nextTick(measureAbout))
 
 // На пульте карточка открывается сразу на «Смотреть»: пока фокус ни на ком, стрелки ведёт оболочка, и первое нажатие уходит первому по разметке (dpad.ts). Прокрутку не трогаем.
 const playHit = ref<HTMLElement | null>(null)
@@ -307,13 +322,18 @@ watch(card, (now) => {
      Сплошным текстом: описания с Шикимори набиты ссылками на персонажей и другие аниме, и на
      приставке каждая становилась целью обхода посреди абзаца — пульт вставал на неё, а толку
      не было. На ПК те же ссылки живые, там на них есть куда идти. -->
-              <RichText v-if="about" class="am-about" :text="about" plain />
+              <div v-if="about" ref="aboutText" class="am-about__clip">
+                <RichText class="am-about" :text="about" plain />
+              </div>
               <div v-else-if="aboutWait" class="am-about__hold" aria-hidden="true">
                 <span class="am-skeleton am-about__hold-line" />
                 <span class="am-skeleton am-about__hold-line" />
                 <span class="am-skeleton am-about__hold-line am-about__hold-line--short" />
               </div>
               <p v-else class="am-dim">Описания ни один источник не дал.</p>
+
+              <!-- Дверь в окно крупного плана: срезанные строки требуют продолжения. -->
+              <span v-if="aboutMore" class="am-about__more">Читать дальше…</span>
 
               <p v-if="aboutSource !== ''" class="am-about__tail">
                 Описание отсюда: {{ aboutSource }}

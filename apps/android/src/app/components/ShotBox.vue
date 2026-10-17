@@ -103,6 +103,86 @@ function stepLook(by: number): void {
   look.value = (look.value + by + count) % count
 }
 
+/** Свайп по кадру: уезд в сторону пальца, въезд нового кадра с противоположной. Мыши не касаемся. */
+const swipeX = ref(0)
+const swiping = ref(false)
+
+/** Движение без пружины: кадр стоит у края и ждёт замены. */
+const flying = ref(false)
+
+let swipeFrom = 0
+let swipeW = 0
+let swipeTimer = 0
+
+/** Клик после свайпа не должен попасть в кнопку под пальцем. */
+let swallowClick = false
+
+/** Длительность уезда и въезда в CSS (.am-look__art); таймер идёт с небольшим запасом. */
+const SLIDE_MS = 200
+
+function onLookDown(event: PointerEvent): void {
+  if (event.pointerType === 'mouse' || look.value < 0) return
+
+  window.clearTimeout(swipeTimer)
+  flying.value = false
+  swiping.value = true
+  swallowClick = false
+  swipeFrom = event.clientX
+  swipeW = (event.currentTarget as Element).getBoundingClientRect().width
+  swipeX.value = 0
+}
+
+function onLookMove(event: PointerEvent): void {
+  if (!swiping.value) return
+  swipeX.value = event.clientX - swipeFrom
+}
+
+function onLookUp(): void {
+  if (!swiping.value) return
+  swiping.value = false
+
+  const dx = swipeX.value
+
+  // Маленький сдвиг — пружина на место, дальше без шага.
+  if (Math.abs(dx) < 48) {
+    swipeX.value = 0
+    return
+  }
+
+  swallowClick = true
+  slide(dx < 0 ? -1 : 1)
+}
+
+/** Кадр довозится до края в сторону свайпа, заменяется там и заезжает обратно
+ *  с противоположного края: новый кадр появляется со стороны, а не на месте старого. */
+function slide(dir: -1 | 1): void {
+  swipeX.value = dir * swipeW
+
+  swipeTimer = window.setTimeout(() => {
+    if (look.value < 0) return
+    stepLook(dir === -1 ? 1 : -1)
+
+    // Смена кадра кадром: без анимации у противоположного края...
+    flying.value = true
+    swipeX.value = -dir * swipeW
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        // ...и пружина въезда.
+        flying.value = false
+        swipeX.value = 0
+      })
+    })
+  }, SLIDE_MS)
+}
+
+function onLookClickCapture(event: MouseEvent): void {
+  if (!swallowClick) return
+  swallowClick = false
+  event.preventDefault()
+  event.stopPropagation()
+}
+
 /** Открывает трейлер: окном, если площадка встраивается, иначе наружу. Встраивание
  * проверено ещё при разборе ответа — сюда embed без адреса не приходит. */
 function openReel(): void {
@@ -205,6 +285,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKey)
+  window.clearTimeout(swipeTimer)
   // Показ прекращается вместе с уходом с тайтла: ответ, пришедший следом, уже не к месту.
   run++
 })
@@ -346,8 +427,25 @@ watch(() => [props.mediaId, props.malId], load)
     <div v-if="look >= 0 && nowShot" class="am-look">
       <button class="am-look__veil" type="button" aria-label="Закрыть" @click="look = -1" />
 
-      <div class="am-look__box" role="dialog" aria-modal="true" aria-label="Кадр">
-        <img class="am-look__art" :src="nowShot.original" alt="" decoding="async" />
+      <div
+        class="am-look__box"
+        :class="{ 'am-look__box--drag': swiping, 'am-look__box--flying': flying }"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Кадр"
+        @pointerdown.capture="onLookDown"
+        @pointermove="onLookMove"
+        @pointerup="onLookUp"
+        @pointercancel="onLookUp"
+        @click.capture="onLookClickCapture"
+      >
+        <img
+          class="am-look__art"
+          :src="nowShot.original"
+          alt=""
+          decoding="async"
+          :style="{ transform: `translateX(${swipeX}px)` }"
+        />
 
         <div class="am-look__row">
           <button
@@ -789,5 +887,17 @@ watch(() => [props.mediaId, props.malId], load)
 :global([data-am-skin='amoled']) .am-shots__reel,
 :global([data-am-skin='amoled']) .am-shots__hold {
   border-color: var(--am-line-soft);
+}
+
+/* Свайп по кадру: горизонтальное ведение слушаем сами, вертикальное отдаём системе.
+   Длительность уезда и въезда задана здесь же: таймер в скрипте сверяется с ней. */
+.am-look__art {
+  touch-action: pan-y;
+  transition: transform 0.18s var(--am-ease);
+}
+
+.am-look__box--drag .am-look__art,
+.am-look__box--flying .am-look__art {
+  transition: none;
 }
 </style>

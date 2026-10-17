@@ -285,7 +285,7 @@ watch(crew, () => {
         <span class="am-bar__gap" />
         <button
           v-if="hiddenCrew > 0"
-          class="am-btn am-btn--ghost"
+          class="am-btn am-btn--ghost am-crew__fold"
           type="button"
           @click="wide = !wide"
         >
@@ -293,7 +293,7 @@ watch(crew, () => {
         </button>
       </div>
 
-      <div ref="crewBox" class="am-crew">
+      <div ref="crewBox" class="am-crew" :class="{ 'am-crew--capped': !wide }">
         <button
           v-for="person in shownCrew"
           :key="`${person.personId}-${person.role ?? ''}`"
@@ -322,6 +322,16 @@ watch(crew, () => {
           </span>
         </button>
       </div>
+
+      <!-- Телефон: кнопка хвоста стоит под прокруткой сетки, а не в шапке — палец дотягивается до неё. -->
+      <button
+        v-if="hiddenCrew > 0"
+        class="am-btn am-btn--ghost am-crew__more"
+        type="button"
+        @click="wide = !wide"
+      >
+        {{ wide ? 'Свернуть' : `Ещё ${hiddenCrew}` }}
+      </button>
     </div>
   </template>
 </template>
@@ -363,6 +373,29 @@ watch(crew, () => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 10px;
+}
+
+/* Кнопка хвоста живёт под сеткой на телефоне; на широком окне хвостом ведает шапка. */
+.am-crew__more {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  /* Свёрнутая сетка прокручивается внутри плитки: показано много, а место занято одно. */
+  .am-crew--capped {
+    max-height: 320px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .am-crew__fold {
+    display: none;
+  }
+
+  .am-crew__more {
+    display: inline-flex;
+    align-self: flex-start;
+  }
 }
 
 .am-mate {
