@@ -38,10 +38,10 @@ export default defineConfig({
     __ANIMORI_PLATFORM__: JSON.stringify('app'),
     // Номер версии нужен рантайму для заголовка User-Agent нашего канала (packages/core/src/bridge/TauriBridge.ts) и для экранов приложения.
     __ANIMORI_VERSION__: JSON.stringify(version),
-    // Умения оболочки объявляет сборка, а не мост: файл моста общий у двух продуктов. У телевизора их нет
-    // ни одного, и объявление обязано быть честным — по нему экраны решают, показывать ли то, что нечем открыть.
+    // Умения оболочки объявляет сборка, а не мост: файл моста общий у продуктов. У телефона
+    // есть системный браузер — наружные ссылки (документы, OAuth Яндекса) открываются им.
     __ANIMORI_SHELL_CAN__: JSON.stringify({
-      browser: false,
+      browser: true,
       history: false,
       fullscreen: false,
       cast: false,

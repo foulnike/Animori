@@ -606,7 +606,7 @@ onMounted(() => {
         </button>
       </template>
 
-      <CloudBox :list="listCount" @changed="onCloudChanged" />
+      <CloudBox :list="listCount" :device="system" @changed="onCloudChanged" />
     </SettingsSheet>
 
     <CloudHelp :open="cloudHelp" @close="cloudHelp = false" />

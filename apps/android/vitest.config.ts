@@ -30,7 +30,7 @@ export default defineConfig({
     // Мост в проверках подменён заглушкой, но объявление остаётся: файл моста общий,
     // и ключ читается из него же. Значение — как в настоящей сборке этого продукта.
     __ANIMORI_SHELL_CAN__: JSON.stringify({
-      browser: false,
+      browser: true,
       history: false,
       fullscreen: false,
       cast: false,
