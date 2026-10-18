@@ -18,6 +18,7 @@ import { adultByBirth } from '@/core/adult'
 import { clearHidden } from '@/core/recs'
 import { saveSetting, settings } from '@/core/settings'
 import { purgeAdultPick } from './home-keep'
+import { cloudPathText } from '@/core/cloud'
 import { APPEARANCES, appearance, setAppearance } from '../appearance'
 import { checkUpdate, installUpdate, updateOffer } from '../update'
 import BrandMark from '../components/BrandMark.vue'
@@ -609,7 +610,7 @@ onMounted(() => {
       <CloudBox :list="listCount" :device="system" @changed="onCloudChanged" />
     </SettingsSheet>
 
-    <CloudHelp :open="cloudHelp" @close="cloudHelp = false" />
+    <CloudHelp :open="cloudHelp" :path="cloudPathText()" @close="cloudHelp = false" />
 
     <SettingsSheet :open="openDoor === 'look'" title="Оформление" @close="openDoor = null">
       <div class="am-panel am-box">

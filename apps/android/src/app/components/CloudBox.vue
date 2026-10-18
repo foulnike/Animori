@@ -482,34 +482,46 @@ onMounted(() => {
       <span class="am-place__acts">
         <template v-if="cloudOn()">
           <button
-            v-tip="'Проверить связь: годен ли пропуск и на месте ли папка копии'"
-            class="am-icon"
+            class="am-place__act"
             type="button"
-            aria-label="Проверить связь"
+            aria-label="Проверить связь: годен ли пропуск и на месте ли папка копии"
             :disabled="cloudBusy"
             @click="onCloudCheck"
           >
-            ↻
+            <span aria-hidden="true">↻</span>
+            Проверить
           </button>
           <button
-            v-tip="'Сменить пропуск'"
-            class="am-icon"
+            class="am-place__act"
             type="button"
-            aria-label="Сменить пропуск"
+            aria-label="Сменить пропуск Яндекс Диска"
             :disabled="cloudBusy || tokenOpen"
             @click="tokenOpen = true"
           >
-            🔑
+            <svg
+              class="am-place__key"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="8.5" cy="15.5" r="3.5" />
+              <path d="M11 13 19 5M15.5 8.5l2 2M17.5 6.5l2 2" />
+            </svg>
+            Сменить
           </button>
           <button
-            v-tip="'Отключить облако: забыть пропуск. Файл копии на Диске останется'"
-            class="am-icon"
+            class="am-place__act am-place__act--bad"
             type="button"
-            aria-label="Отключить облако"
+            aria-label="Отключить облако: забыть пропуск, файл на Диске останется"
             :disabled="cloudBusy"
             @click="onCloudForget"
           >
-            ✕
+            <span aria-hidden="true">✕</span>
+            Отключить
           </button>
         </template>
 
@@ -541,7 +553,11 @@ onMounted(() => {
         Пропуск выдаёт сам Яндекс: заведите приложение с правом «Приложения на Диске» на
         <button class="am-link" type="button" @click="onCloudHelp">oauth.yandex.com</button>
         и вставьте выданный токен сюда. Он останется на этом устройстве. Порядок по шагам — под
-        кнопкой «i». Копия уходит на серверы Яндекса только по кнопке; условия обработки — в
+        кнопкой «i».
+      </p>
+
+      <p class="am-meta">
+        Копия уходит на серверы Яндекса только по кнопке; условия обработки — в
         <button class="am-link" type="button" @click="onPrivacy">
           Политике обработки персональных данных</button
         >.
@@ -719,24 +735,21 @@ onMounted(() => {
             <label class="am-field">
               <input class="am-input" type="text" readonly :value="shareLink" />
             </label>
-            <button
-              v-tip="'Открыть ссылку в браузере'"
-              class="am-icon"
-              type="button"
-              aria-label="Открыть ссылку"
-              @click="onShareOpen"
-            >
-              ↗
-            </button>
-            <button
-              v-tip="'Закрыть доступ по ссылке. Файл копии останется на месте'"
-              class="am-btn am-btn--ghost"
-              type="button"
-              :disabled="cloudBusy"
-              @click="onUnshare"
-            >
-              Закрыть доступ
-            </button>
+
+            <!-- Оба действия одной линией под полем: иконкой «открыть» не пользоваться — подпись обязательна. -->
+            <div class="am-share__acts">
+              <button class="am-btn am-btn--ghost" type="button" @click="onShareOpen">
+                Открыть в браузере
+              </button>
+              <button
+                class="am-btn am-btn--ghost"
+                type="button"
+                :disabled="cloudBusy"
+                @click="onUnshare"
+              >
+                Закрыть доступ
+              </button>
+            </div>
           </template>
         </div>
 
