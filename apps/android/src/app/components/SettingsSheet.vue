@@ -337,20 +337,19 @@ onBeforeUnmount(() => {
 /* На узком экране окно становится нижним листом: строка на всю ширину читается лучше коробки по центру. */
 @media (max-width: 640px) {
   .am-sheet {
-    align-items: flex-end;
-    /* Границы как у основных экранов: часы и навбар держат токены из темы. */
+    /* По центру, а не нижним листом: коробки настроек малые и средние, и прижимать
+       их к низу было неказисто. Длинная коробка займёт кадр целиком — потолок держит
+       max-height, а корневые поля уводят содержимое от системных полос. */
+    align-items: center;
     padding-block: var(--am-modal-top) var(--am-modal-bottom);
-    padding-inline: 0;
+    padding-inline: 12px;
   }
 
   .am-sheet__box {
     width: 100%;
-    /* Поля корня уже вычли систему: потолок всей доступной высоты. */
     max-height: 100%;
-    border-right: 0;
-    border-bottom: 0;
-    border-left: 0;
-    border-radius: var(--am-r-drop) var(--am-r-drop) 0 0;
+    border: 1px solid var(--am-line);
+    border-radius: var(--am-r-drop);
   }
 
   /* Дубликат заголовка в теле снят — несёт шапка. */

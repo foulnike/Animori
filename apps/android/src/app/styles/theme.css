@@ -237,6 +237,16 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Тач-устройство: кольцо фокуса — свойство пульта и клавиатуры. На телефоне оно
+   остаётся после тапа и после программных фокусов («Смотреть» на карточке, первая
+   кнопка в модалке) и читается как застрявший ховер. */
+@media (pointer: coarse) {
+  *:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+}
+
 body {
   font-family:
     'Inter',
