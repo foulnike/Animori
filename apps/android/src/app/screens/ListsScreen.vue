@@ -752,4 +752,16 @@ onBeforeUnmount(() => {
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
+
+/* Телефон: поиск строкой, порядок и вид показа — одной строкой под ним. */
+@media (max-width: 640px) {
+  .am-find {
+    flex-basis: 100%;
+  }
+
+  .am-sort {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
 </style>

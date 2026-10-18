@@ -7,7 +7,7 @@ import { emptyPick, pickIsSet, pickKey, type CatalogPick } from '@/api/anilist-c
 import type { MediaBrief } from '@/api/anilist-media'
 import { setupVideoSources } from '@/api/video-sources'
 import { genreAllowed, keepAllowed } from '@/core/adult'
-import { initCollection } from '@/core/collection'
+import { editEntry, getEntry, initCollection } from '@/core/collection'
 import { selectEntries } from '@/core/collection-view'
 import {
   notOutYet,
@@ -32,8 +32,10 @@ import type { SnapshotEntry } from '@/core/snapshot'
 import { Logger } from '@/utils/logger'
 
 import EmptyMark from '../components/EmptyMark.vue'
+import EntrySheet from '../components/EntrySheet.vue'
 import FilterSheet from '../components/FilterSheet.vue'
 import MediaTile from '../components/MediaTile.vue'
+import PressMenu from '../components/PressMenu.vue'
 import { gridCols, wholeRows } from '../grid-fit'
 import { splashLine } from '../splash'
 import { SAKURA_ROSETTE, SAKURA_ROSETTE_ASPECT, SAKURA_ROSETTE_BOX } from '../sakura'
@@ -733,6 +735,123 @@ function hideOne(mediaId: number): void {
   }
 }
 
+/** Плитка под пальцем: что показать в меню и что открыть после. */
+interface PressTile {
+  mediaId: number
+  title: string
+  /** Разрешено ли скрытие: полка продолжения записи прячет нечем. */
+  canHide: boolean
+}
+
+/** Сколько держится зажатие, прежде чем открыть меню. */
+const HOLD_MS = 480
+
+/** Дальше этого сдвига палец считается прокруткой, а не зажатием. */
+const HOLD_SHIFT = 12
+
+const press = ref<PressTile | null>(null)
+
+/** Тайтл, чей лист правки открыт. */
+const edit = ref<PressTile | null>(null)
+
+let holdTimer = 0
+let holdTile: PressTile | null = null
+let holdX = 0
+let holdY = 0
+
+/** Клик после зажатия карточку не открывает: её место заняло меню. */
+let holdClick = false
+
+function holdStart(tile: PressTile, event: PointerEvent): void {
+  if (event.pointerType === 'mouse') return
+
+  window.clearTimeout(holdTimer)
+  holdClick = false
+  holdTile = tile
+  holdX = event.clientX
+  holdY = event.clientY
+
+  holdTimer = window.setTimeout(() => {
+    press.value = holdTile
+    holdTile = null
+    holdClick = true
+  }, HOLD_MS)
+}
+
+function holdMove(event: PointerEvent): void {
+  if (holdTile === null) return
+  if (
+    Math.abs(event.clientX - holdX) <= HOLD_SHIFT &&
+    Math.abs(event.clientY - holdY) <= HOLD_SHIFT
+  ) {
+    return
+  }
+
+  window.clearTimeout(holdTimer)
+  holdTile = null
+}
+
+function holdEnd(): void {
+  window.clearTimeout(holdTimer)
+  holdTile = null
+}
+
+/** Открытие карточки с полки: зажатие ему мешает. */
+function openShelf(mediaId: number): void {
+  if (holdClick) {
+    holdClick = false
+    return
+  }
+  open(mediaId)
+}
+
+/** Снимок записи на момент открытия листа: черновик листа живёт от пропов. */
+const editSnap = computed(() => {
+  const tile = edit.value
+  if (tile === null) return null
+
+  const entry = getEntry(tile.mediaId)
+  return {
+    status: entry?.status ?? '',
+    score10: entry?.score10 ?? 0,
+    progress: entry?.progress ?? 0,
+    repeat: entry?.repeat ?? 0,
+    startedAt: entry?.startedAt ?? null,
+    completedAt: entry?.completedAt ?? null,
+    notes: entry?.notes ?? null,
+  }
+})
+
+/** Правка из домашнего листа: тот же путь, что с карточки — editEntry с обликом. */
+function editSend(
+  kind: 'status' | 'score' | 'progress' | 'repeat' | 'startedAt' | 'completedAt' | 'notes',
+  value: string | number | null,
+): void {
+  const tile = edit.value
+  if (tile === null) return
+
+  editEntry(tile.mediaId, kind, value, { romaji: tile.title, english: null, isAdult: false })
+}
+
+function onEditRemove(): void {
+  const tile = edit.value
+  if (tile !== null) {
+    editEntry(tile.mediaId, 'remove', null, { romaji: tile.title, english: null, isAdult: false })
+  }
+  edit.value = null
+}
+
+function pressEdit(): void {
+  edit.value = press.value
+  press.value = null
+}
+
+function pressHide(): void {
+  const tile = press.value
+  press.value = null
+  if (tile !== null) hideOne(tile.mediaId)
+}
+
 /** Чип жанра под шапкой: быстрый отбор без меню. */
 function toggleGenre(genre: string): void {
   const pick = homePick.value
@@ -778,10 +897,6 @@ function open(mediaId: number): void {
   navigate('media', { id: String(mediaId) })
 }
 
-function toLists(): void {
-  navigate('lists')
-}
-
 function toSearch(): void {
   navigate('search')
 }
@@ -816,6 +931,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  window.clearTimeout(holdTimer)
   lookRun++
   titleRun++
   playRun++
@@ -965,7 +1081,14 @@ watch(
           :cover="row.cover"
           :color="row.color"
           :play="row.play"
-          @open="open(row.mediaId)"
+          @open="openShelf(row.mediaId)"
+          @pointerdown="
+            holdStart({ mediaId: row.mediaId, title: row.title, canHide: false }, $event)
+          "
+          @pointermove="holdMove"
+          @pointerup="holdEnd"
+          @pointercancel="holdEnd"
+          @pointerleave="holdEnd"
         />
       </ul>
 
@@ -1043,8 +1166,6 @@ watch(
             <SakuraMark class="am-shelf__mine" />
             Продолжаю смотреть
           </h2>
-          <span class="am-bar__gap" />
-          <button class="am-btn am-btn--ghost" type="button" @click="toLists">К спискам</button>
         </div>
 
         <ul class="am-rail" data-am-row>
@@ -1062,7 +1183,14 @@ watch(
             :soon="row.soon"
             :play="row.play"
             :adult="row.adult"
-            @open="open(row.mediaId)"
+            @open="openShelf(row.mediaId)"
+            @pointerdown="
+              holdStart({ mediaId: row.mediaId, title: row.title, canHide: false }, $event)
+            "
+            @pointermove="holdMove"
+            @pointerup="holdEnd"
+            @pointercancel="holdEnd"
+            @pointerleave="holdEnd"
           />
         </ul>
       </section>
@@ -1091,8 +1219,15 @@ watch(
             :play="row.play"
             :adult="row.adult"
             hidable
-            @open="open(row.mediaId)"
+            @open="openShelf(row.mediaId)"
             @hide="hideOne(row.mediaId)"
+            @pointerdown="
+              holdStart({ mediaId: row.mediaId, title: row.title, canHide: true }, $event)
+            "
+            @pointermove="holdMove"
+            @pointerup="holdEnd"
+            @pointercancel="holdEnd"
+            @pointerleave="holdEnd"
           />
         </ul>
       </section>
@@ -1122,8 +1257,15 @@ watch(
             :play="row.play"
             :adult="row.adult"
             hidable
-            @open="open(row.mediaId)"
+            @open="openShelf(row.mediaId)"
             @hide="hideOne(row.mediaId)"
+            @pointerdown="
+              holdStart({ mediaId: row.mediaId, title: row.title, canHide: true }, $event)
+            "
+            @pointermove="holdMove"
+            @pointerup="holdEnd"
+            @pointercancel="holdEnd"
+            @pointerleave="holdEnd"
           />
         </ul>
 
@@ -1171,6 +1313,39 @@ watch(
         </div>
       </div>
     </template>
+
+    <!-- Меню зажатия: скрытие прячет тайтл с витрины и ленты, правка открывает тот же лист, что на карточке. -->
+    <PressMenu
+      v-if="press !== null"
+      :title="press.title"
+      :hide="press.canHide"
+      @edit="pressEdit"
+      @hide="pressHide"
+      @close="press = null"
+    />
+
+    <EntrySheet
+      v-if="edit !== null && editSnap !== null"
+      :title="edit.title"
+      :status="editSnap.status"
+      :score10="editSnap.score10"
+      :progress="editSnap.progress"
+      :parts-total="null"
+      :ongoing="false"
+      :repeat="editSnap.repeat"
+      :started-at="editSnap.startedAt"
+      :completed-at="editSnap.completedAt"
+      :notes="editSnap.notes"
+      @close="edit = null"
+      @status="editSend('status', $event)"
+      @score="editSend('score', $event)"
+      @progress="editSend('progress', $event)"
+      @repeat="editSend('repeat', $event)"
+      @started-at="editSend('startedAt', $event)"
+      @completed-at="editSend('completedAt', $event)"
+      @notes="editSend('notes', $event)"
+      @remove="onEditRemove"
+    />
 
     <FilterSheet :open="sheetOpen" :pick="homePick" @close="sheetOpen = false" @apply="onApply" />
   </section>
