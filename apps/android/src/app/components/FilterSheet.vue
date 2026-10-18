@@ -455,12 +455,13 @@ onBeforeUnmount(() => {
 
           <section class="am-part">
             <h3 class="am-h3">Порядок</h3>
-            <div class="am-seg">
+            <!-- Чипы, а не единый сегмент: строка не влезала в узкое окно, и «Новинки» торчали за край. -->
+            <div class="am-wrap">
               <button
                 v-for="item in SORT_CHOICES"
                 :key="item.key"
-                class="am-seg__btn"
-                :class="{ 'am-seg__btn--on': draft.sort === item.key }"
+                class="am-chip"
+                :class="{ 'am-chip--on': draft.sort === item.key }"
                 type="button"
                 @click="setSort(item.key)"
               >

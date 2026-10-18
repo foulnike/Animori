@@ -539,15 +539,17 @@ onBeforeUnmount(() => {
             </div>
           </section>
 
-          <section class="am-field">
-            <span class="am-field__name">Начато</span>
-            <DateField :value="pickStarted" title="Начато" @pick="onStarted" />
-          </section>
+          <div class="am-pair">
+            <section class="am-field">
+              <span class="am-field__name">Начато</span>
+              <DateField :value="pickStarted" title="Начато" @pick="onStarted" />
+            </section>
 
-          <section class="am-field">
-            <span class="am-field__name">Закончено</span>
-            <DateField :value="pickCompleted" title="Закончено" @pick="onCompleted" />
-          </section>
+            <section class="am-field">
+              <span class="am-field__name">Закончено</span>
+              <DateField :value="pickCompleted" title="Закончено" @pick="onCompleted" />
+            </section>
+          </div>
 
           <section class="am-field am-field--wide">
             <span class="am-field__name">Комментарий</span>
@@ -760,6 +762,11 @@ onBeforeUnmount(() => {
 /* Закладки, оценка и комментарий занимают всю ширину: рядов там много. */
 .am-field--wide {
   grid-column: 1 / -1;
+}
+
+/* Обёртка пары дат: на широком окне прозрачна — секции стоят в сетке тела как прежде. */
+.am-pair {
+  display: contents;
 }
 
 .am-field {
@@ -1023,13 +1030,44 @@ onBeforeUnmount(() => {
   }
 
   .am-sheet__body {
-    gap: 10px;
+    /* Ритм держат волосяные линии секций, а не промежутки между плитками. */
+    gap: 0;
     padding-right: 0;
   }
 
+  /* Плоская форма: секции без своих плиток — одна шторка, линии разделяют,
+     фон и рамки у каждой секции сняты. Стопка коробок в коробке читалась мусором. */
   .am-field {
     gap: 10px;
-    padding: 14px;
+    padding: 13px 2px;
+    background: none;
+    border: 0;
+    border-top: 1px solid var(--am-line-soft);
+    border-radius: 0;
+  }
+
+  .am-sheet__body > .am-field:first-child {
+    padding-top: 2px;
+    border-top: 0;
+  }
+
+  .am-field__name {
+    font-size: 12px;
+    letter-spacing: 0.06em;
+  }
+
+  /* Даты парой: начало и конец — соседние колонки, а не два этажа. */
+  .am-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding-top: 13px;
+    border-top: 1px solid var(--am-line-soft);
+  }
+
+  .am-pair .am-field {
+    padding: 0;
+    border-top: 0;
   }
 
   /* Закладка — сетка ячеек под палец, а не лента капсул. */
