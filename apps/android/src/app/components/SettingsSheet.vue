@@ -151,6 +151,7 @@ onBeforeUnmount(() => {
         <header class="am-sheet__top">
           <h2 class="am-sheet__title">{{ title }}</h2>
           <span class="am-bar__gap" />
+          <slot name="tools" />
           <button
             ref="close"
             class="am-sheet__close"

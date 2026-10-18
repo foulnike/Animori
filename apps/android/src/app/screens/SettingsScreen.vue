@@ -22,6 +22,7 @@ import { APPEARANCES, appearance, setAppearance } from '../appearance'
 import { checkUpdate, installUpdate, updateOffer } from '../update'
 import BrandMark from '../components/BrandMark.vue'
 import CloudBox from '../components/CloudBox.vue'
+import CloudHelp from '../components/CloudHelp.vue'
 import CreditsBox from '../components/CreditsBox.vue'
 import DateField from '../components/DateField.vue'
 import ProxyBox from '../components/ProxyBox.vue'
@@ -170,6 +171,9 @@ type Door = 'list' | 'look' | 'data' | 'cloud' | 'net' | 'about'
 
 /** Открытая плита. null — мозаика на виду. */
 const openDoor = ref<Door | null>(null)
+
+/** Открыта ли справка по переносу: кнопка «i» живёт в шапке модалки копии. */
+const cloudHelp = ref(false)
 
 /** Плиты мозаики: под каждой своё окно, и имя его называет. Подпись под именем убрана:
  *  плита держится на знаке и имени, а мелкая строка под заголовком на пульте только шумит. */
@@ -591,8 +595,21 @@ onMounted(() => {
 
     <!-- Копия списка: на телевизоре от неё остался один путь — забрать копию по ссылке. -->
     <SettingsSheet :open="openDoor === 'cloud'" title="Копия списка" @close="openDoor = null">
+      <template #tools>
+        <button
+          class="am-help-i"
+          type="button"
+          aria-label="Как получить ссылку"
+          @click="cloudHelp = true"
+        >
+          i
+        </button>
+      </template>
+
       <CloudBox :list="listCount" @changed="onCloudChanged" />
     </SettingsSheet>
+
+    <CloudHelp :open="cloudHelp" @close="cloudHelp = false" />
 
     <SettingsSheet :open="openDoor === 'look'" title="Оформление" @close="openDoor = null">
       <div class="am-panel am-box">

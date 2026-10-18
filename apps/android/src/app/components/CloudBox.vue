@@ -11,7 +11,6 @@ import type { PullMode } from '@/core/collection'
 import { restoreFocus } from '../focus-return'
 import { canOpenOutside } from '../platform'
 import BrandMark from './BrandMark.vue'
-import CloudHelp from './CloudHelp.vue'
 
 /** Есть ли куда уводить ссылки: на приставке браузера нет, адрес показывается текстом. */
 const canDocs = canOpenOutside()
@@ -36,9 +35,6 @@ const linkDraft = ref('')
 
 /** Что нашлось по введённой ссылке. null — ещё не искали или не нашли. */
 const linkFound = ref<CloudLink | null>(null)
-
-/** Открыта ли справка; состояние здесь, а не внутри неё — нажимают отсюда. */
-const helpOpen = ref(false)
 
 // Своя заметка и своя ошибка: отказ облака не должен красить соседние панели
 // настроек и затирать их ответы.
@@ -149,19 +145,7 @@ function pullText(got: {
 
 <template>
   <div class="am-panel am-box">
-    <div class="am-bar">
-      <h3 class="am-h3">Копия списка</h3>
-      <span class="am-bar__gap" />
-      <button
-        v-tip="'Откуда взять ссылку и что набирать'"
-        class="am-icon"
-        type="button"
-        aria-label="Как получить ссылку"
-        @click="helpOpen = true"
-      >
-        i
-      </button>
-    </div>
+    <!-- Заголовок несёт шапка модалки, кнопка «i» переехала туда же: дубль в теле снят. -->
 
     <!-- Строкой сервиса: знак, название, короткая заметка, под ними поле и кнопка. Знак рисует
          BrandMark.vue из src/app/brand/yandex-disk.svg — красная плита Яндекса с глифом диска. -->
@@ -238,9 +222,6 @@ function pullText(got: {
       <p v-if="cloudError" class="am-error">{{ cloudError }}</p>
       <p v-if="cloudNote" class="am-note">{{ cloudNote }}</p>
     </div>
-
-    <!-- Справка отдельным узлом и модалкой: читать её будут один раз, когда впервые переносят список. -->
-    <CloudHelp :open="helpOpen" @close="helpOpen = false" />
   </div>
 </template>
 

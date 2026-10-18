@@ -397,9 +397,13 @@ onBeforeUnmount(() => {
 }
 
 /* Телефон: центр экрана, боковые поля12px — границы те же, что у прочих оверлеев:
-   токены темы держат системные полосы сверху и снизу, заголовок шапки крупнее. */
+   токены темы держат системные полосы сверху и снизу, заголовок шапки крупнее.
+   Флекс вместо сетки: авто-трек grid рос по содержимому и уводил коробку за края. */
 @media (max-width: 640px) {
   .am-modal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding-block: var(--am-modal-top) var(--am-modal-bottom);
     padding-inline: 12px;
   }
@@ -407,6 +411,7 @@ onBeforeUnmount(() => {
   .am-modal__box {
     width: 100%;
     max-height: 100%;
+    overflow: hidden;
   }
 
   .am-modal__title {

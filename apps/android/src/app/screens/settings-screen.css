@@ -794,3 +794,22 @@ code {
 .am-meta {
   overflow-wrap: anywhere;
 }
+
+/* Кнопка инструкции в шапке модалки: тот же квадрат, что крестик рядом. */
+.am-help-i {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--am-dim);
+  cursor: pointer;
+  background: var(--am-fill-1);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-cap);
+}
