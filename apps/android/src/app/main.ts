@@ -4,9 +4,8 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import { startAppearance } from './appearance'
 import { seen } from './see-tile'
-import { tip } from './tip'
-import { startDpad } from './dpad'
 import { startInsets } from './insets'
+import { tip } from './tip'
 import { isWeakPlatform, markPlatform } from './platform'
 import { startUpdateCheck } from './update'
 import { initCollection } from '@/core/collection'
@@ -28,9 +27,6 @@ markPlatform()
 
 // Системные поля моста — в CSS-переменные: навбар в env() не приходит.
 startInsets()
-
-// Пульт: на десктопе не нужен — там стрелками крутят страницу.
-if (isWeakPlatform()) startDpad()
 
 /// Снимает заставку из index.html: она стоит отдельным узлом рядом с корнем, а Vue не стирает содержимое корня,
 /// а дописывает своё — знак висел бы под окном. Снимается сразу после монтирования, до него — нельзя.

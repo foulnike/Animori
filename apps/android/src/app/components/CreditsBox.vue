@@ -395,4 +395,22 @@ onBeforeUnmount(() => {
   background: var(--am-hover);
   border-color: rgb(var(--am-accent-rgb) / 0.45);
 }
+
+/* Телефон: центр экрана, боковые поля12px — границы те же, что у прочих оверлеев:
+   токены темы держат системные полосы сверху и снизу, заголовок шапки крупнее. */
+@media (max-width: 640px) {
+  .am-modal {
+    padding-block: var(--am-modal-top) var(--am-modal-bottom);
+    padding-inline: 12px;
+  }
+
+  .am-modal__box {
+    width: 100%;
+    max-height: 100%;
+  }
+
+  .am-modal__title {
+    font-size: 17px;
+  }
+}
 </style>

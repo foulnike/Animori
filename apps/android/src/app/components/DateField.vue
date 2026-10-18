@@ -29,12 +29,19 @@ const MONTHS_OF: ReadonlyArray<string> = [
 /** Как просим набирать: подсказка в пустом поле и в ошибке одна и та же. */
 const SHAPE = 'ДД/ММ/ГГГГ'
 
-const props = defineProps<{
-  /** ГГГГ-ММ-ДД. Пустая строка и null значат «дата не стоит». */
-  value: string | null
-  /** Имя поля: уходит в подпись для чтецов с экрана. */
-  title: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    /** ГГГГ-ММ-ДД. Пустая строка и null значат «дата не стоит». */
+    value: string | null
+    /** Имя поля: уходит в подпись для чтецов с экрана. */
+    title: string
+    /** Показывать ли «Сегодня»: дате рождения кнопка не к чему. */
+    showToday?: boolean
+    /** Крестик в одну строку с полем: отдельная строка действий у возраста пуста. */
+    inlineWipe?: boolean
+  }>(),
+  { showToday: true, inlineWipe: false },
+)
 
 const emit = defineEmits<{
   (e: 'pick', value: string): void
@@ -136,7 +143,7 @@ watch(
 
 <template>
   <div class="am-date">
-    <div class="am-date__field">
+    <div class="am-date__field" :class="{ 'am-date__field--row': props.inlineWipe }">
       <svg class="am-date__mark" viewBox="0 0 16 16" aria-hidden="true">
         <rect x="1.6" y="3.2" width="12.8" height="11.2" rx="2.6" />
         <path d="M1.6 6.9h12.8" />
@@ -156,14 +163,30 @@ watch(
         @blur="check"
         @keydown.enter="check"
       />
+
+      <button
+        v-if="props.inlineWipe"
+        class="am-btn am-btn--ghost am-date__wipe am-date__wipe--row"
+        type="button"
+        aria-label="Стереть дату"
+        @click="wipe"
+      >
+        <span aria-hidden="true">×</span>
+      </button>
     </div>
 
-    <div class="am-date__acts">
-      <button class="am-btn am-btn--ghost am-date__today" type="button" @click="today">
+    <div v-if="props.showToday || !props.inlineWipe" class="am-date__acts">
+      <button
+        v-if="props.showToday"
+        class="am-btn am-btn--ghost am-date__today"
+        type="button"
+        @click="today"
+      >
         Сегодня
       </button>
 
       <button
+        v-if="!props.inlineWipe"
         class="am-btn am-btn--ghost am-date__wipe"
         type="button"
         aria-label="Стереть дату"
@@ -235,6 +258,24 @@ watch(
   display: flex;
   grid-area: acts;
   gap: 6px;
+}
+
+/* Строка с крестиком: поле тянется, крестик сидит справа в той же строке. */
+.am-date__field--row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.am-date__field--row .am-date__input {
+  flex: 1;
+  min-width: 0;
+}
+
+.am-date__wipe--row {
+  flex: none;
+  margin-left: auto;
 }
 
 /* Кнопки ростом с поле: цель нажатия одна на всю строку, и кромка фокуса не меряет высоту

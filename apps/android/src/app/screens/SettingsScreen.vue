@@ -469,11 +469,6 @@ onMounted(() => {
               <span class="am-serv__name">Шикимори</span>
               <span class="am-serv__note">Профиль на Шикимори должен быть открытым.</span>
             </span>
-
-            <span class="am-flag">
-              <span class="am-flag__dot" aria-hidden="true" />
-              вход не нужен
-            </span>
           </div>
 
           <div class="am-row">
@@ -643,7 +638,13 @@ onMounted(() => {
         <div v-if="askingAge" class="am-age">
           <p class="am-age__ask">Укажите ваш возраст</p>
 
-          <DateField :value="birth" title="Дата рождения" @pick="onBirth" />
+          <DateField
+            :value="birth"
+            title="Дата рождения"
+            :show-today="false"
+            :inline-wipe="true"
+            @pick="onBirth"
+          />
 
           <p v-if="ageError" class="am-error">{{ ageError }}</p>
 

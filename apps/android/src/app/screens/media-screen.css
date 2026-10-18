@@ -343,6 +343,15 @@
   transform: translateY(-1px);
 }
 
+/* Тач: кольцо гасится глобально, но рамка в фокусе оставалась ярче покоящейся —
+   возвращаем её к базе в пределах этого экрана. */
+@media (pointer: coarse) {
+  .am-acts__play:focus-visible {
+    border-color: rgb(var(--am-accent-rgb) / 0.5);
+    transform: none;
+  }
+}
+
 .am-acts__save {
   color: var(--am-on-art);
   background: color-mix(in srgb, var(--am-veil) 52%, transparent);

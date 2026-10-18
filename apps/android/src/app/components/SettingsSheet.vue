@@ -294,6 +294,12 @@ onBeforeUnmount(() => {
   border-color: rgb(var(--am-accent-rgb) / 0.45);
 }
 
+/* Дубль заголовка в теле снят — несёт шапка. Панель приходит из слота в области
+   родителя, поэтому правило идёт через :deep — обычное scoped его не видит. */
+.am-sheet__body :deep(.am-panel > .am-h3:first-child) {
+  display: none;
+}
+
 /* Тело едет, шапка и низ стоят: «Готово» не уезжает за край длинной панели. min-height: 0
    обязателен: в гибкой колонке блок по умолчанию не сжимается ниже содержимого. */
 .am-sheet__body {
@@ -350,21 +356,6 @@ onBeforeUnmount(() => {
     max-height: 100%;
     border: 1px solid var(--am-line);
     border-radius: var(--am-r-drop);
-  }
-
-  /* Дубликат заголовка в теле снят — несёт шапка. */
-  .am-sheet__body .am-panel > .am-h3:first-child {
-    display: none;
-  }
-
-  /* Панели без своей плитки: панель в панели читалась коробкой в коробке —
-     тот же плоский вид, что у секций фильтров. */
-  .am-sheet__body > .am-panel {
-    padding: 0;
-    background: none;
-    border: 0;
-    border-radius: 0;
-    box-shadow: none;
   }
 }
 
