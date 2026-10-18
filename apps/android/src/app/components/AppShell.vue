@@ -135,6 +135,7 @@ onBeforeUnmount(() => {
           :class="{
             'am-view__hold--deep': navDirection === 'deep',
             'am-view__hold--back': navDirection === 'back',
+            'am-view__hold--fill': active === 'settings',
           }"
         >
           <slot />
@@ -525,6 +526,8 @@ onBeforeUnmount(() => {
 }
 
 .am-view {
+  display: flex;
+  flex-direction: column;
   flex: 1;
   width: 100%;
   /* Низ дополнен системным полем: жестовая полоса накрывает содержимое. */
@@ -551,6 +554,12 @@ onBeforeUnmount(() => {
     opacity: 1;
     transform: none;
   }
+}
+
+/* Экран-кадр: держит высоту вида, а не растёт по содержимому — им пользуются настройки. */
+.am-view__hold--fill {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* Внутрь содержимое приходит справа, наружу — слева. 18 пикселей — ровно боковое

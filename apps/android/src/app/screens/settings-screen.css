@@ -767,3 +767,25 @@ code {
 .am-lite .am-fact {
   padding: 11px 0;
 }
+
+/* Телефон: экран настроек встаёт в кадр без прокрутки — страница держит высоту,
+   мозаика делит остаток на две колонки по три ряда. Режим слабой платформы
+   (три колонки на всю высоту) сменяется: правило той же специфике и позднее. */
+@media (max-width: 640px) {
+  .am-set {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .am-lite .am-doors {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    flex: 1 1 auto;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+  }
+}

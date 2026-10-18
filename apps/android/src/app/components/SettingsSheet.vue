@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Окно настроек: одна плита мозаики — одно окно. Рамка одна на шесть окон, содержимое приходит слотом. Заголовка у рамки нет: его несёт панель внутри — одно и то же слово стояло бы дважды.
+// Окно настроек: одна плита мозаики — одно окно. Рамка одна на шесть окон, содержимое приходит слотом. Заголовок несёт шапка (title) в ряду с выходом; панели внутри — содержимое.
 
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
@@ -147,8 +147,9 @@ onBeforeUnmount(() => {
       <button class="am-sheet__veil" type="button" aria-label="Закрыть" @click="onClose" />
 
       <div ref="sheet" class="am-sheet__box" role="dialog" aria-modal="true" :aria-label="title">
-        <!-- Крест один во всей рамке: заголовок несёт панель, шапке остаётся выход. -->
+        <!-- Заголовок в шапке, в ряду с выходом: крупный, на месте — раньше несли панели внутри. -->
         <header class="am-sheet__top">
+          <h2 class="am-sheet__title">{{ title }}</h2>
           <span class="am-bar__gap" />
           <button
             ref="close"
@@ -253,6 +254,18 @@ onBeforeUnmount(() => {
   padding: 10px 12px 0 clamp(14px, 1.8vw, 22px);
 }
 
+/* Заголовок шапки: крупнее прежнего панельного и по одному ряду с выходом. */
+.am-sheet__title {
+  overflow: hidden;
+  min-width: 0;
+  margin: 0;
+  font-size: clamp(19px, 2vw, 24px);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .am-sheet__close {
   display: grid;
   flex: none;
@@ -338,6 +351,21 @@ onBeforeUnmount(() => {
     border-bottom: 0;
     border-left: 0;
     border-radius: var(--am-r-drop) var(--am-r-drop) 0 0;
+  }
+
+  /* Дубликат заголовка в теле снят — несёт шапка. */
+  .am-sheet__body .am-panel > .am-h3:first-child {
+    display: none;
+  }
+
+  /* Панели без своей плитки: панель в панели читалась коробкой в коробке —
+     тот же плоский вид, что у секций фильтров. */
+  .am-sheet__body > .am-panel {
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
   }
 }
 
