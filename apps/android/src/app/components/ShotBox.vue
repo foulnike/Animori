@@ -77,6 +77,23 @@ const reelTrailer = computed<MediaTrailer | null>(() => {
   return { title: clip.name, thumb: clip.thumb, embed: clip.embed, url: clip.url }
 })
 
+/** Превью трейлера не приехало: кадр с YouTube, а сеть его не пустила. Пустая коробка с кнопкой
+ *  читалась бы поломкой, поэтому вместо картинки рисуется заглушка с названием. */
+const reelBroken = ref(false)
+
+/** Заглушка нужна: картинки нет вовсе или она отвалилась. */
+const reelBare = computed<boolean>(() => {
+  const trailer = reelTrailer.value
+  if (trailer === null) return false
+  return trailer.thumb === null || reelBroken.value
+})
+
+/** Картинка трейлера отвалилась: показываем заглушку вместо пустой коробки. */
+function onReelError(url: string | null): void {
+  reelBroken.value = true
+  markReady(url)
+}
+
 /** Кадры плитки: счётчик остальных занимает последнюю клетку. */
 const rest = computed<number>(() => Math.max(0, shots.value.length - GRID_SHOTS))
 const cells = computed<MediaShot[]>(() =>
@@ -263,6 +280,7 @@ async function load(): Promise<void> {
   reel.value = false
   gal.value = false
   broken.value = false
+  reelBroken.value = false
 
   if (props.mediaId === 0) return
 
@@ -317,25 +335,29 @@ watch(() => [props.mediaId, props.malId], load)
     <!-- Трейлер и сетка одной обёрткой: на узкой плитке они друг под другом, на широкой — рядом.
      Обёртка нужна, чтобы раскладку решал один запрос по ширине плитки. -->
     <div class="am-shots__body">
-      <!-- Трейлер кадром во всю ширину плитки: кадр ютюба шестнадцать на девять, и в узкой клетке был бы огрызком. -->
+      <!-- Трейлер кадром во всю ширину плитки: кадр ютюба шестнадцать на девять, и в узкой клетке был бы огрызком. Без превью — заглушка с названием: пустая коробка читалась бы поломкой. -->
       <button
         v-if="reelTrailer"
         v-tip="`Смотреть: ${reelTrailer.title}`"
         class="am-shots__reel"
-        :class="{ 'am-skeleton': pending(reelTrailer.thumb) }"
+        :class="{
+          'am-skeleton': pending(reelTrailer.thumb) && !reelBare,
+          'am-shots__reel--bare': reelBare,
+        }"
         type="button"
         @click="openReel"
       >
         <img
-          v-if="reelTrailer.thumb"
+          v-if="reelTrailer.thumb && !reelBare"
           class="am-shots__reelart"
           :src="reelTrailer.thumb"
           alt=""
           loading="lazy"
           decoding="async"
           @load="markReady(reelTrailer.thumb)"
-          @error="markReady(reelTrailer.thumb)"
+          @error="onReelError(reelTrailer.thumb)"
         />
+        <span v-if="reelBare" class="am-shots__reelname">{{ reelTrailer.title }}</span>
         <span class="am-shots__play" aria-hidden="true">
           <svg viewBox="0 0 16 16">
             <path d="M5.2 3.4 12.4 8l-7.2 4.6z" />
@@ -597,6 +619,34 @@ watch(() => [props.mediaId, props.malId], load)
   /* Кромка та же, что у сетки кадров выше: там же описано зачем. */
   border: 1px solid transparent;
   border-radius: var(--am-r-m);
+}
+
+/* Заглушка вместо кадра: превью с YouTube не приехало (за границей сети часто не едет),
+   и пустая коробка читалась бы поломкой. Градиент той же пары, что у плашки репозитория,
+   и подпись — человек понимает, что ролик есть, но его кадр не доехал. */
+.am-shots__reel--bare {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(
+    135deg,
+    rgb(var(--am-accent-2-rgb) / 0.22),
+    rgb(var(--am-accent-rgb) / 0.08)
+  );
+}
+
+/* Подпись заглушки: под цветком пуска, по центру, длинное название усекается одной строкой. */
+.am-shots__reelname {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  left: 12px;
+  overflow: hidden;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--am-dim);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .am-shots__reelart {

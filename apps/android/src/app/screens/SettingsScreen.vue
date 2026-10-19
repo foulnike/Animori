@@ -869,11 +869,6 @@ onMounted(() => {
                 → «Export my anime list».
               </span>
             </span>
-
-            <span class="am-flag">
-              <span class="am-flag__dot" aria-hidden="true" />
-              вход не нужен
-            </span>
           </div>
 
           <div class="am-row">
