@@ -5,22 +5,38 @@ import { computed, onMounted, ref } from 'vue'
 
 import { Bridge } from '@/bridge'
 import {
+  eachEntry,
   entryCount,
   forgetCollection,
   initCollection,
+  pullFromMalFile,
   pullFromShikimori,
+  refreshFromServer,
+  unlinkCollection,
+  type MalPullResult,
   type PullMode,
   type ShikiPullResult,
 } from '@/core/collection'
 import { datasetStatus, initDatasetNames } from '@/core/dataset-names'
 import { clearCache, getDbStats } from '@/core/db'
 import { adultByBirth } from '@/core/adult'
+import { buildMalXml, malXmlFileName, parseMalXml } from '@/core/mal-xml'
 import { clearHidden } from '@/core/recs'
 import { saveSetting, settings } from '@/core/settings'
 import { purgeAdultPick } from './home-keep'
 import { cloudPathText } from '@/core/cloud'
 import { APPEARANCES, appearance, setAppearance } from '../appearance'
+import {
+  authStatus,
+  logout,
+  refreshAuth,
+  startLogin,
+  submitToken,
+  type LoginStart,
+} from '../auth/session'
 import { checkUpdate, installUpdate, updateOffer } from '../update'
+import { pickTextFile } from '../load-file'
+import { saveXmlFile } from '../save-file'
 import BrandMark from '../components/BrandMark.vue'
 import CloudBox from '../components/CloudBox.vue'
 import CloudHelp from '../components/CloudHelp.vue'
@@ -105,6 +121,200 @@ const askingShiki = ref(false)
 const shikiBusy = ref(false)
 const shikiNote = ref('')
 const shikiError = ref('')
+
+/** Ответ Rust на нажатие «Подключить». Держится до входа или до ухода с экрана: из него
+ * берётся срок ожидания для подсказки. На телефоне окно — системный браузер. */
+const login = ref<LoginStart | null>(null)
+
+/** Ручная вставка токена: запасной путь, когда браузер не открылся или пропуск не вернулся. */
+const manual = ref('')
+const manualOpen = ref(false)
+
+/** Спрошено ли подтверждение переноса с AniList. Спрашивается всегда: замена вычищает
+ * список целиком, включая набранное руками. */
+const asking = ref(false)
+
+/** Занятость и ответы переноса из файла MAL — отдельно: перенос долог и гасил бы чужие кнопки. */
+const malBusy = ref(false)
+const malNote = ref('')
+const malError = ref('')
+
+/** Выбранный файл, ждущий ответа на вопрос. Разбирается сразу при выборе: битый отказывает
+ * сразу, а живой даёт число записей для текста вопроса. */
+const malFile = ref<{ name: string; text: string; count: number } | null>(null)
+
+/** Спрошено ли подтверждение переноса из файла. Спрашивается по той же причине. */
+const askingMal = ref(false)
+
+/** Страница выгрузки списка на MAL: входа в сервис у нас нет, файл забирается руками. */
+const MAL_EXPORT_URL = 'https://myanimelist.net/panel.php?go=export'
+
+function onMalExportLink(): void {
+  void Bridge.shell.openExternal(MAL_EXPORT_URL)
+}
+
+/** Нажатие «Подключить»: сначала Rust поднимает приёмник, потом открывается браузер. */
+function onLogin(): void {
+  void guard(async () => {
+    login.value = await startLogin()
+  })
+}
+
+/** Отключение аккаунта: связь рвётся, список остаётся местным (3.16) — раньше выход
+ * уносил список совсем. */
+function onLogout(): void {
+  void guard(async () => {
+    note.value = ''
+    asking.value = false
+
+    await logout()
+    const left = await unlinkCollection()
+    login.value = null
+    await readState()
+
+    note.value =
+      left > 0 ? `Счёт отключён. Список остался здесь местным: записей ${left}.` : 'Счёт отключён.'
+  })
+}
+
+/** Ручная вставка токена: тот же путь входа, только без браузера. */
+function onManual(): void {
+  void guard(async () => {
+    await submitToken(manual.value)
+    manual.value = ''
+    manualOpen.value = false
+    login.value = null
+  })
+}
+
+/** Перенос списка с AniList одним из двух способов; зовётся только из подтверждения, никогда сам.
+ * Итог говорится числами: после слияния важно не общее число, а что стало с набранным здесь. */
+function onPull(mode: PullMode): void {
+  asking.value = false
+
+  void guard(async () => {
+    note.value = ''
+    const done = await refreshFromServer(mode)
+    await readState()
+
+    // Способ берётся из ответа, а не из просьбы: смена счёта переключает перенос на замену сама, и сказать надо о том, что случилось на деле.
+    if (done.mode === 'replace') {
+      note.value = `Список замещён списком с AniList: записей ${done.total}.`
+      return
+    }
+
+    note.value =
+      `Списки слиты: всего ${done.total}, новых ${done.added}, ` +
+      `обновлено ${done.updated}, своих правок сохранено ${done.kept}, ` +
+      `только здесь ${done.onlyHere}.`
+  })
+}
+
+/** Нажатие на кнопку переноса: сначала вопрос, действие потом. */
+function onAsk(): void {
+  note.value = ''
+  error.value = ''
+  asking.value = true
+}
+
+function onCancel(): void {
+  asking.value = false
+}
+
+/// Ожидание в минутах: секунды читать неудобно.
+function waitText(seconds: number): string {
+  return `${Math.round(seconds / 60)} мин`
+}
+
+/// Срок входа словами: «до» и дата читаются лучше, чем голая кучка секунд эпохи.
+function expiryText(seconds: number | null): string {
+  if (seconds === null) return 'срок неизвестен'
+  return `до ${new Date(seconds * 1000).toLocaleDateString('ru-RU')}`
+}
+
+/** Выбор файла выгрузки: закрытое окно ошибкой не считается — null значит «передумал».
+ * Битый XML отказывает сразу, живой даёт число записей в текст вопроса. */
+function onMalPick(): void {
+  malNote.value = ''
+  malError.value = ''
+
+  void (async () => {
+    malBusy.value = true
+
+    try {
+      const loaded = await pickTextFile('.xml,.gz')
+      if (loaded === null) return
+
+      const count = parseMalXml(loaded.text).rows.length
+      malFile.value = { name: loaded.name, text: loaded.text, count }
+      askingMal.value = true
+    } catch (e) {
+      malError.value = describe(e)
+    } finally {
+      malBusy.value = false
+    }
+  })()
+}
+
+function onMalCancel(): void {
+  askingMal.value = false
+  malFile.value = null
+}
+
+/** Перенос списка из файла: способы те же два, и замена столь же беспощадна — вычищает
+ * и перенесённое с AniList. Разобранный при выборе текст едет в перенос как есть:
+ * копия в памяти, подменить её нечем. */
+function onMalPull(mode: PullMode): void {
+  askingMal.value = false
+
+  const file = malFile.value
+  malFile.value = null
+  if (file === null) return
+
+  void (async () => {
+    malBusy.value = true
+    malError.value = ''
+    malNote.value = ''
+
+    try {
+      const done: MalPullResult = await pullFromMalFile(file.text, mode)
+      await readState()
+
+      malNote.value =
+        done.mode === 'replace'
+          ? `Список замещён списком из файла: записей ${done.total}.`
+          : `Списки слиты: всего ${done.total}, новых ${done.added}, ` +
+            `обновлено ${done.updated}, своих правок сохранено ${done.kept}, ` +
+            `только здесь ${done.onlyHere}.`
+    } catch (e) {
+      malError.value = describe(e)
+    } finally {
+      malBusy.value = false
+    }
+  })()
+}
+
+/** Выгрузка списка файлом XML: формат чужой и старый, зато его понимают Шикимори, AniList,
+ * Kitsu и сам MyAnimeList. Записи без номера MAL выразить нечем, и их число говорится вслух. */
+function onExport(): void {
+  void guard(async () => {
+    note.value = ''
+    await initCollection()
+
+    const built = buildMalXml({ entries: eachEntry() })
+    if (built.exported === 0) {
+      note.value = 'Выгружать нечего: ни одной записи с закладкой и номером MAL.'
+      return
+    }
+
+    const saved = await saveXmlFile(malXmlFileName(), built.xml)
+
+    const lost = built.noMalId.length
+    const tail = lost > 0 ? ` Без номера MAL осталось ${lost} — их в файле нет.` : ''
+
+    note.value = `Выгружено записей: ${built.exported}. Файл: ${saved.path}${tail}`
+  })
+}
 
 const listCount = ref(0)
 const usedSize = ref('')
@@ -442,6 +652,11 @@ function ageText(days: number): string {
 
 onMounted(() => {
   void readState()
+
+  // Состояние входа нужно списку и панели: без него запросы идут без подписи. Ошибка не роняет запуск: без входа приложение работает.
+  void refreshAuth().catch((e: unknown) => {
+    error.value = describe(e)
+  })
 })
 </script>
 
@@ -470,10 +685,108 @@ onMounted(() => {
     <!-- Окна: по одному на плиту, поднимаются по нажатию. Панели внутри — те же, что стояли колонкой,
      и заголовок окну даёт заголовок панели. -->
     <SettingsSheet :open="openDoor === 'list'" title="Импорт списка" @close="openDoor = null">
-      <!-- Импорт списка. Из двух источников осталась Шикимори: AniList требует входа через окно
-     браузера, а браузера на телевизоре нет. Знак берёт components/BrandMark.vue из brand/shikimori.svg. -->
+      <!-- Импорт списка. Три источника: AniList со входом (на телефоне браузер системный,
+     пропуск возвращается в приёмник приложения), Шикимори по нику и файл выгрузки.
+     Знаки берёт components/BrandMark.vue из brand/*.svg. -->
       <div class="am-panel am-box">
         <h3 class="am-h3">Импорт списка</h3>
+
+        <!-- AniList. Вход тем же способом, что на компьютере: Rust поднимает приёмник
+             на 127.0.0.1 и отдаёт адрес системному браузеру. -->
+        <div class="am-serv">
+          <div class="am-serv__head">
+            <BrandMark class="am-serv__logo" name="anilist" />
+
+            <span class="am-serv__text">
+              <span class="am-serv__name">AniList</span>
+              <span class="am-serv__note">
+                {{
+                  authStatus.authorized
+                    ? `Подключён ${expiryText(authStatus.expiresAt)}.`
+                    : 'Нужен вход в аккаунт.'
+                }}
+              </span>
+            </span>
+
+            <span class="am-flag" :class="{ 'am-flag--on': authStatus.authorized }">
+              <span class="am-flag__dot" aria-hidden="true" />
+              {{ authStatus.authorized ? 'подключён' : 'не подключён' }}
+            </span>
+          </div>
+
+          <div class="am-row">
+            <button
+              v-if="!authStatus.authorized"
+              class="am-btn"
+              type="button"
+              :disabled="busy"
+              @click="onLogin"
+            >
+              Подключить аккаунт
+            </button>
+
+            <template v-else>
+              <button class="am-btn" type="button" :disabled="busy" @click="onAsk">
+                {{ busy ? 'Переносим…' : 'Перенести список' }}
+              </button>
+              <button class="am-btn am-btn--ghost" type="button" :disabled="busy" @click="onLogout">
+                Отключить
+              </button>
+            </template>
+
+            <button
+              v-if="!authStatus.authorized"
+              class="am-btn am-btn--ghost"
+              type="button"
+              @click="manualOpen = !manualOpen"
+            >
+              Ввести токен
+            </button>
+          </div>
+
+          <!-- Вопрос перед переносом: одно число и два способа рядом. Разницу говорят подписи
+           кнопок, поэтому абзац объяснений здесь убран — он повторял их втрое длиннее. -->
+          <div v-if="asking" class="am-ask">
+            <p class="am-ask__text">Записей: {{ listCount }}.</p>
+
+            <div class="am-row">
+              <button class="am-btn" type="button" :disabled="busy" @click="onPull('merge')">
+                Добавить недостающее
+              </button>
+              <button
+                class="am-btn am-btn--ghost"
+                type="button"
+                :disabled="busy"
+                @click="onPull('replace')"
+              >
+                Заменить целиком
+              </button>
+              <button class="am-btn am-btn--ghost" type="button" @click="onCancel">Отмена</button>
+            </div>
+          </div>
+
+          <!-- Показывается только после нажатия: до него ждать нечего. -->
+          <p v-if="login && !authStatus.authorized" class="am-meta">
+            Браузер открыт, после разрешения вернитесь в приложение. Ожидание —
+            {{ waitText(login.waitSecs) }}.
+          </p>
+
+          <div v-if="manualOpen && !authStatus.authorized" class="am-row">
+            <label class="am-field">
+              <input v-model="manual" class="am-input" type="text" placeholder="Токен AniList" />
+            </label>
+            <button
+              class="am-btn"
+              type="button"
+              :disabled="busy || !manual.trim()"
+              @click="onManual"
+            >
+              Сохранить
+            </button>
+          </div>
+
+          <p v-if="error" class="am-error">{{ error }}</p>
+        </div>
 
         <div class="am-serv">
           <div class="am-serv__head">
@@ -538,6 +851,66 @@ onMounted(() => {
           <p v-if="shikiNote" class="am-note">{{ shikiNote }}</p>
           <p v-if="shikiError" class="am-error">{{ shikiError }}</p>
         </div>
+
+        <!-- MyAnimeList: знак из brand/myanimelist.svg; входа нет и не будет: список приезжает
+             файлом выгрузки; тот же файл отдаёт Шикимори — формат MAL до тега. -->
+        <div class="am-serv">
+          <div class="am-serv__head">
+            <BrandMark class="am-serv__logo" name="myanimelist" />
+
+            <span class="am-serv__text">
+              <span class="am-serv__name">MyAnimeList</span>
+              <span class="am-serv__note">
+                Перейдите
+                <button v-if="outside" class="am-link" type="button" @click="onMalExportLink">
+                  сюда
+                </button>
+                <span v-else>сюда</span>
+                → «Export my anime list».
+              </span>
+            </span>
+
+            <span class="am-flag">
+              <span class="am-flag__dot" aria-hidden="true" />
+              вход не нужен
+            </span>
+          </div>
+
+          <div class="am-row">
+            <button class="am-btn" type="button" :disabled="malBusy" @click="onMalPick">
+              {{ malBusy ? 'Переносим…' : 'Выбрать файл' }}
+            </button>
+          </div>
+
+          <!-- Вопрос тот же, что у AniList и Шикимори, и по той же причине: замена вычищает
+           список целиком. -->
+          <div v-if="askingMal && malFile" class="am-ask">
+            <p class="am-ask__text">
+              Файл: {{ malFile.name }}, записей в нём {{ malFile.count }}. Записей у вас:
+              {{ listCount }}.
+            </p>
+
+            <div class="am-row">
+              <button class="am-btn" type="button" :disabled="malBusy" @click="onMalPull('merge')">
+                Добавить недостающее
+              </button>
+              <button
+                class="am-btn am-btn--ghost"
+                type="button"
+                :disabled="malBusy"
+                @click="onMalPull('replace')"
+              >
+                Заменить целиком
+              </button>
+              <button class="am-btn am-btn--ghost" type="button" @click="onMalCancel">
+                Отмена
+              </button>
+            </div>
+          </div>
+
+          <p v-if="malNote" class="am-note">{{ malNote }}</p>
+          <p v-if="malError" class="am-error">{{ malError }}</p>
+        </div>
       </div>
     </SettingsSheet>
 
@@ -559,6 +932,11 @@ onMounted(() => {
 
         <!-- Необратимое одной строкой: сброс памяти и удаление списка стоят рядом, потому что оба про этот диск. -->
         <div class="am-row">
+          <!-- Выгрузка списка файлом XML: формат чужой и старый, зато его понимают Шикимори, AniList, Kitsu и сам MyAnimeList. Куда ложить файл, спрашивает система родным пикером. -->
+          <button class="am-btn" type="button" :disabled="busy" @click="onExport">
+            Выгрузить в XML
+          </button>
+
           <button
             v-tip="'Убрать сохранённые названия, описания и обложки'"
             ref="clearBtn"

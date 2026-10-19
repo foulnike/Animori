@@ -17,13 +17,27 @@ import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import java.io.File
 import java.net.URL
+import org.json.JSONObject
 
 class MainActivity : TauriActivity() {
+  companion object {
+    /** Коды запросов системных пикеров. Свои, далеко от чужих: оболочка и плагины
+     *  тоже ждут onActivityResult, и пересечение кодов спрятало бы чужой ответ. */
+    private const val REQUEST_PICK_XML = 7301
+    private const val REQUEST_SAVE_XML = 7302
+  }
   /** Системные поля в пикселях. Chromium не всегда отдаёт их в env(): нижний навбар
      в три кнопки до CSS не доходит, и содержимое уезжает под него. */
   @Volatile private var sysTop = 0
 
   @Volatile private var sysBottom = 0
+
+  /** Хранилище WebView для ответов моста файлов: onActivityResult живёт в активности,
+   *  а звать в страницу можно только через ту самую WebView. */
+  @Volatile private var fileWebView: WebView? = null
+
+  /** Текст выгрузки до выбора документа: он приходит из страницы, а пикер открывается позже. */
+  @Volatile private var savePayload: String? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
@@ -166,6 +180,150 @@ class MainActivity : TauriActivity() {
       },
       "AnimoriOrient",
     )
+
+    // Мост файлов. Своё окно выбора у WebView нет: <input type="file"> молчит без
+    // onShowFileChooser в ChromeClient, а <a download> молчит без DownloadListener.
+    // Поэтому выбор и запись идут системными намерениями Storage Access Framework:
+    // человек видит родной пикер, а мы получаем адрес документа.
+    fileWebView = webView
+
+    webView.addJavascriptInterface(
+      object {
+        /** Открывает пикер XML. Ответ приходит в window.__amFilesPicked({name, text} | null). */
+        @JavascriptInterface
+        fun pickXml() {
+          val intent = Intent(Intent.ACTION_OPEN_DOCUMENT)
+          intent.addCategory(Intent.CATEGORY_OPENABLE)
+          intent.type = "*/*"
+          intent.putExtra(
+            Intent.EXTRA_MIME_TYPES,
+            arrayOf("application/xml", "text/xml", "application/gzip", "application/octet-stream"),
+          )
+          startActivityForResult(intent, REQUEST_PICK_XML)
+        }
+
+        /** Записывает XML в документ, выбранный человеком. Ответ — имя файла или null в
+         *  window.__amFilesSaved(name | null). */
+        @JavascriptInterface
+        fun saveXml(name: String, text: String) {
+          val intent = Intent(Intent.ACTION_CREATE_DOCUMENT)
+          intent.addCategory(Intent.CATEGORY_OPENABLE)
+          intent.type = "application/xml"
+          intent.putExtra(Intent.EXTRA_TITLE, name)
+          savePayload = text
+          startActivityForResult(intent, REQUEST_SAVE_XML)
+        }
+      },
+      "AnimoriFiles",
+    )
+  }
+
+  /**
+   * Ответ системного пикера.
+   *
+   * SAF присылает адрес документа, а не файл: прочитать и записать можно только через
+   * ContentResolver, и обезличенный путь вида content://… в разметку отдавать нельзя.
+   * Чтение — в потоке: выгрузка списка уходит за мегабайт, а главный поток ей не место.
+   */
+  override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+    if (requestCode == REQUEST_PICK_XML) {
+      val uri = if (resultCode == RESULT_OK) data?.data else null
+
+      if (uri == null) {
+        tellPicked(null, null)
+      } else {
+        Thread { tellPicked(readDocument(uri)) }.start()
+      }
+      return
+    }
+
+    if (requestCode == REQUEST_SAVE_XML) {
+      val uri = if (resultCode == RESULT_OK) data?.data else null
+      val payload = savePayload
+      savePayload = null
+
+      if (uri == null || payload == null) {
+        tellSaved(null)
+      } else {
+        Thread { tellSaved(writeDocument(uri, payload)) }.start()
+      }
+      return
+    }
+
+    super.onActivityResult(requestCode, resultCode, data)
+  }
+
+  /** Имя документа у человека на виду: провайдер может переименовать или добавить расширение. */
+  private fun documentName(uri: android.net.Uri): String {
+    contentResolver
+      .query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)
+      ?.use { cursor ->
+        if (cursor.moveToFirst()) {
+          val index = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+          if (index >= 0) return cursor.getString(index) ?: "animelist.xml"
+        }
+      }
+
+    return uri.lastPathSegment ?: "animelist.xml"
+  }
+
+  /** Читает документ текстом; gzip распаковывается по подписи 1F 8B, а не по имени:
+   *  MyAnimeList отдаёт animelist.xml.gz, но переименовать файл можно как угодно. */
+  private fun readDocument(uri: android.net.Uri): Pair<String, String?> {
+    return try {
+      val raw = contentResolver.openInputStream(uri)?.use { it.readBytes() }
+      if (raw == null) return documentName(uri) to null
+
+      val text =
+        if (raw.size > 2 && raw[0] == 0x1F.toByte() && raw[1] == 0x8B.toByte()) {
+          java.util.zip.GZIPInputStream(java.io.ByteArrayInputStream(raw))
+            .use { it.readBytes() }
+            .decodeToString()
+        } else {
+          raw.decodeToString()
+        }
+
+      documentName(uri) to text
+    } catch (ex: Exception) {
+      Log.e("AniMori", "документ не прочитался: ${ex.message}")
+      documentName(uri) to null
+    }
+  }
+
+  /** Пишет текст в созданный документ. Имя возвращается от провайдера: система могла
+   *  переименовать файл или добавить расширение, и человеку говорят именно его. */
+  private fun writeDocument(uri: android.net.Uri, text: String): String? {
+    return try {
+      contentResolver.openOutputStream(uri, "wt")?.use { stream ->
+        stream.write(text.toByteArray(Charsets.UTF_8))
+      }
+      documentName(uri)
+    } catch (ex: Exception) {
+      Log.e("AniMori", "выгрузка не записалась: ${ex.message}")
+      null
+    }
+  }
+
+  /** Отдаёт выбор в страницу. Имя и текст едут раздельными аргументами: JSON из сырых
+   *  строк собирать нельзя — кавычки и переводы строк поломали бы вызов. */
+  private fun tellPicked(read: Pair<String, String?>) {
+    val (name, text) = read
+    val payload =
+      if (text === null) "null"
+      else "{\"name\":${JSONObject.quote(name)},\"text\":${JSONObject.quote(text)}}"
+
+    runOnUiThread {
+      fileWebView?.evaluateJavascript("window.__amFilesPicked && window.__amFilesPicked($payload)", null)
+    }
+  }
+
+  /** Отдаёт имя записанного файла в страницу; null — отказ или отмена. */
+  private fun tellSaved(name: String?) {
+    val payload = if (name === null) "null" else JSONObject.quote(name)
+
+    runOnUiThread {
+      fileWebView?.evaluateJavascript("window.__amFilesSaved && window.__amFilesSaved($payload)", null)
+    }
   }
 
   /**
