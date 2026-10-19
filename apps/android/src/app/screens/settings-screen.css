@@ -795,6 +795,63 @@ code {
   overflow-wrap: anywhere;
 }
 
+/* Служебный текст пропуска: единым абзацем по ширине. pretty добирает последние
+   строки — адрес и длинная кнопка не оставляют висячих слов на любом дисплее. */
+.am-meta--text {
+  text-align: justify;
+  text-wrap: pretty;
+}
+
+/* Плашка репозитория: приглашение, не служебное сообщение. Имя своё, не .am-ask — тот занят жёлтой плашкой вопроса.
+   Цвет фиолетовый и мягкий: жёлтый закреплён за предупреждением, призыв в его цвете читался бы поломкой. */
+.am-repo {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  width: 100%;
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--am-dim);
+  text-align: left;
+  cursor: pointer;
+  background: linear-gradient(
+    135deg,
+    rgb(var(--am-accent-2-rgb) / 0.18),
+    rgb(var(--am-accent-rgb) / 0.07)
+  );
+  border: 1px solid rgb(var(--am-accent-2-rgb) / 0.32);
+  border-radius: var(--am-r-m);
+  box-shadow: inset 0 1px 0 var(--am-edge);
+  transition:
+    border-color var(--am-fast) var(--am-ease),
+    transform var(--am-fast) var(--am-ease);
+}
+
+/* Отклик — рамкой и сдвигом, а не подсветкой фона: плашка уже цветная. */
+.am-repo:hover:where(:not(.am-lite *)),
+.am-repo:focus-visible {
+  border-color: rgb(var(--am-accent-2-rgb) / 0.6);
+  transform: translateY(-1px);
+}
+
+/* Сердце — тем же переходом, что и плашка, только в цвете знака. Заливкой:
+   на восемнадцати пикселях обведённое сердце читается контуром. */
+.am-repo__heart {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+.am-repo__stop {
+  stop-color: var(--am-accent-2);
+}
+
+.am-repo__stop--end {
+  stop-color: var(--am-sakura);
+}
+
 /* Кнопка инструкции в шапке модалки: тот же квадрат, что крестик рядом. */
 .am-help-i {
   display: grid;

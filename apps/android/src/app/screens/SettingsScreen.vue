@@ -60,6 +60,15 @@ function onDatasetLink(): void {
   void Bridge.shell.openExternal(DATASET_URL)
 }
 
+/** Адрес репозитория и просьба при нём. В «О программе», а не окном при запуске:
+ * окно на старте читается вымогательством. Звезда значит «пригодилось», issue — «сломалось»,
+ * и обе вещи делаются в одном месте. */
+const REPO_URL = 'https://github.com/foulnike/Animori'
+
+function onRepoLink(): void {
+  void Bridge.shell.openExternal(REPO_URL)
+}
+
 /** Есть ли куда вести ссылкам наружу. На телевизоре браузера нет, и обе кнопки уводили бы в никуда:
  * плашка репозитория снимается целиком, а имя датасета остаётся простым текстом. */
 const outside = canOpenOutside()
@@ -744,6 +753,36 @@ onMounted(() => {
           ><span v-else class="am-meta">animori-data</span>
           и запустите сборку кнопкой.
         </p>
+
+        <!-- Плашка репозитория: не строка заметок, а приглашение — свой фон и своё сердце,
+             нажимается вся плашка. Почему именно здесь — у REPO_URL в скрипте. -->
+        <button class="am-repo" type="button" @click="onRepoLink">
+          <svg class="am-repo__heart" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <!-- Градиент сердцу задан классами: stop-color через var() в атрибуте не читается. -->
+            <defs>
+              <linearGradient
+                id="am-repo-heart"
+                x1="2.4"
+                y1="2.4"
+                x2="13.6"
+                y2="13.6"
+                gradientUnits="userSpaceOnUse"
+              >
+                <stop class="am-repo__stop" offset="0" />
+                <stop class="am-repo__stop am-repo__stop--end" offset="1" />
+              </linearGradient>
+            </defs>
+            <path
+              fill="url(#am-repo-heart)"
+              d="M8 14.1S1.9 10.3 1.9 6.1C1.9 3.9 3.7 2.4 5.5 2.4 6.8 2.4 7.6 3.1 8 4c.4-.9 1.2-1.6 2.5-1.6 1.8 0 3.6 1.5 3.6 3.7 0 4.2-6.1 8-6.1 8Z"
+            />
+          </svg>
+
+          <span class="am-repo__text">
+            AniMori — бесплатное приложение, без рекламы и телеметрии. Если вам понравилось —
+            поставьте звёздочку, если что-то сломалось — оставьте issue в репозитории.
+          </span>
+        </button>
 
         <!-- Источники и права — последнее в окне: дальше читать нечего. -->
         <CreditsBox />

@@ -327,11 +327,17 @@ onBeforeUnmount(() => {
   padding-left: 20px;
 }
 
-/* Ссылка-кнопка правового документа: тот же приём, что в справке про облако. */
+/* Ссылка-кнопка правового документа: инлайн в тексте — вторая строка подписи
+   выравнивается по краю абзаца, а не по центру кнопки. */
 .am-modal__link {
+  display: inline;
   padding: 0;
   font: inherit;
   color: var(--am-accent);
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow-wrap: anywhere;
   cursor: pointer;
   background: none;
   border: 0;
