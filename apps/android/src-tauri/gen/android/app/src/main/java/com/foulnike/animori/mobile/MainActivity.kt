@@ -232,7 +232,10 @@ class MainActivity : TauriActivity() {
       if (uri == null) {
         tellPicked(null, null)
       } else {
-        Thread { tellPicked(readDocument(uri)) }.start()
+        Thread {
+          val (name, text) = readDocument(uri)
+          tellPicked(name, text)
+        }.start()
       }
       return
     }
@@ -306,10 +309,9 @@ class MainActivity : TauriActivity() {
 
   /** Отдаёт выбор в страницу. Имя и текст едут раздельными аргументами: JSON из сырых
    *  строк собирать нельзя — кавычки и переводы строк поломали бы вызов. */
-  private fun tellPicked(read: Pair<String, String?>) {
-    val (name, text) = read
+  private fun tellPicked(name: String?, text: String?) {
     val payload =
-      if (text === null) "null"
+      if (name === null || text === null) "null"
       else "{\"name\":${JSONObject.quote(name)},\"text\":${JSONObject.quote(text)}}"
 
     runOnUiThread {
