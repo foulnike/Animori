@@ -135,8 +135,13 @@ class MainActivity : TauriActivity() {
         @JavascriptInterface
         fun set(name: String) {
           val mode =
-            if (name == "landscape") ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-            else ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            when (name) {
+              "landscape" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+              // Фулскрин трейлера: экран слушает датчик, и телефон ложится боком по желанию.
+              // Вне фулскрина сюда не приходят — портретный лок приложения остаётся.
+              "auto" -> ActivityInfo.SCREEN_ORIENTATION_SENSOR
+              else -> ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            }
           runOnUiThread { requestedOrientation = mode }
         }
 

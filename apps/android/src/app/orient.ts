@@ -1,8 +1,9 @@
 // Ориентация экрана и системные полосы. Приложение портретное; альбомную сторону и погружение
-// просит только плеер. Моста нет вне Android — вызов молча уходит в никуда.
+// просит только плеер, а режим датчика — фулскрин трейлера: ролик во весь экран смотрят
+// боком. Моста нет вне Android — вызов молча уходит в никуда.
 
-/** portrait — всё приложение, landscape — плеер. */
-export function setOrientation(name: 'portrait' | 'landscape'): void {
+/** portrait — всё приложение, landscape — плеер, auto — датчик (фулскрин трейлера). */
+export function setOrientation(name: 'portrait' | 'landscape' | 'auto'): void {
   const bridge = (window as unknown as { AnimoriOrient?: { set?: (n: string) => void } })
     .AnimoriOrient
   bridge?.set?.(name)

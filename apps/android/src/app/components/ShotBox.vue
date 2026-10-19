@@ -9,6 +9,7 @@ import type { MediaClip, MediaShot, MediaTrailer } from '@/core/types'
 import { Logger } from '@/utils/logger'
 
 import { canOpenOutside, isWeakPlatform } from '../platform'
+import { setOrientation } from '../orient'
 import { useScrollLock } from '../scroll-lock'
 
 const props = defineProps<{
@@ -123,6 +124,32 @@ function stepLook(by: number): void {
   if (count === 0) return
   look.value = (look.value + by + count) % count
 }
+
+/** Полный кадр текущего снимка доехал. Соседние прогреваются заранее (см. warm), чтобы
+ *  свайп почти всегда находил картинку готовой. */
+const lookReady = computed<boolean>(() => {
+  const shot = nowShot.value
+  return shot !== null && ready.value.has(shot.original)
+})
+
+/** Соседний кадр грузим мимоходом: браузер положит его в свой кэш, и свайп не встанет
+ *  на трёхбере. События настоящего <img> всё равно дождёмся сами. */
+function warm(at: number): void {
+  const shot = shots.value[at]
+  if (!shot || ready.value.has(shot.original)) return
+
+  const img = new Image()
+  img.onload = () => markReady(shot.original)
+  img.onerror = () => markReady(shot.original)
+  img.src = shot.original
+}
+
+// Соседи тёплые в обе стороны: назад и вперёд свайпают одинаково часто.
+watch(look, (at) => {
+  if (at < 0) return
+  warm(at - 1)
+  warm(at + 1)
+})
 
 /** Свайп по кадру: уезд в сторону пальца, въезд нового кадра с противоположной. Мыши не касаемся. */
 const swipeX = ref(0)
@@ -244,6 +271,50 @@ function closeTop(): void {
   gal.value = false
 }
 
+/** Ролик развёрнут во весь экран. Тогда экрану можно слушать датчик — фильм смотрят боком, —
+ * а с закрытием фулскрина возвращается портретный лок приложения. */
+const reelFull = ref(false)
+
+function applyReelOrient(): void {
+  setOrientation(reelFull.value ? 'auto' : 'portrait')
+}
+
+/** Стандартное событие браузера: разворот iframe доходит до родителя как fullscreenElement. */
+function onFsChange(): void {
+  if (!reel.value) return
+
+  const doc = document as Document & { webkitFullscreenElement?: Element | null }
+  reelFull.value = doc.fullscreenElement != null || doc.webkitFullscreenElement != null
+  applyReelOrient()
+}
+
+/** YouTube сообщает о фулскрине письмом в родителя: событий страницы из кросс-доменного
+ * плеера не бывает, и только это сообщение узнаёт разворот в обоих направлениях. */
+function onReelMsg(event: MessageEvent): void {
+  if (!reel.value) return
+
+  const data: unknown = event.data
+  if (typeof data !== 'string' || !data.includes('onFullscreenChange')) return
+
+  try {
+    const note = JSON.parse(data) as { event?: string; info?: { fullscreen?: boolean } }
+    if (note.event !== 'onFullscreenChange' || typeof note.info?.fullscreen !== 'boolean') return
+    reelFull.value = note.info.fullscreen
+    applyReelOrient()
+  } catch {
+    // Письмо чужое — не наше дело.
+  }
+}
+
+// Закрыли фулскрин или окно — ориентация портретная. Смотреть за закрытием только по
+// событию нельзя: кросс-доменный плеер молчит при уходе, а письмо могло и не дойти.
+watch([reel, reelFull], ([open]) => {
+  if (!open && reelFull.value) {
+    reelFull.value = false
+    applyReelOrient()
+  }
+})
+
 /** Клавиши: Escape закрывает, стрелки ходят по кадрам. Прослушивание на окне, а не
  * на корне плитки: просмотр и трейлер живут в общем слое, и фокус бывает уже там. На приставке стрелки ходят не по кадрам, а по кнопкам окна — почему, ниже. */
 function onKey(event: KeyboardEvent): void {
@@ -303,11 +374,22 @@ async function load(): Promise<void> {
 onMounted(() => {
   void load()
   window.addEventListener('keydown', onKey)
+  document.addEventListener('fullscreenchange', onFsChange)
+  document.addEventListener('webkitfullscreenchange', onFsChange)
+  window.addEventListener('message', onReelMsg)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKey)
+  document.removeEventListener('fullscreenchange', onFsChange)
+  document.removeEventListener('webkitfullscreenchange', onFsChange)
+  window.removeEventListener('message', onReelMsg)
   window.clearTimeout(swipeTimer)
+  // Уход с тайтла возвращает портрет, даже если фулскрин не закрылся сам.
+  if (reelFull.value) {
+    reelFull.value = false
+    applyReelOrient()
+  }
   // Показ прекращается вместе с уходом с тайтла: ответ, пришедший следом, уже не к месту.
   run++
 })
@@ -465,13 +547,24 @@ watch(() => [props.mediaId, props.malId], load)
         @pointercancel="onLookUp"
         @click.capture="onLookClickCapture"
       >
-        <img
-          class="am-look__art"
-          :src="nowShot.original"
-          alt=""
-          decoding="async"
-          :style="{ transform: `translateX(${swipeX}px)` }"
-        />
+        <!-- Обойма едет на свайпе, а не картинка: пока полный кадр не доехал, внутри заглушка
+             с трёхбером. Ключ по адресу пересоздаёт <img> — прошлый кадр негде остаться. -->
+        <div class="am-look__slide" :style="{ transform: `translateX(${swipeX}px)` }">
+          <span v-if="!lookReady" class="am-look__hold">
+            <span class="am-look__spin" aria-hidden="true" />
+          </span>
+
+          <img
+            v-show="lookReady"
+            :key="nowShot.original"
+            class="am-look__art"
+            :src="nowShot.original"
+            alt=""
+            decoding="async"
+            @load="markReady(nowShot.original)"
+            @error="markReady(nowShot.original)"
+          />
+        </div>
 
         <div class="am-look__row">
           <button
@@ -953,13 +1046,44 @@ watch(() => [props.mediaId, props.malId], load)
 
 /* Свайп по кадру: горизонтальное ведение слушаем сами, вертикальное отдаём системе.
    Длительность уезда и въезда задана здесь же: таймер в скрипте сверяется с ней. */
-.am-look__art {
+.am-look__slide {
+  position: relative;
+  display: flex;
   touch-action: pan-y;
   transition: transform 0.18s var(--am-ease);
 }
 
-.am-look__box--drag .am-look__art,
-.am-look__box--flying .am-look__art {
+.am-look__box--drag .am-look__slide,
+.am-look__box--flying .am-look__slide {
   transition: none;
+}
+
+/* Заглушка незагруженного кадра: та же коробка, что у картинки (пропорция кадра Шикимори),
+   с трёхбером по центру. Без неё свайп вёл бы на пустую темноту и читался бы зависанием. */
+.am-look__hold {
+  display: grid;
+  place-items: center;
+  width: min(100%, calc((100vh - 130px) * 16 / 9));
+  aspect-ratio: 16 / 9;
+  background: var(--am-fill-1);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-m);
+  box-shadow: var(--am-sh-2);
+}
+
+/* Трёхбер: тонкое кольцо с хвостом, цвет пары темы. */
+.am-look__spin {
+  width: 34px;
+  height: 34px;
+  border: 3px solid rgb(255 255 255 / 0.14);
+  border-top-color: rgb(245 179 200 / 0.95);
+  border-radius: 50%;
+  animation: am-look-turn 0.7s linear infinite;
+}
+
+@keyframes am-look-turn {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>
