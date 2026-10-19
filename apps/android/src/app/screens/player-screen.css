@@ -356,6 +356,20 @@
   transform: translateY(10px);
 }
 
+/* Кадр в маленьком окне. Система берёт кадр прямоугольником кадра, но панель, шапка, знаки и заслонка
+   лежат поверх него и остаются в захваченной области — в окошке они сплющиваются и загораживают картинку.
+   Прячем всё, кроме самого видео. Класс ставится по pipOn, то есть ловит и кнопку, и сворачивание. */
+.am-play--pip .am-play__head,
+.am-play--pip .am-play__deck,
+.am-play--pip .am-play__mid,
+.am-play--pip .am-play__tap,
+.am-play--pip .am-play__veil,
+.am-play--pip .am-play__resume,
+.am-play--pip .am-play__skip,
+.am-play--pip .am-play__side {
+  display: none !important;
+}
+
 /* Полоса времени */
 
 .am-play__seek {
@@ -710,6 +724,91 @@
   font-weight: 600;
 }
 
+/* Заголовок раздела в шестерёнке: скорость и качество живут в одном меню, и без подписи
+   второй список читался бы продолжением первого. */
+.am-play__group {
+  padding: 8px 10px 4px;
+  color: rgb(255 255 255 / 0.5);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+/* Сросшийся ящик озвучки и серий: два столбца рядом, каждый крутится сам — параллельно,
+   а не один под другим. Высота и ширина заданы у блока-обёртки, см. .am-play__pop. */
+.am-play__menu--pair {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  overflow: hidden;
+}
+
+/** Всплывающий блок меню: держит список и кнопки краёв вместе, ограничивается и по высоте,
+ *  и по ширине — чтобы не дотянуться до шапки и не уехать за левый край на узком кадре. */
+.am-play__pop {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 38px);
+  z-index: 6;
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  /* Справа от списка стоят правые кнопки панели (~74px), поэтому резерв под левый край шире. */
+  width: min(574px, calc(100vw - 100px));
+  /* Между шапкой и панелью: сверху остаётся шапка (поля + заголовок), снизу — панель с отступом 38px.
+     Долю высоты брать нельзя: в альбомной ориентации вьюпорт низкий, и 62vh уезжало под шапку. */
+  max-height: calc(100vh - 240px - max(env(safe-area-inset-top), var(--am-sys-top)));
+  animation: am-play-pop var(--am-fast) var(--am-ease) both;
+}
+
+.am-play__pop .am-play__menu {
+  position: static;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: none;
+  animation: none;
+}
+
+/* Столбец: шапка липкая сверху, список крутится под ней. */
+.am-play__col {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 0;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgb(255 255 255 / 0.28) transparent;
+  scrollbar-width: thin;
+}
+
+/* Первая колонка (озвучка) уже: имён студий меньше, чем серий у длинного тайтла. */
+.am-play__col:first-child {
+  flex: 1 1 38%;
+  border-right: 1px solid rgb(255 255 255 / 0.08);
+  padding-right: 4px;
+}
+
+.am-play__col-h {
+  position: sticky;
+  top: -8px;
+  z-index: 1;
+  margin: 0 0 4px;
+  padding: 6px 8px;
+  background: rgb(10 12 17 / 0.96);
+  color: rgb(255 255 255 / 0.56);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Ячейка списка: обёртка, чтобы длинный текст усекался внутри, а не растягивал столбец. */
+.am-play__cell {
+  display: block;
+}
+
 .am-play__opt-tick {
   display: grid;
   width: 16px;
@@ -723,21 +822,18 @@
 }
 
 /** Края списка серий. У длинных тайтлов больше тысячи серий, и дойти стрелками до конца нельзя: две
- *  кнопки ведут сразу на первую и на последнюю, отдельной коробкой справа от списка. */
+ *  кнопки ведут сразу на первую и на последнюю. Столбик тянется на всю высоту блока — поэтому первая
+ *  кнопка вверху, последняя внизу, а не скопом в середине. */
 
 .am-play__jump {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 38px);
-  z-index: 6;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   padding: 6px;
   border: 1px solid rgb(255 255 255 / 0.12);
   border-radius: var(--am-r-m);
   background: rgb(10 12 17 / 0.96);
   box-shadow: var(--am-sh-2);
-  animation: am-play-pop var(--am-fast) var(--am-ease) both;
   gap: 6px;
 }
 
@@ -760,13 +856,6 @@
 .am-play__jump-key .am-play__ico {
   width: 22px;
   height: 22px;
-}
-
-/* Список уступает кнопкам их ширину: они стоят вплотную к правому краю кнопки панели,
-   а за её пределы выходить нельзя — там край кадра. */
-
-.am-play__pick--jump .am-play__menu {
-  right: 60px;
 }
 
 /* Списки */

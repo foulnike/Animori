@@ -54,6 +54,15 @@ import {
   type WatchWhat,
 } from './player-keep'
 import { episodeLabel, usePlayer, voiceLine, type VoiceRow } from './player-view'
+import {
+  enterPip,
+  feedPipSource,
+  markPipPlaying,
+  markPipReady,
+  pipOn,
+  pipReady,
+  watchPip,
+} from '../pip'
 
 /** Знак кнопки — рисунок в квадрате 24×24, а не символ шрифта: у символов своя ширина и наплыв над
  * базовой
@@ -97,6 +106,11 @@ const LINE = {
   // Край списка: стрелка в упор к черте.
   first: 'M6.5 6h11M12 19V9M7.5 14l4.5-5 4.5 5',
   last: 'M6.5 18h11M12 5v10M7.5 10l4.5 5 4.5-5',
+  // Шестерёнка скорости и качества: зубцы по кругу, дырка по центру. Контур симметричен относительно
+  // (12, 12) — так же, как и дырка: иначе центр круга уезжал от центра зубчатого колеса.
+  gear: 'M18.2 13.5l1.7 1-2 3.4-1.9-.7a7 7 0 0 1-1.7 1l-.3 2h-4l-.3-2a7 7 0 0 1-1.7-1l-1.9.7-2-3.4 1.7-1a7 7 0 0 1 0-3l-1.7-1 2-3.4 1.9.7a7 7 0 0 1 1.7-1l.3-2h4l.3 2a7 7 0 0 1 1.7 1l1.9-.7 2 3.4-1.7 1a7 7 0 0 1 0 3zM12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z',
+  // Кадр в маленьком окне: рамка со скруглёнными углами и припаянный кусок в углу.
+  pip: 'M6 5h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM14.5 12h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3a1.5 1.5 0 0 1-1.5-1.5v-3a1.5 1.5 0 0 1 1.5-1.5z',
 } as const
 
 /** Кнопка панели: подпись, знак и что делать. Разметка из этого списка одна.
@@ -175,9 +189,9 @@ const calm = ref(false)
 /** Указатель на панели: пока он там, тишина не считается. */
 const deckHot = ref(false)
 
-/** Какое меню панели открыто. Одно за раз: два перекрывали бы друг друга. Списки озвучки
- * и серий — тоже меню, и на пульте только так: отдельным ящиком они требовали отдельного входа. */
-const menu = ref<'' | 'quality' | 'rate' | 'voices' | 'episodes'>('')
+/** Какое меню панели открыто. Одно за раз: два перекрывали бы друг друга. `tune` — шестерёнка
+ *  скорости и качества, `lists` — сросшийся ящик озвучки и серий. */
+const menu = ref<'' | 'tune' | 'lists'>('')
 
 /** Кнопка, раскрывшая меню: закрытие возвращает на неё фокус. */
 let menuFrom: HTMLElement | null = null
@@ -187,6 +201,9 @@ let dropMenuStop: (() => void) | null = null
 
 /** Шаг «Назад» на время всего экрана: выход в карточку, а не по истории. */
 let dropExitStop: (() => void) | null = null
+
+/** Снятие слежения за входом и выходом из PiP. */
+let stopPipWatch: (() => void) | null = null
 
 /** Кадр встал посреди серии: сеть не поспевает, но ошибки ещё нет. */
 const stalled = ref(false)
@@ -299,14 +316,6 @@ const veilSpin = computed<boolean>(
  * выглядит тем же самым, и объяснять тут нечего. */
 const waiting = computed<boolean>(() => stalled.value || renewOn.value)
 
-/** Подпись кнопки качества: то, что играет сейчас. */
-const qualityNow = computed<string>(
-  () => qualities.value.find((quality) => quality.on)?.label ?? 'Качество',
-)
-
-/** Подпись кнопки озвучки: та, что играет сейчас. */
-const voiceNow = computed<string>(() => (voiceLabel.value === '' ? 'Озвучка' : voiceLabel.value))
-
 /** Кнопка пропуска: показывается только внутри своего отрезка. */
 const skip = computed<{ label: string; to: number } | null>(() => {
   const ep = current.value
@@ -396,13 +405,12 @@ function toggleMute(): void {
   applySound()
 }
 
-/** Выбор озвучки закрывает меню: выбор сделан, список больше не нужен. */
+/** Выбор озвучки в сросшемся ящике: ящик остаётся — после озвучки обычно берут серию. */
 function takeVoice(key: string): void {
   pickVoice(key)
-  menu.value = ''
 }
 
-/** Выбор серии закрывает меню — ровно так же, как выбор озвучки. */
+/** Выбор серии закрывает ящик: смотреть начинают, ящик больше не нужен. */
 function takeEpisode(number: number): void {
   pickEpisode(number)
   menu.value = ''
@@ -411,20 +419,20 @@ function takeEpisode(number: number): void {
 /** Край списка серий. У длинных тайтлов больше тысячи серий, и дойти до конца стрелками нельзя:
  * одно нажатие — одна строка. Список остаётся открытым: прыжок ещё не выбор серии. */
 function jumpEpisode(side: 'start' | 'end'): void {
-  const box = rootEl.value?.querySelector<HTMLElement>('[data-zone="menu"]')
-  if (box === null || box === undefined) return
+  const col = rootEl.value?.querySelector<HTMLElement>('[data-part="episodes"]')
+  if (col === null || col === undefined) return
 
-  const rows = Array.from(box.querySelectorAll<HTMLElement>('button.am-play__opt'))
+  const rows = Array.from(col.querySelectorAll<HTMLElement>('button.am-play__opt'))
   const aim = side === 'start' ? rows[0] : rows[rows.length - 1]
   if (aim === undefined) return
 
-  box.scrollTop = side === 'start' ? 0 : box.scrollHeight
+  col.scrollTop = side === 'start' ? 0 : col.scrollHeight
   aim.focus()
 }
 
 /** Раскрывает меню панели и запоминает кнопку, которая его раскрыла: строка списка
  * уезжает вместе с меню, и фокус вернуть было бы некуда. */
-function openMenu(name: 'quality' | 'rate' | 'voices' | 'episodes', event: Event): void {
+function openMenu(name: 'tune' | 'lists', event: Event): void {
   if (menu.value === name) {
     menu.value = ''
     return
@@ -454,11 +462,18 @@ watch(menu, (now) => {
   })
 
   void nextTick(() => {
+    // В сросшемся ящике фокус ставим на текущую серию — по ней чаще всего заходят, и она в
+    // дальнем столбце. В шестерёнке — на выбранную строку, как раньше.
+    const sel =
+      menu.value === 'lists'
+        ? rootEl.value?.querySelector<HTMLElement>('[data-part="episodes"] .am-play__opt--on')
+        : undefined
+
     const box = rootEl.value?.querySelector<HTMLElement>('[data-zone="menu"]')
     if (box === null || box === undefined) return
 
     const rows = Array.from(box.querySelectorAll<HTMLElement>('button.am-play__opt'))
-    const on = rows.find((row) => row.classList.contains('am-play__opt--on'))
+    const on = sel ?? rows.find((row) => row.classList.contains('am-play__opt--on'))
     const aim = on ?? rows[0]
     aim?.focus()
   })
@@ -718,6 +733,17 @@ function onRolling(): void {
   stalled.value = false
 }
 
+/** Тап по кадру. Первый тап, когда панель уехала, только поднимает её: иначе панель и так бы
+ *  дёрнулась от касания, и человек, желая увидеть кнопки, ставил бы паузу. Дальше тап идёт в кадр. */
+function onStageTap(): void {
+  if (calm.value) {
+    wake()
+    return
+  }
+
+  doToggle()
+}
+
 function doToggle(): void {
   const el = videoEl.value
   if (el === null || veil.value) return
@@ -942,10 +968,39 @@ const leftKeys = computed<Key[]>(() => [
   { tip: 'Следующая серия', sign: SIGN.next, off: !hasNext.value, run: nextEpisode },
 ])
 
-/** Правый кластер: два пути кадра из окна и полный экран. Полный экран всегда последний.
- * Картинки в картинке в списке нет, когда движок её не умеет. Кнопки ссылки здесь больше нет. */
+/** Подпись сросшейся кнопки: озвучка и серия вместе, чтобы ящик читался одним делом. */
+const pickNow = computed<string>(() => {
+  const voice = voiceLabel.value === '' ? 'Озвучка' : voiceLabel.value
+  return `${voice} · ${episode.value || '—'}`
+})
+
+/** Кормит мост прямоугольником кадра. Зовётся при открытии, при смене раскладки и перед уводом:
+ * кадр мог сменить место. */
+function feedPip(): void {
+  const el = videoEl.value
+  if (el !== null) feedPipSource(el)
+}
+
+/** Уводит кадр в маленькое окно. Перед уводом кормим рект — система обрежет по нему. */
+function movePip(): void {
+  feedPip()
+  enterPip()
+}
+
+/** Правый кластер: путь кадра в маленькое окно и полный экран. Полный экран всегда последний.
+ * Кнопки ссылки здесь больше нет; трансляции на телефоне нет. */
 const rightKeys = computed<Key[]>(() => {
   const keys: Key[] = []
+
+  // Кнопка PiP есть только когда устройство его умеет: без умения она была бы пустой.
+  if (pipReady.value) {
+    keys.push({
+      tip: pipOn.value ? 'Кадр во весь экран' : 'Маленькое окно',
+      line: LINE.pip,
+      on: pipOn.value,
+      run: movePip,
+    })
+  }
 
   // На пульте кнопки размера кадра нет: плеер всегда во весь экран, а сложенный кадр — тот промежуточный вид, от которого ушли.
   if (!lite) {
@@ -1081,6 +1136,11 @@ onMounted(() => {
   // Поля моста догоняют погружение: полосы ушли, инсеты обновились асинхронно.
   window.setTimeout(syncInsets, 250)
 
+  // PiP: устройство умеет — ставим слежение, кормим рект кадра и сообщаем умение кнопке.
+  markPipReady()
+  stopPipWatch = watchPip()
+  feedPip()
+
   const el = videoEl.value
   if (el !== null) {
     playback = attachPlayback(el, {
@@ -1153,6 +1213,13 @@ watch(
 // Прокрутка страницы под театром: колесо мыши уводило бы её вслепую, и, выйдя из полного экрана, человек оказался бы не там.
 watch(wide, (on) => {
   document.body.style.overflow = on ? 'hidden' : ''
+  // Разворот меняет место кадра — кормим рект, чтобы сворачивание увезло верную область.
+  if (on) void nextTick(feedPip)
+})
+
+// Игра идёт или нет: оболочка решает по этому признаку, уводить ли кадр при сворачивании.
+watch(playing, (on) => {
+  markPipPlaying(on)
 })
 
 onBeforeUnmount(() => {
@@ -1179,6 +1246,9 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKey)
   window.removeEventListener('keyup', onKeyUp)
   window.removeEventListener('pointerdown', onDown)
+  stopPipWatch?.()
+  stopPipWatch = null
+  markPipPlaying(false)
   if (calmTimer !== 0) window.clearTimeout(calmTimer)
   if (resumeTimer !== 0) window.clearTimeout(resumeTimer)
   if (renewTimer !== 0) {
@@ -1222,6 +1292,9 @@ onBeforeUnmount(() => {
           'am-play--calm': calm,
           'am-play--lite': lite,
           'am-play--veil': veil,
+          // В маленьком окне виден весь кадр целиком, и наша панель сплющивается поверх него.
+          // Клажем интерфейс, как только кадр ушёл — каким бы путём это ни случилось.
+          'am-play--pip': pipOn,
         }"
         @pointermove="wake"
       >
@@ -1251,8 +1324,8 @@ onBeforeUnmount(() => {
               v-if="!veil"
               class="am-play__tap"
               type="button"
-              :aria-label="playing ? 'Пауза' : 'Смотреть'"
-              @click="doToggle"
+              :aria-label="calm ? 'Показать управление' : playing ? 'Пауза' : 'Смотреть'"
+              @click="onStageTap"
             ></button>
 
             <!-- Центр кадра. Оба знака центрует сетка обёртки, а не сдвиг трансформацией: кольцу нужен свой
@@ -1398,10 +1471,15 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div class="am-play__clip am-play__clip--end">
-                  <!-- Скорость списком, а не ползунком: доли вроде 1,15× на ползунке ловятся только случайно. -->
+                  <!-- Скорость и качество под одной шестерёнкой: скоростью крутят часто, качеством — изредка, и две
+                       отдельные кнопки жрали место в ряду. Списки внутри одного меню, разделённые заголовками. -->
                   <div class="am-play__pick">
-                    <ul v-if="menu === 'rate'" class="am-play__menu" data-zone="menu">
-                      <li v-for="value in RATES" :key="value">
+                  <!-- Скорость и качество под одной шестерёнкой и тоже двумя столбцами: как и списки рядом,
+                       каждый столбец крутится сам, а не один под другим. -->
+                  <div v-if="menu === 'tune'" class="am-play__menu am-play__menu--pair" data-zone="menu">
+                    <div class="am-play__col">
+                      <span class="am-play__col-h">Скорость</span>
+                      <div v-for="value in RATES" :key="'r' + value" class="am-play__cell">
                         <button
                           class="am-play__opt"
                           :class="{ 'am-play__opt--on': value === rate }"
@@ -1413,23 +1491,12 @@ onBeforeUnmount(() => {
                           </span>
                           <span>{{ value === NORMAL_RATE ? 'Обычная' : rateLabel(value) }}</span>
                         </button>
-                      </li>
-                    </ul>
+                      </div>
+                    </div>
 
-                    <button
-                      class="am-play__key am-play__key--word"
-                      :class="{ 'am-play__key--on': rate !== NORMAL_RATE }"
-                      type="button"
-                      :aria-expanded="menu === 'rate'"
-                      @click="openMenu('rate', $event)"
-                    >
-                      {{ rateLabel(rate) }}
-                    </button>
-                  </div>
-
-                  <div v-if="qualities.length > 0" class="am-play__pick">
-                    <ul v-if="menu === 'quality'" class="am-play__menu" data-zone="menu">
-                      <li v-for="quality in qualities" :key="quality.height">
+                    <div v-if="qualities.length > 0" class="am-play__col">
+                      <span class="am-play__col-h">Качество</span>
+                      <div v-for="quality in qualities" :key="'q' + quality.height" class="am-play__cell">
                         <button
                           class="am-play__opt"
                           :class="{ 'am-play__opt--on': quality.on }"
@@ -1441,95 +1508,107 @@ onBeforeUnmount(() => {
                           </span>
                           <span>{{ quality.label }}</span>
                         </button>
-                      </li>
-                    </ul>
+                      </div>
+                    </div>
+                  </div>
 
                     <button
-                      class="am-play__key am-play__key--word"
+                      class="am-play__key"
+                      :class="{ 'am-play__key--on': rate !== NORMAL_RATE }"
                       type="button"
-                      :aria-expanded="menu === 'quality'"
-                      @click="openMenu('quality', $event)"
+                      aria-label="Скорость и качество"
+                      :aria-expanded="menu === 'tune'"
+                      @click="openMenu('tune', $event)"
                     >
-                      {{ qualityNow }}
+                      <Icon :line="LINE.gear" />
                     </button>
                   </div>
 
-                  <!-- Озвучка и серия — две разные кнопки, а не один ящик на двоих: в общем списке они мешали друг другу,
-     а закрыть его можно было только повторным нажатием. Ящик справа остался компьютеру, где место есть. -->
-                  <div v-if="lite && voices.length > 0" class="am-play__pick">
-                    <ul v-if="menu === 'voices'" class="am-play__menu" data-zone="menu">
-                      <li v-for="voice in voices" :key="voice.key">
-                        <button
-                          class="am-play__opt"
-                          :class="{ 'am-play__opt--on': voice.key === voiceKey }"
-                          type="button"
-                          @click="takeVoice(voice.key)"
+                  <!-- Озвучка и серия срослись в один ящик: два столбца скроллятся параллельно, а не один под другим.
+                       Выбор озвучки ящик не закрывает — после неё обычно берут серию; выбор серии закрывает. -->
+                  <div
+                    v-if="lite && (voices.length > 0 || episodes.length > 0)"
+                    class="am-play__pick am-play__pick--lists"
+                  >
+                    <div v-if="menu === 'lists'" class="am-play__pop">
+                      <div class="am-play__menu am-play__menu--pair" data-zone="menu">
+                      <div class="am-play__col" data-part="voices">
+                        <span class="am-play__col-h">Озвучка</span>
+                        <div
+                          v-for="voice in voices"
+                          :key="voice.key"
+                          class="am-play__cell"
                         >
-                          <span class="am-play__opt-tick">
-                            <Icon v-if="voice.key === voiceKey" :line="LINE.tick" />
-                          </span>
-                          <span>{{ voiceLine(voice) }}</span>
-                        </button>
-                      </li>
-                    </ul>
+                          <button
+                            class="am-play__opt"
+                            :class="{ 'am-play__opt--on': voice.key === voiceKey }"
+                            type="button"
+                            @click="takeVoice(voice.key)"
+                          >
+                            <span class="am-play__opt-tick">
+                              <Icon v-if="voice.key === voiceKey" :line="LINE.tick" />
+                            </span>
+                            <span class="am-play__word-cut">{{ voiceLine(voice) }}</span>
+                          </button>
+                        </div>
+                        <p v-if="voices.length === 0" class="am-play__none">Озвучек нет.</p>
+                      </div>
 
-                    <button
-                      class="am-play__key am-play__key--word"
-                      type="button"
-                      :aria-expanded="menu === 'voices'"
-                      @click="openMenu('voices', $event)"
-                    >
-                      <span class="am-play__cut">{{ voiceNow }}</span>
-                    </button>
-                  </div>
-
-                  <div v-if="lite && episodes.length > 0" class="am-play__pick am-play__pick--jump">
-                    <ul v-if="menu === 'episodes'" class="am-play__menu" data-zone="menu">
-                      <li v-for="item in episodes" :key="item.number">
-                        <button
-                          class="am-play__opt"
-                          :class="{ 'am-play__opt--on': item.number === episode }"
-                          type="button"
-                          @click="takeEpisode(item.number)"
+                      <div class="am-play__col" data-part="episodes">
+                        <span class="am-play__col-h">Серии</span>
+                        <div
+                          v-for="item in episodes"
+                          :key="item.number"
+                          class="am-play__cell"
                         >
-                          <span class="am-play__opt-tick">
-                            <Icon v-if="item.number === episode" :line="LINE.tick" />
-                          </span>
-                          <span class="am-play__word-cut">
-                            {{ item.number }}. {{ item.title ?? 'Серия' }}
-                          </span>
+                          <button
+                            class="am-play__opt"
+                            :class="{ 'am-play__opt--on': item.number === episode }"
+                            type="button"
+                            @click="takeEpisode(item.number)"
+                          >
+                            <span class="am-play__opt-tick">
+                              <Icon v-if="item.number === episode" :line="LINE.tick" />
+                            </span>
+                            <span class="am-play__word-cut">
+                              {{ item.number }}. {{ item.title ?? 'Серия' }}
+                            </span>
+                          </button>
+                        </div>
+                        <p v-if="episodes.length === 0" class="am-play__none">Серий пока нет.</p>
+                      </div>
+                      </div>
+
+                      <!-- Края списка серий живут в том же блоке, что и список: столбик тянется на всю
+                           высоту, и кнопки расходятся по краям, а не скопом в середине. -->
+                      <div v-if="episodes.length > 0" class="am-play__jump" data-zone="jump">
+                        <button
+                          class="am-play__jump-key"
+                          type="button"
+                          aria-label="Первая серия"
+                          @click="jumpEpisode('start')"
+                        >
+                          <Icon :line="LINE.first" />
                         </button>
-                      </li>
-                    </ul>
 
-                    <!-- Края списка стоят отдельно, а не строкой внутри: внутри они уезжали бы вместе с прокруткой. -->
-                    <div v-if="menu === 'episodes'" class="am-play__jump" data-zone="jump">
-                      <button
-                        class="am-play__jump-key"
-                        type="button"
-                        aria-label="Первая серия"
-                        @click="jumpEpisode('start')"
-                      >
-                        <Icon :line="LINE.first" />
-                      </button>
-
-                      <button
-                        class="am-play__jump-key"
-                        type="button"
-                        aria-label="Последняя серия"
-                        @click="jumpEpisode('end')"
-                      >
-                        <Icon :line="LINE.last" />
-                      </button>
+                        <button
+                          class="am-play__jump-key"
+                          type="button"
+                          aria-label="Последняя серия"
+                          @click="jumpEpisode('end')"
+                        >
+                          <Icon :line="LINE.last" />
+                        </button>
+                      </div>
                     </div>
 
                     <button
                       class="am-play__key am-play__key--word"
                       type="button"
-                      :aria-expanded="menu === 'episodes'"
-                      @click="openMenu('episodes', $event)"
+                      :aria-expanded="menu === 'lists'"
+                      @click="openMenu('lists', $event)"
                     >
-                      {{ episode }}
+                      <span class="am-play__cut">{{ pickNow }}</span>
                     </button>
                   </div>
 

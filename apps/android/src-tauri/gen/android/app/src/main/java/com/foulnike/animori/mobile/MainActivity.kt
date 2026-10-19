@@ -1,11 +1,15 @@
 package com.foulnike.animori.mobile
 
+import android.app.PictureInPictureParams
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.res.Configuration
+import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
+import android.util.Rational
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
@@ -38,6 +42,22 @@ class MainActivity : TauriActivity() {
 
   /** Текст выгрузки до выбора документа: он приходит из страницы, а пикер открывается позже. */
   @Volatile private var savePayload: String? = null
+
+  // ПИКТУР-ИН-ПИКТУР. Web-PiP в Android WebView мёртв (caniwebview: requestPictureInPicture
+  // и весь родной API — unsupported), поэтому кадр в маленькое окно уносит сама активность.
+  // Страница кормит мост прямоугольником кадра и признаком игры; свернуть приложение — и оно
+  // само уезжает в PiP. Оба поля в пикселях: CSS живёт в dp, но системе нужны пиксели.
+
+  /** Прямоугольник кадра на экране; null — кадр ещё не мерился. */
+  @Volatile private var pipRect: Rect? = null
+
+  /** Пропорция кадра для маленького окна; знаменатель ноль — не сообщали, ставим 16:9. */
+  @Volatile private var pipAspectW = 16
+
+  @Volatile private var pipAspectH = 9
+
+  /** Игра ли сейчас: PiP по сворачиванию нужен только под живой кадр. */
+  @Volatile private var pipPlaying = false
 
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
@@ -186,6 +206,46 @@ class MainActivity : TauriActivity() {
       "AnimoriOrient",
     )
 
+    // Мост Picture-in-Picture. На телефоне кадр в маленькое окно уносит активность, а не движок:
+    // Web-PiP в Android WebView не поддержан вовсе. Страница сообщает прямоугольник кадра и игру,
+    // а также сама просит разворот по кнопке.
+    webView.addJavascriptInterface(
+      object {
+        /** Кадр меряется в dp (CSS), системе нужны пиксели — пересчёт по плотности. */
+        @JavascriptInterface
+        fun source(leftDp: Int, topDp: Int, widthDp: Int, heightDp: Int, aspectW: Int, aspectH: Int) {
+          val density = resources.displayMetrics.density
+          val left = Math.round(leftDp * density)
+          val top = Math.round(topDp * density)
+          val width = Math.round(widthDp * density)
+          val height = Math.round(heightDp * density)
+          pipRect = Rect(left, top, left + width, top + height)
+          pipAspectW = if (aspectW > 0) aspectW else 16
+          pipAspectH = if (aspectH > 0) aspectH else 9
+        }
+
+        /** Игра идёт: по этому признаку сворачивание решает, уводить ли кадр. */
+        @JavascriptInterface
+        fun playing(on: Boolean) {
+          pipPlaying = on
+        }
+
+        /** Уводит кадр в маленькое окно по кнопке. Мост зовётся из фонового потока WebView,
+         *  а разворот — работа UI-потока: отвечаем готовностью, а сам увод — туда. */
+        @JavascriptInterface
+        fun enter(): Boolean {
+          val ready = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && pipRect !== null
+          if (ready) runOnUiThread { enterPipNow() }
+          return ready
+        }
+
+        /** Умеет ли устройство PiP вовсе: кнопки без умения быть не должно. */
+        @JavascriptInterface
+        fun supports(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+      },
+      "AnimoriPip",
+    )
+
     // Мост файлов. Своё окно выбора у WebView нет: <input type="file"> молчит без
     // onShowFileChooser в ChromeClient, а <a download> молчит без DownloadListener.
     // Поэтому выбор и запись идут системными намерениями Storage Access Framework:
@@ -259,6 +319,67 @@ class MainActivity : TauriActivity() {
     }
 
     super.onActivityResult(requestCode, resultCode, data)
+  }
+
+  /**
+   * Разворачивает кадр в маленькое окно.
+   *
+   * Прямоугольник кадра (sourceRectHint) говорит системе, какую часть экрана показывать — без
+   * него в PiP уезжает весь экран целиком. Пропорция держит форму кадра. Выход из PiP делает
+   * сама система (кнопка разворота или закрытия), наша работа — вернуть портрет и погасить флаг.
+   */
+  private fun enterPipNow(): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
+    val rect = pipRect ?: return false
+    if (rect.width() <= 0 || rect.height() <= 0) return false
+
+    return try {
+      val params =
+        PictureInPictureParams.Builder()
+          .setSourceRectHint(rect)
+          .setAspectRatio(Rational(pipAspectW, pipAspectH))
+          .build()
+      enterPictureInPictureMode(params)
+      true
+    } catch (ex: Exception) {
+      Log.e("AniMori", "PiP не открылся: ${ex.message}")
+      false
+    }
+  }
+
+  /**
+   * Сворачивание приложения (Home, недавние) во время игры.
+   *
+   * Это ровно тот случай «свернул — всплыл PiP»: onUserLeaveHint зовут только на уходе человека,
+   * а не на системных событиях вроде звонка. Кадр уезжает сам, если игра идёт и прямоугольник
+   * уже мерился; в остальных случаях сворачивание обычное.
+   */
+  override fun onUserLeaveHint() {
+    super.onUserLeaveHint()
+    if (pipPlaying && !isInPictureInPictureMode) {
+      enterPipNow()
+    }
+  }
+
+  /**
+   * Вход и выход из PiP. Страница узнаёт о смене режима и подтягивает вид: в маленьком окне
+   * панель не нужна, а на выходе она возвращается.
+   */
+  override fun onPictureInPictureModeChanged(isIn: Boolean, newConfig: Configuration) {
+    super.onPictureInPictureModeChanged(isIn, newConfig)
+    fileWebView?.evaluateJavascript("window.__amPipChanged && window.__amPipChanged($isIn)", null)
+  }
+
+  /**
+   * PiP — пауза для обычного кода, но не для кадра: маленькое окно продолжает показывать видео,
+   * и WebView нельзя усыплять. WryActivity.onPause ставит движок на паузу — здесь мы возвращаем
+   * ему бодрость, пока мы в PiP. Выход из PiP шлёт обычный onResume от оболочки.
+   */
+  override fun onPause() {
+    super.onPause()
+    if (isInPictureInPictureMode) {
+      fileWebView?.onResume()
+    }
   }
 
   /** Имя документа у человека на виду: провайдер может переименовать или добавить расширение. */
