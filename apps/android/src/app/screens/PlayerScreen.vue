@@ -63,12 +63,7 @@ import {
   pipReady,
   watchPip,
 } from '../pip'
-import {
-  reportMediaState,
-  reportMediaTitle,
-  stopMedia,
-  watchMedia,
-} from '../media'
+import { reportMediaState, reportMediaTitle, stopMedia, watchMedia } from '../media'
 
 /** Знак кнопки — рисунок в квадрате 24×24, а не символ шрифта: у символов своя ширина и наплыв над
  * базовой
@@ -1530,47 +1525,51 @@ onBeforeUnmount(() => {
                   <!-- Скорость и качество под одной шестерёнкой: скоростью крутят часто, качеством — изредка, и две
                        отдельные кнопки жрали место в ряду. Списки внутри одного меню, разделённые заголовками. -->
                   <div class="am-play__pick">
-                  <!-- Скорость и качество под одной шестерёнкой и тоже двумя столбцами: как и списки рядом,
+                    <!-- Скорость и качество под одной шестерёнкой и тоже двумя столбцами: как и списки рядом,
                        каждый столбец крутится сам, а не один под другим. -->
-                  <div v-if="menu === 'tune'" class="am-play__pop am-play__pop--tune">
-                    <div class="am-play__menu am-play__menu--pair" data-zone="menu">
-                      <div class="am-play__col">
-                        <span class="am-play__col-h">Скорость</span>
-                      <div v-for="value in RATES" :key="'r' + value" class="am-play__cell">
-                        <button
-                          class="am-play__opt"
-                          :class="{ 'am-play__opt--on': value === rate }"
-                          type="button"
-                          @click="takeRate(value)"
-                        >
-                          <span class="am-play__opt-tick">
-                            <Icon v-if="value === rate" :line="LINE.tick" />
-                          </span>
-                          <span class="am-play__word-cut">{{
-                            value === NORMAL_RATE ? 'Обычная' : rateLabel(value)
-                          }}</span>
-                        </button>
-                      </div>
-                    </div>
+                    <div v-if="menu === 'tune'" class="am-play__pop am-play__pop--tune">
+                      <div class="am-play__menu am-play__menu--pair" data-zone="menu">
+                        <div class="am-play__col">
+                          <span class="am-play__col-h">Скорость</span>
+                          <div v-for="value in RATES" :key="'r' + value" class="am-play__cell">
+                            <button
+                              class="am-play__opt"
+                              :class="{ 'am-play__opt--on': value === rate }"
+                              type="button"
+                              @click="takeRate(value)"
+                            >
+                              <span class="am-play__opt-tick">
+                                <Icon v-if="value === rate" :line="LINE.tick" />
+                              </span>
+                              <span class="am-play__word-cut">{{
+                                value === NORMAL_RATE ? 'Обычная' : rateLabel(value)
+                              }}</span>
+                            </button>
+                          </div>
+                        </div>
 
-                    <div v-if="qualities.length > 0" class="am-play__col">
-                      <span class="am-play__col-h">Качество</span>
-                      <div v-for="quality in qualities" :key="'q' + quality.height" class="am-play__cell">
-                        <button
-                          class="am-play__opt"
-                          :class="{ 'am-play__opt--on': quality.on }"
-                          type="button"
-                          @click="takeHeight(quality.height)"
-                        >
-                          <span class="am-play__opt-tick">
-                            <Icon v-if="quality.on" :line="LINE.tick" />
-                          </span>
-                          <span class="am-play__word-cut">{{ quality.label }}</span>
-                        </button>
+                        <div v-if="qualities.length > 0" class="am-play__col">
+                          <span class="am-play__col-h">Качество</span>
+                          <div
+                            v-for="quality in qualities"
+                            :key="'q' + quality.height"
+                            class="am-play__cell"
+                          >
+                            <button
+                              class="am-play__opt"
+                              :class="{ 'am-play__opt--on': quality.on }"
+                              type="button"
+                              @click="takeHeight(quality.height)"
+                            >
+                              <span class="am-play__opt-tick">
+                                <Icon v-if="quality.on" :line="LINE.tick" />
+                              </span>
+                              <span class="am-play__word-cut">{{ quality.label }}</span>
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  </div>
 
                     <button
                       class="am-play__key"
@@ -1592,51 +1591,43 @@ onBeforeUnmount(() => {
                   >
                     <div v-if="menu === 'lists'" class="am-play__pop">
                       <div class="am-play__menu am-play__menu--pair" data-zone="menu">
-                      <div class="am-play__col" data-part="voices">
-                        <span class="am-play__col-h">Озвучка</span>
-                        <div
-                          v-for="voice in voices"
-                          :key="voice.key"
-                          class="am-play__cell"
-                        >
-                          <button
-                            class="am-play__opt"
-                            :class="{ 'am-play__opt--on': voice.key === voiceKey }"
-                            type="button"
-                            @click="takeVoice(voice.key)"
-                          >
-                            <span class="am-play__opt-tick">
-                              <Icon v-if="voice.key === voiceKey" :line="LINE.tick" />
-                            </span>
-                            <span class="am-play__word-cut">{{ voiceLine(voice) }}</span>
-                          </button>
+                        <div class="am-play__col" data-part="voices">
+                          <span class="am-play__col-h">Озвучка</span>
+                          <div v-for="voice in voices" :key="voice.key" class="am-play__cell">
+                            <button
+                              class="am-play__opt"
+                              :class="{ 'am-play__opt--on': voice.key === voiceKey }"
+                              type="button"
+                              @click="takeVoice(voice.key)"
+                            >
+                              <span class="am-play__opt-tick">
+                                <Icon v-if="voice.key === voiceKey" :line="LINE.tick" />
+                              </span>
+                              <span class="am-play__word-cut">{{ voiceLine(voice) }}</span>
+                            </button>
+                          </div>
+                          <p v-if="voices.length === 0" class="am-play__none">Озвучек нет.</p>
                         </div>
-                        <p v-if="voices.length === 0" class="am-play__none">Озвучек нет.</p>
-                      </div>
 
-                      <div class="am-play__col" data-part="episodes">
-                        <span class="am-play__col-h">Серии</span>
-                        <div
-                          v-for="item in episodes"
-                          :key="item.number"
-                          class="am-play__cell"
-                        >
-                          <button
-                            class="am-play__opt"
-                            :class="{ 'am-play__opt--on': item.number === episode }"
-                            type="button"
-                            @click="takeEpisode(item.number)"
-                          >
-                            <span class="am-play__opt-tick">
-                              <Icon v-if="item.number === episode" :line="LINE.tick" />
-                            </span>
-                            <span class="am-play__word-cut">
-                              {{ item.number }}. {{ item.title ?? 'Серия' }}
-                            </span>
-                          </button>
+                        <div class="am-play__col" data-part="episodes">
+                          <span class="am-play__col-h">Серии</span>
+                          <div v-for="item in episodes" :key="item.number" class="am-play__cell">
+                            <button
+                              class="am-play__opt"
+                              :class="{ 'am-play__opt--on': item.number === episode }"
+                              type="button"
+                              @click="takeEpisode(item.number)"
+                            >
+                              <span class="am-play__opt-tick">
+                                <Icon v-if="item.number === episode" :line="LINE.tick" />
+                              </span>
+                              <span class="am-play__word-cut">
+                                {{ item.number }}. {{ item.title ?? 'Серия' }}
+                              </span>
+                            </button>
+                          </div>
+                          <p v-if="episodes.length === 0" class="am-play__none">Серий пока нет.</p>
                         </div>
-                        <p v-if="episodes.length === 0" class="am-play__none">Серий пока нет.</p>
-                      </div>
                       </div>
 
                       <!-- Края списка серий живут в том же блоке, что и список: столбик тянется на всю
