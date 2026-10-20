@@ -5,10 +5,14 @@
     <!-- Обновление ставит само приложение: иначе APK привезти нечем. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- Бэкапы выключены: animori-settings.json держит пропуск AniList и пропуск
+         Яндекс Диска, а на десктопе он шифруется DPAPI, здесь — нет. Пути к
+         секретам не должно быть ни у облака Google, ни у переноса при смене телефона. -->
     <application
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/Theme.animori"
+        android:allowBackup="false"
         android:usesCleartextTraffic="${usesCleartextTraffic}">
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"

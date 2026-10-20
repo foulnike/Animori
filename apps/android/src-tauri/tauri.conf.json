@@ -15,7 +15,7 @@
     "withGlobalTauri": false,
     "windows": [],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; media-src 'self' blob: http: https:; connect-src 'self' ipc: http://ipc.localhost blob: data: http: https:; worker-src 'self' blob:; frame-src https://www.youtube.com https://www.dailymotion.com; object-src 'none'; base-uri 'self'; form-action 'none'"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; media-src 'self' blob: http: https:; connect-src 'self' ipc: http://ipc.localhost blob: data: https:; worker-src 'self' blob:; frame-src https://www.youtube.com https://www.dailymotion.com; object-src 'none'; base-uri 'self'; form-action 'none'"
     }
   },
   "bundle": {

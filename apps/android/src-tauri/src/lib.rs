@@ -122,11 +122,15 @@ pub fn run() {
                     .rotation_strategy(RotationStrategy::KeepOne)
                     .timezone_strategy(TimezoneStrategy::UseLocal)
                     .max_file_size(2_000_000)
-                    // Stdout добавлен на время порта под Android TV: журнал в каталоге логов читается с компьютера только после остановки приложения.
-                    .targets([
-                        Target::new(TargetKind::LogDir { file_name: None }),
-                        Target::new(TargetKind::Stdout),
-                    ])
+                    // LogDir на всех платформах. Stdout — только debug: журнал читается с компьютера
+                    // через logcat, и в release канал выключен — оболочка не должна попадать в logcat.
+                    .targets({
+                        let mut targets = vec![Target::new(TargetKind::LogDir { file_name: None })];
+                        if cfg!(debug_assertions) {
+                            targets.push(Target::new(TargetKind::Stdout));
+                        }
+                        targets
+                    })
                     .build(),
             )?;
 

@@ -141,6 +141,12 @@ class MainActivity : TauriActivity() {
             openInstallSetting()
             return false
           }
+          // Схема проверяется здесь, а не на доверии к странице — как в openExternal.
+          // Подпись APK всё равно сверит система, но посторонний file:// или content:// в руки нечего давать.
+          if (!url.startsWith("https://")) {
+            Log.e("AniMori", "обновление: адрес не https, отказано")
+            return false
+          }
           fetchAndInstall(url)
           return true
         }
