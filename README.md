@@ -32,7 +32,7 @@
 | :--- | :--- | :--- |
 | **Windows** 10/11 | 3.1.1 | [установщик, MSI, портативный архив](https://github.com/foulnike/Animori/releases/latest) |
 | **Android TV** 7.0+ | 3.1.1 | [APK armv7 и arm64](https://github.com/foulnike/Animori/releases/tag/android-tv-v3.1.1) |
-| **Телефон** (Android 7.0+) | 3.1.1 | [APK arm64 и armv7](https://github.com/foulnike/Animori/releases) |
+| **Телефон** (Android 7.0+) | 3.1.1 | [APK arm64 и armv7](https://github.com/foulnike/Animori/releases/tag/android-v3.1.1) |
 
 ## Почему это удобно
 
@@ -60,7 +60,7 @@
 
 ## Настольное приложение
 
-**Windows 10/11**, мышь и клавиатура. Установщик, MSI или портативный архив без
+**Windows 10/11**. Установщик, MSI или портативный архив без
 установки — в [выпусках](https://github.com/foulnike/Animori/releases/latest).
 
 <table>
@@ -81,7 +81,7 @@
 
 ## Приложение для телевизора
 
-**Android TV, Android 7.0 и новее**, управление с пульта.
+**Android TV, Android 7.0 и новее**.
 
 <p align="center">
   <img src="apps/android-tv/screens/preview-calendar.png" width="23%" alt="Календарь выхода серий">
@@ -94,12 +94,12 @@
 
 APK в [выпусках](https://github.com/foulnike/Animori/releases):
 `AniMori_3.1.1_armv7.apk` для 32-разрядных приставок и `AniMori_3.1.1_arm64.apk`
-для 64-разрядных. Установка из неизвестных источников, ставится с пульта.
+для 64-разрядных.
 Подробности — в [apps/android-tv](apps/android-tv).
 
 ## Приложение для телефона
 
-**Android 7.0 и новее**, управление пальцем.
+**Android 7.0 и новее**.
 
 <p align="center">
   <img src="apps/android/screens/phone-home.jpg" width="31%" alt="Главная: календарь выхода, продолжение просмотра, полки">
@@ -111,7 +111,7 @@ APK в [выпусках](https://github.com/foulnike/Animori/releases):
 
 APK в [выпусках](https://github.com/foulnike/Animori/releases):
 `AniMori_3.1.1_arm64.apk` для 64-разрядных телефонов и `AniMori_3.1.1_armv7.apk`
-для 32-разрядных. Подпись нашим ключом — обновление ставится поверх.
+для 32-разрядных.
 Подробности — в [apps/android](apps/android).
 
 ## Сборка
