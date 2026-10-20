@@ -228,6 +228,25 @@ onBeforeUnmount(() => {
   color: color-mix(in srgb, var(--am-text) 92%, transparent);
 }
 
+/* ТЕЛЕФОН. Без своего запроса окно держало десктопную сетку и потолок 88vh: на узком
+   экране с системными полосами коробка выше видимой области и уезжала за низ. Флекс
+   вместо сетки: авто-трек grid рос по содержимому и уводил коробку за края. */
+@media (max-width: 640px) {
+  .am-modal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-block: var(--am-modal-top) var(--am-modal-bottom);
+    padding-inline: 12px;
+  }
+
+  .am-modal__box {
+    width: 100%;
+    max-height: 100%;
+    overflow: hidden;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .am-modal__box {
     animation: none;

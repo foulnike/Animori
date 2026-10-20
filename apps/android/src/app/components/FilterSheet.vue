@@ -914,17 +914,17 @@ onBeforeUnmount(() => {
     align-items: flex-end;
     /* Границы как у основных экранов: часы и навбар держат токены из темы. */
     padding-block: var(--am-modal-top) var(--am-modal-bottom);
-    padding-inline: 0;
+    /* Боковое поле держит коробку внутри кадра: во всю ширину рама уходила за края дисплея. */
+    padding-inline: 12px;
   }
 
   .am-sheet__box {
     width: 100%;
     /* Поля корня уже вычли систему: потолок всей доступной высоты. */
     max-height: 100%;
-    border-right: 0;
     border-bottom: 0;
-    border-left: 0;
-    border-radius: var(--am-r-drop) var(--am-r-drop) 0 0;
+    /* Шторка парит над навбаром: прямой низ читался срезом. */
+    border-radius: var(--am-r-xl);
   }
 }
 

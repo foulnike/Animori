@@ -246,6 +246,33 @@ class MainActivity : TauriActivity() {
       "AnimoriPip",
     )
 
+    // Мост медиа. Страница держит MediaSession в правде: игра/пауза, позиция и заголовок идут
+    // наружу, чтобы кнопки пуск/пауза и смены серий в PiP показывали настоящее. В обратную
+    // сторону — команды «переключить», «предыдущая» и «следующая».
+    Media.attach(webView)
+    webView.addJavascriptInterface(
+      object {
+        /** Состояние звука: игра/пауза и позиция с длительностью в миллисекундах. */
+        @JavascriptInterface
+        fun state(on: Boolean, positionMs: Long, durationMs: Long) {
+          Media.reportState(this@MainActivity, on, positionMs, durationMs)
+        }
+
+        /** Заголовок кадра для плашки. */
+        @JavascriptInterface
+        fun title(text: String) {
+          Media.reportTitle(this@MainActivity, text)
+        }
+
+        /** Плеер размонтирован — сессия гаснет, кнопки PiP уходят. */
+        @JavascriptInterface
+        fun stop() {
+          Media.stop()
+        }
+      },
+      "AnimoriMedia",
+    )
+
     // Мост файлов. Своё окно выбора у WebView нет: <input type="file"> молчит без
     // onShowFileChooser в ChromeClient, а <a download> молчит без DownloadListener.
     // Поэтому выбор и запись идут системными намерениями Storage Access Framework:
@@ -371,15 +398,22 @@ class MainActivity : TauriActivity() {
   }
 
   /**
-   * PiP — пауза для обычного кода, но не для кадра: маленькое окно продолжает показывать видео,
-   * и WebView нельзя усыплять. WryActivity.onPause ставит движок на паузу — здесь мы возвращаем
-   * ему бодрость, пока мы в PiP. Выход из PiP шлёт обычный onResume от оболочки.
+   * PiP и «только звук» — пауза для обычного кода, но не для кадра: и маленькое окно, и звук
+   * из-под закрытого окна продолжают показывать видео, и WebView нельзя усыплять. WryActivity.onPause
+   * ставит движок на паузу — здесь мы возвращаем ему бодрость, пока кадр играет. Выход из PiP шлёт
+   * обычный onResume от оболочки.
    */
   override fun onPause() {
     super.onPause()
-    if (isInPictureInPictureMode) {
+    if (isInPictureInPictureMode || pipPlaying) {
       fileWebView?.onResume()
     }
+  }
+
+  override fun onDestroy() {
+    fileWebView?.let { Media.detach(it) }
+    Media.stop()
+    super.onDestroy()
   }
 
   /** Имя документа у человека на виду: провайдер может переименовать или добавить расширение. */

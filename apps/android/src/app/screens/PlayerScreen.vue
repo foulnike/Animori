@@ -63,6 +63,12 @@ import {
   pipReady,
   watchPip,
 } from '../pip'
+import {
+  reportMediaState,
+  reportMediaTitle,
+  stopMedia,
+  watchMedia,
+} from '../media'
 
 /** Знак кнопки — рисунок в квадрате 24×24, а не символ шрифта: у символов своя ширина и наплыв над
  * базовой
@@ -204,6 +210,9 @@ let dropExitStop: (() => void) | null = null
 
 /** Снятие слежения за входом и выходом из PiP. */
 let stopPipWatch: (() => void) | null = null
+
+/** Снятие слежения за командой «переключить» из MediaSession (плашка, PiP, часы). */
+let stopMediaWatch: (() => void) | null = null
 
 /** Кадр встал посреди серии: сеть не поспевает, но ошибки ещё нет. */
 const stalled = ref(false)
@@ -691,7 +700,30 @@ function onTime(): void {
 
   at.value = now
   onProgress()
+  pushMediaState()
   if (spot !== '') rememberSpot(spot, now, total.value, aboutSpot(spot))
+}
+
+/** Держит MediaSession оболочки в правде: игра/пауза и позиция идут наружу, чтобы
+ *  кнопки PiP-оверлея показывали настоящее. */
+function pushMediaState(): void {
+  const el = videoEl.value
+  reportMediaState(playing.value, (el?.currentTime ?? 0) * 1000, total.value * 1000)
+}
+
+/** Кнопка пуск/пауза в PiP: оболочка шлёт команду, кадр переключаем сами. */
+function onMediaToggle(): void {
+  doToggle()
+}
+
+/** Стрелка |< в PiP: та же серия назад, что и клавиша. */
+function onMediaPrev(): void {
+  doPrev()
+}
+
+/** Стрелка >| в PiP: та же серия вперёд, что и кнопка. */
+function onMediaNext(): void {
+  if (hasNext.value) nextEpisode()
 }
 
 /** Длина у HLS приезжает позже кадра, и бесконечность тоже бывает. */
@@ -702,6 +734,7 @@ function onMeta(): void {
   total.value = Number.isFinite(el.duration) ? el.duration : 0
   applySound()
   applyRate()
+  pushMediaState()
 }
 
 /** Конец серии: следующая сама. Смотренное забывается: оно пройдено. */
@@ -716,11 +749,13 @@ function onPlay(): void {
   stalled.value = false
   meant = true
   wake()
+  pushMediaState()
 }
 
 function onPause(): void {
   playing.value = false
   calm.value = false
+  pushMediaState()
 }
 
 /** Кадр встал посреди серии. Своё колесо здесь обязательно: без него встают и кадр,
@@ -1166,6 +1201,12 @@ onMounted(() => {
   window.addEventListener('keyup', onKeyUp)
   window.addEventListener('pointerdown', onDown)
 
+  // MediaSession: команды приходят от кнопок PiP-оверлея — переключаем сами.
+  window.addEventListener('am-media-toggle', onMediaToggle)
+  window.addEventListener('am-media-prev', onMediaPrev)
+  window.addEventListener('am-media-next', onMediaNext)
+  stopMediaWatch = watchMedia()
+
   // Присмотр за сроком ссылки. Часы у неё свои, и узнать о её смерти из оборвавшегося потока — значит узнать слишком поздно.
   renewTimer = window.setInterval(watchLink, RENEW_TICK_MS)
 
@@ -1222,6 +1263,14 @@ watch(playing, (on) => {
   markPipPlaying(on)
 })
 
+// Заголовок для плашки: название аниме и номер серии. Добор имени фоном меняет computed — watcher поймает.
+watch([mainTitle, episode], () => {
+  const name = mainTitle.value
+  if (name === '') return
+  const ep = episode.value
+  reportMediaTitle(ep > 0 ? `${name} · Серия ${ep}` : name)
+})
+
 onBeforeUnmount(() => {
   setImmersive(false)
   setOrientation('portrait')
@@ -1246,6 +1295,13 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKey)
   window.removeEventListener('keyup', onKeyUp)
   window.removeEventListener('pointerdown', onDown)
+  // MediaSession: подписка снимается — экрана больше нет, команды слушать некому.
+  window.removeEventListener('am-media-toggle', onMediaToggle)
+  window.removeEventListener('am-media-prev', onMediaPrev)
+  window.removeEventListener('am-media-next', onMediaNext)
+  stopMediaWatch?.()
+  stopMediaWatch = null
+  stopMedia()
   stopPipWatch?.()
   stopPipWatch = null
   markPipPlaying(false)
@@ -1476,9 +1532,10 @@ onBeforeUnmount(() => {
                   <div class="am-play__pick">
                   <!-- Скорость и качество под одной шестерёнкой и тоже двумя столбцами: как и списки рядом,
                        каждый столбец крутится сам, а не один под другим. -->
-                  <div v-if="menu === 'tune'" class="am-play__menu am-play__menu--pair" data-zone="menu">
-                    <div class="am-play__col">
-                      <span class="am-play__col-h">Скорость</span>
+                  <div v-if="menu === 'tune'" class="am-play__pop am-play__pop--tune">
+                    <div class="am-play__menu am-play__menu--pair" data-zone="menu">
+                      <div class="am-play__col">
+                        <span class="am-play__col-h">Скорость</span>
                       <div v-for="value in RATES" :key="'r' + value" class="am-play__cell">
                         <button
                           class="am-play__opt"
@@ -1489,7 +1546,9 @@ onBeforeUnmount(() => {
                           <span class="am-play__opt-tick">
                             <Icon v-if="value === rate" :line="LINE.tick" />
                           </span>
-                          <span>{{ value === NORMAL_RATE ? 'Обычная' : rateLabel(value) }}</span>
+                          <span class="am-play__word-cut">{{
+                            value === NORMAL_RATE ? 'Обычная' : rateLabel(value)
+                          }}</span>
                         </button>
                       </div>
                     </div>
@@ -1506,10 +1565,11 @@ onBeforeUnmount(() => {
                           <span class="am-play__opt-tick">
                             <Icon v-if="quality.on" :line="LINE.tick" />
                           </span>
-                          <span>{{ quality.label }}</span>
+                          <span class="am-play__word-cut">{{ quality.label }}</span>
                         </button>
                       </div>
                     </div>
+                  </div>
                   </div>
 
                     <button

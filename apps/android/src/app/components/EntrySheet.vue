@@ -1024,7 +1024,8 @@ onBeforeUnmount(() => {
     /* Потолок — вся доступная высота: поля полос уже вычтены корнем. */
     max-height: 100%;
     padding: 18px 16px 16px;
-    border-radius: var(--am-r-xl) var(--am-r-xl) 0 0;
+    /* Шторка парит над навбаром, а не сливается с краем экрана: прямой низ под «Готово» читался срезом. */
+    border-radius: var(--am-r-xl);
     transform: none;
     animation-name: am-sheet-up;
   }

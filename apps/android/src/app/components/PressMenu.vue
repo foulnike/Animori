@@ -95,7 +95,8 @@ onBeforeUnmount(() => {
   width: 100%;
   padding: 16px 16px 12px;
   background: var(--am-panel);
-  border-radius: var(--am-r-xl) var(--am-r-xl) 0 0;
+  /* Шторка парит над навбаром: прямой низ читался срезом. */
+  border-radius: var(--am-r-xl);
   box-shadow:
     var(--am-sh-2),
     inset 0 1px 0 var(--am-edge);
