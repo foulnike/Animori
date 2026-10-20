@@ -4,9 +4,9 @@
 
 # AniMori
 
-### Смотрите аниме и ведите списки AniList на русском — на ПК и ТВ
+### Смотрите аниме и ведите списки AniList на русском — на ПК, ТВ и телефоне
 
-Неофициальный клиент AniList для Windows и Android TV. Программа сама обращается
+Неофициальный клиент AniList для Windows, Android TV и телефона. Программа сама обращается
 к API и подставляет русские названия и описания из Shikimori —
 браузер и менеджер скриптов не нужны.
 
@@ -14,9 +14,11 @@
 [![Лицензия](https://img.shields.io/badge/лицензия-MIT-02A9FF?style=flat-square&labelColor=0B1622)](LICENSE)
 [![Windows](https://img.shields.io/badge/Windows%2010%2F11-0078D4?style=flat-square&logo=windows&logoColor=white)](apps/windows)
 [![Android TV](https://img.shields.io/badge/Android%20TV%207.0%2B-3DDC84?style=flat-square&logo=androidtv&logoColor=black)](apps/android-tv)
+[![Android](https://img.shields.io/badge/Android%207.0%2B-3DDC84?style=flat-square&logo=android&logoColor=black)](apps/android)
 
 **[Скачать для Windows](https://github.com/foulnike/Animori/releases/latest)** ·
 **[Скачать APK для Android TV](https://github.com/foulnike/Animori/releases)** ·
+**[Скачать APK для телефона](https://github.com/foulnike/Animori/releases)** ·
 [Сборка из исходников](#сборка)
 
 </div>
@@ -31,6 +33,7 @@
 | :--- | :--- | :--- |
 | **Windows** 10/11 | 3.1.1 | [установщик, MSI, портативный архив](https://github.com/foulnike/Animori/releases/latest) |
 | **Android TV** 7.0+ | 3.1.1 | [APK armv7 и arm64](https://github.com/foulnike/Animori/releases/tag/android-tv-v3.1.1) |
+| **Телефон** (Android 7.0+) | 3.1.1 | [APK arm64 и armv7](https://github.com/foulnike/Animori/releases) |
 
 ## Почему это удобно
 
@@ -95,6 +98,23 @@ APK в [выпусках](https://github.com/foulnike/Animori/releases):
 для 64-разрядных. Установка из неизвестных источников, ставится с пульта.
 Подробности — в [apps/android-tv](apps/android-tv).
 
+## Приложение для телефона
+
+**Android 7.0 и новее**, управление пальцем.
+
+<p align="center">
+  <img src="apps/android/screens/phone-home.jpg" width="31%" alt="Главная: календарь выхода, продолжение просмотра, полки">
+  <img src="apps/android/screens/phone-lists.jpg" width="31%" alt="Моё: списки по статусам">
+  <img src="apps/android/screens/phone-card.jpg" width="31%" alt="Карточка тайтла">
+</p>
+
+<p align="center"><sub>Главная · Списки · Карточка</sub></p>
+
+APK в [выпусках](https://github.com/foulnike/Animori/releases):
+`AniMori_3.1.1_arm64.apk` для 64-разрядных телефонов и `AniMori_3.1.1_armv7.apk`
+для 32-разрядных. Подпись нашим ключом — обновление ставится поверх.
+Подробности — в [apps/android](apps/android).
+
 ## Сборка
 
 Нужен Node.js 24 или новее (npm 11): lock репозитория сгенерирован npm 11 и не
@@ -111,9 +131,10 @@ npm run typecheck
 ```bash
 cd apps/windows   && npm run tauri dev
 cd apps/android-tv && npm run tauri -- android dev
+cd apps/android   && npm run tauri -- android dev   # туннель adb: см. apps/android
 ```
 
-Выпуск делается тегом: `windows-v3.1.1` или `android-tv-v3.1.1`.
+Выпуск делается тегом: `windows-v3.1.1`, `android-tv-v3.1.1` или `android-v3.1.1`.
 
 ## Устройство репозитория
 
@@ -122,6 +143,7 @@ cd apps/android-tv && npm run tauri -- android dev
 | `packages/core` | Общее ядро: данные, снимок, облачная копия, видео |
 | `apps/windows` | Настольное приложение: экраны и оболочка |
 | `apps/android-tv` | Приложение для телевизора: экраны и оболочка |
+| `apps/android` | Приложение для телефона: экраны и оболочка |
 | `docs` | Документация: правовая и для разработчиков — [оглавление](docs/README.md) |
 
 ## Лицензия
