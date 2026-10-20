@@ -36,6 +36,9 @@ vite.config.ts.timestamp-*.mjs
 .DS_Store
 Thumbs.db
 
+# Рабочие заметки инструмента: память проекта, а не его исходники
+.workbuddy-ai/
+
 # Секреты (токены подписи обновлений Tauri и пр.)
 .env
 .env.*
