@@ -1,0 +1,329 @@
+# Запуск по тегу `android-v<версия>`. Номер сверяется с package.json. Имена файлов
+# обязательны: AniMori_<версия>_arm64.apk и AniMori_<версия>_armv7.apk — их ждёт
+# апдейтер (src/app/update.ts), и промах имени для него не обновление, а отказ.
+#
+# Отмена: сначала Cancel. Пробный прогон — workflow_dispatch с dry: собрать и
+# подписать, но релиз не публиковать.
+
+name: release-android
+
+on:
+  push:
+    tags:
+      - 'android-v*'
+
+  # Ручной запуск — для прогона без выпуска: конвейер стоит проверить заранее
+  # (sdkmanager, платформа, NDK, npm ci, ключ подписи). Пробный прогон публикацию пропускает.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Тег выпуска'
+        required: true
+        default: 'android-v3.1.1'
+      dry:
+        description: 'Пробный прогон: собрать и подписать, но релиз не публиковать'
+        type: boolean
+        default: true
+
+# Без этого токен прогона только читает, и создание релиза упадёт на 403.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    # Код телефона лежит в apps/android, а конвейер — в корне: GitHub читает
+    # .github/workflows только оттуда. Поэтому каталог задаётся здесь, а не путями в командах.
+    defaults:
+      run:
+        working-directory: apps/android
+
+    # Разрядность — отдельным прогоном: Rust компилируется под каждую цель
+    # заново, и в одном прогоне вторая сборка не взяла бы ничего из первой.
+    strategy:
+      fail-fast: false
+      matrix:
+        # abi — приставка в имени файла (её ищет src/app/update.ts по разрядности
+        # устройства); target — тройка Rust; cli — имя цели для `tauri android build`.
+        include:
+          - abi: arm64
+            target: aarch64-linux-android
+            cli: aarch64
+          - abi: armv7
+            target: armv7-linux-androideabi
+            cli: armv7
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Исходный код
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          # Node 24 — та же версия, что в ci.yml и release.yml: lock генерирует
+          # npm 11, а npm 10 из node 22 отвергает его на npm ci.
+          node-version: 24
+          cache: npm
+
+      # Номер версии из имени тега и сверка с package.json. Номер берётся образцом,
+      # а не отрезанием приставки: тег android-v3.0 тихо дал бы странное имя файла.
+      - name: Номер версии из тега
+        id: ver
+        run: |
+          set -euo pipefail
+          tag='${{ inputs.tag || github.ref_name }}'
+          if [[ ! "$tag" =~ ^android-v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "::error::Имя тега '$tag' не подходит под android-v<версия>"
+            exit 1
+          fi
+          version="${BASH_REMATCH[1]}"
+          declared="$(node -p "require('./package.json').version")"
+          if [[ "$version" != "$declared" ]]; then
+            echo "::error::Номер в теге ($version) расходится с package.json ($declared)"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Выпуск телефона: $version (тег $tag)"
+
+      - name: Окружение Rust
+        uses: dtolnay/rust-toolchain@89b12181fb390509a0842a86cc55eeb8eb928c1d # stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # Компиляция зависимостей Tauri с нуля — это минуты. Кэш привязан к
+      # Cargo.lock, который у нас закоммичен, поэтому попадание стабильно.
+      # Путь каталога полный: defaults.run относится только к run-шагам, а у
+      # rust-cache он ищет Cargo.toml от корня чекаута.
+      - name: Кэш Cargo
+        uses: Swatinem/rust-cache@49a0bdc70d2e1b713ca9e2869b211fcce03d3c1c # v2
+        with:
+          workspaces: apps/android/src-tauri
+
+      # Java 17: его требует Android Gradle Plugin 8.x. Более новый не нужен,
+      # а более старый Gradle 8.14 не примет вовсе.
+      - name: Java
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6
+        with:
+          java-version: 17
+          distribution: temurin
+
+      - name: Android SDK
+        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+
+      # Пакеты ставятся явно: без NDK Rust не соберётся, а расхождение версий NDK
+      # между сборками даёт разные .so. Платформа та же, что в compileSdk приложения.
+      - name: Пакеты SDK
+        run: |
+          set -euo pipefail
+
+          # Лицензии принимаются ответом из файла, а не трубой `yes | …`: на свежем
+          # образе раннера `yes` получает broken pipe, и под pipefail шаг падает.
+          printf 'y\ny\ny\ny\ny\ny\ny\ny\ny\ny\n' > "$RUNNER_TEMP/sdk-yes.txt"
+          sdkmanager --licenses < "$RUNNER_TEMP/sdk-yes.txt" > /dev/null 2>&1 || true
+
+          sdkmanager --install "platforms;android-36" "build-tools;35.0.0" "ndk;30.0.15729638"
+
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          if [[ -z "$sdk" ]]; then
+            echo "::error::Ни ANDROID_HOME, ни ANDROID_SDK_ROOT не заданы"
+            exit 1
+          fi
+          {
+            echo "ANDROID_HOME=$sdk"
+            echo "ANDROID_NDK_HOME=$sdk/ndk/30.0.15729638"
+            echo "NDK_HOME=$sdk/ndk/30.0.15729638"
+          } >> "$GITHUB_ENV"
+
+      # Нужны для beforeBuildCommand: сборку переднего края (npm run build:app)
+      # запускает сам tauri перед компиляцией Rust.
+      # Проверка до сборки: без неё пустой секрет всплывает через семь минут
+      # компиляции и валит apksigner ошибкой про DER, из которой ключа не видно.
+      # Ключ общий с приставкой (ANIMORI_KEYSTORE_*): подпись должна быть постоянной,
+      # иначе обновление с первой версии не встанет.
+      - name: Проверка секретов подписи
+        env:
+          KS_BASE64: ${{ secrets.ANIMORI_KEYSTORE_BASE64 }}
+          KS_PASSWORD: ${{ secrets.ANIMORI_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANIMORI_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANIMORI_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          missing=()
+          for v in KS_BASE64 KS_PASSWORD KS_ALIAS KEY_PASSWORD; do
+            [[ -n "${!v}" ]] || missing+=("$v")
+          done
+          if (( ${#missing[@]} )); then
+            echo "::error::Пустые секреты подписи: ${missing[*]}. Задать в Settings → Secrets and variables → Actions репозитория Animori"
+            exit 1
+          fi
+          echo "Все четыре секрета подписи на месте."
+
+      - name: Зависимости npm
+        # Установка из корня: замок один на репозиторий, в каталоге приложения его нет.
+        working-directory: .
+        run: npm ci
+
+      # Сборка. Файл выходит неподписанным — так делает Tauri и на компьютере:
+      # ключа выпуска у него нет. Подписываем следующим шагом.
+      - name: Собрать APK
+        run: npm run tauri -- android build -t ${{ matrix.cli }}
+
+      # Порядок обязателен: zipalign до подписи, а подписанный файл трогать нельзя —
+      # выравнивание сдвинет содержимое, и подпись перестанет сходиться.
+      - name: Подписать APK
+        env:
+          KS_BASE64: ${{ secrets.ANIMORI_KEYSTORE_BASE64 }}
+          KS_PASSWORD: ${{ secrets.ANIMORI_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANIMORI_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANIMORI_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          version='${{ steps.ver.outputs.version }}'
+          abi='${{ matrix.abi }}'
+          tools="${ANDROID_HOME:-${ANDROID_SDK_ROOT:?}}/build-tools/35.0.0"
+
+          # Один APK в выводе: tauri пишит в gen/android/app/build/outputs/apk, и в нём
+          # могла остаться остаток прежней, и подписать можно не то.
+          mapfile -t found < <(find src-tauri/gen/android/app/build/outputs/apk -name '*.apk')
+          if [[ "${#found[@]}" -ne 1 ]]; then
+            echo "::error::В выводе сборки не один APK: ${found[*]}"
+            exit 1
+          fi
+
+          mkdir -p out
+          echo "$KS_BASE64" | base64 -d > out/animori.jks
+
+          # Хранилище ключа бывает двух видов: JKS начинается с магии FEEDFEED,
+          # PKCS12 — с DER-метки 0x30. Проверять надо обе, а не одну.
+          size=$(stat -c%s out/animori.jks)
+          magic=$(od -An -tx1 -N4 out/animori.jks | tr -d ' ')
+          if [[ "$size" -lt 100 || ( "$magic" != "feedfeed" && "${magic:0:2}" != "30" ) ]]; then
+            echo "::error::Хранилище не похоже ни на JKS, ни на PKCS12: $size байт, начало 0x$magic"
+            exit 1
+          fi
+
+          "$tools/zipalign" -p -f 4 "${found[0]}" out/aligned.apk
+
+          java -jar "$tools/lib/apksigner.jar" sign \
+            --ks out/animori.jks \
+            --ks-key-alias "$KS_ALIAS" \
+            --ks-pass "pass:$KS_PASSWORD" \
+            --key-pass "pass:$KEY_PASSWORD" \
+            --out "out/AniMori_${version}_${abi}.apk" \
+            out/aligned.apk
+
+          # Проверка перед выкладкой: неподписанный или битый файл телефон не поставит,
+          # а поймёт это человек лишь нажав «Установить».
+          java -jar "$tools/lib/apksigner.jar" verify "out/AniMori_${version}_${abi}.apk"
+
+          rm -f out/animori.jks out/aligned.apk
+          ls -l "out/AniMori_${version}_${abi}.apk"
+
+      - name: Артефакт прогона
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: apk-${{ matrix.abi }}
+          # Путь от корня репозитория, а не от каталога приложения: у
+          # upload-artifact нет параметра working-directory, и defaults.run его
+          # не подставляет.
+          path: apps/android/out/AniMori_${{ steps.ver.outputs.version }}_${{ matrix.abi }}.apk
+          if-no-files-found: error
+  publish:
+    # Каталог тот же, что и в задаче сборки: шаги читают package.json и CHANGELOG.
+    defaults:
+      run:
+        working-directory: apps/android
+
+    # Отдельной задачей, а не шагом внутри сборки: релиз один на две разрядности,
+    # и создавать его должен тот, кто дождался обеих сборок.
+    needs: build
+    runs-on: ubuntu-latest
+
+    # Пробный прогон сюда не доходит: сборки уже проверили ключ и подпись,
+    # а выпускать нечего.
+    if: ${{ github.event_name == 'push' || !inputs.dry }}
+
+    steps:
+      - name: Исходный код
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Номер версии из тега
+        id: ver
+        run: |
+          set -euo pipefail
+          tag='${{ inputs.tag || github.ref_name }}'
+          if [[ ! "$tag" =~ ^android-v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "::error::Имя тега '$tag' не подходит под android-v<версия>"
+            exit 1
+          fi
+          echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+
+      # Описание релиза берётся из ведущего абзаца раздела: подробности лежат
+      # в CHANGELOG.md, а в окно обновления целиком раздел не лезет.
+      - name: Описание релиза из CHANGELOG
+        id: notes
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import pathlib
+
+          lines = pathlib.Path('CHANGELOG.md').read_text(encoding='utf-8').splitlines()
+
+          # Заголовок раздела — «## [версия]». Редактор умеет экранировать скобку
+          # («## \[3.0.2]»), и такой заголовок разделом тоже считаем.
+          def is_section(line):
+              return line.startswith('## ') and line.replace('\\', '').lstrip('#').strip().startswith('[')
+
+          marks = [i for i, line in enumerate(lines) if is_section(line)]
+          if not marks:
+              raise SystemExit('В CHANGELOG.md не найдено ни одного раздела вида "## [версия]"')
+
+          start = marks[0] + 1
+          end = marks[1] if len(marks) > 1 else len(lines)
+
+          # Ведущий абзац: до первого подзаголовка любого уровня.
+          stop = end
+          for i in range(start, end):
+              if lines[i].lstrip().startswith('#'):
+                  stop = i
+                  break
+
+          body = '\n'.join(lines[start:stop]).strip()
+          if not body:
+              raise SystemExit('У раздела нет ведущего абзаца: нечего показать в окне обновления')
+
+          # Окно обновления урежет текст само (NOTES_LIMIT в src/app/update.ts),
+          # но длинное описание не нужно и на странице выпуска.
+          if len(body) > 1200:
+              body = body[:1200].rstrip() + '…'
+
+          body += '\n\n— Политика: https://github.com/foulnike/Animori/blob/main/docs/PRIVACY.md · Условия: https://github.com/foulnike/Animori/blob/main/docs/TERMS.md'
+
+          print('body<<ANIMORI_NOTES')
+          print(body)
+          print('ANIMORI_NOTES')
+          PY
+
+      - name: Собрать файлы выпуска
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        with:
+          pattern: apk-*
+          path: dist
+          merge-multiple: true
+
+      # Предварительный — обязательно: обычный релиз стал бы последним в репозитории,
+      # `releases/latest` уехал бы на него, а там ждут windows-апдейтер с latest.json.
+      # Апдейтер телефона ищет свой выпуск по префиксу тега `android-v` в общем
+      # списке (/releases), и предварительные выпуски список содержит. Draft
+      # остаётся выключенным: в анонимном списке черновика не видно вовсе.
+      - name: Релиз
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
+        with:
+          tag_name: ${{ inputs.tag || github.ref_name }}
+          # Платформа в названии: три продукта живут в одном репозитории, и без неё
+          # на странице Releases ряды «AniMori 3.1.1» не отличить.
+          name: AniMori ${{ steps.ver.outputs.version }} — Android
+          body: ${{ steps.notes.outputs.body }}
+          draft: false
+          prerelease: true
+          files: dist/*.apk
