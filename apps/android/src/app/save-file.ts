@@ -1,7 +1,5 @@
-// Выгрузка списка файлом. Путь один: системный пикер создания документа через Kotlin-мост
-// AnimoriFiles (MainActivity.kt). <a download> в Android WebView молчит — DownloadListener
-// не подключён, и ссылка не делает ничего. Мост молчит вне приложения: в браузере
-// (npm run dev:app) кнопка выгрузки вернёт отказ с внятным текстом.
+// Выгрузка списка системным пикером через мост AnimoriFiles (MainActivity.kt): <a download>
+// в Android WebView молчит. Вне приложения мост отдаёт отказ с внятным текстом.
 
 /** Куда в итоге лег файл. */
 export interface SaveResult {

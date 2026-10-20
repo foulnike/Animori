@@ -4,7 +4,7 @@ import { computed, ref, watch } from 'vue'
 
 import { dateCaret, dateDigits, maskDate, maskOf, stampDate } from '../date-text'
 
-/** Границы года — те же, что у календаря: раньше аниме по телевизору не показывали. */
+/** Границы года — те же, что у календаря. */
 const YEAR_MIN = 1940
 
 /** Запас вперёд: сезон объявляют заранее, но дата правки — не прогноз на десятилетие. */

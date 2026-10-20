@@ -1,7 +1,5 @@
-// Загрузка файла ОТ человека. Путь один: системный пикер Storage Access Framework через
-// Kotlin-мост AnimoriFiles (MainActivity.kt). Своего окна выбора у Android WebView нет:
-// <input type="file"> молчит без onShowFileChooser в ChromeClient. Мост молчит вне
-// приложения — в браузере (npm run dev:app) кнопка выбора просто вернёт null.
+// Загрузка файла от человека системным пикером SAF через мост AnimoriFiles (MainActivity.kt).
+// <input type="file"> в Android WebView молчит; вне приложения мост возвращает null.
 
 /** Выбранный файл, прочитанный в строку. */
 export interface LoadedFile {

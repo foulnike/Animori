@@ -17,7 +17,7 @@ const STORE_FILE: &str = "animori-settings.json";
 /// Ключ повторяет KEY_TOKEN из auth.rs: пропуск пишет вход, читаем его мы.
 const KEY_TOKEN: &str = "auth_token";
 
-// Ключи прокси повторяют proxy.rs. Общего разбора нет намеренно: тот файл у потолка размера, и переезд разбора отложен до его следующей правки.
+// Ключи прокси повторяют proxy.rs; общий разбор не вынесен.
 const KEY_PROXY_ENABLED: &str = "set_proxy_on";
 const KEY_PROXY_KIND: &str = "set_proxy_kind";
 const KEY_PROXY_HOST: &str = "set_proxy_host";

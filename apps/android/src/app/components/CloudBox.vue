@@ -106,8 +106,7 @@ function tokenNeeded(): boolean {
   return cloudPlace.value === 'yandex' && (!cloudSaved.value || tokenOpen.value)
 }
 
-/// Подпись под названием площадки: одна строка на все состояния,
-/// а не три абзаца в разных местах панели, как раньше.
+/// Подпись под названием площадки: одна строка на все состояния.
 function placeNote(): string {
   if (cloudPlace.value !== 'yandex') return 'Копия списка одним файлом в папке приложения'
   if (!cloudSaved.value) return 'Пропуск не сохранён'
@@ -213,8 +212,8 @@ function onCloudToken(): void {
   })
 }
 
-/// Отказ от смены пропуска. Черновик стирается: недонабранная строка,
-/// всплывшая через месяц, читалась бы как сохранённый пропуск.
+/// Отказ от смены пропуска. Черновик стирается: недонабранная строка не должна
+/// читаться как сохранённый пропуск.
 function onTokenCancel(): void {
   tokenDraft.value = ''
   tokenOpen.value = false

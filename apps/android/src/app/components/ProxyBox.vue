@@ -73,7 +73,8 @@ function currentConfig(): ProxyConfig {
 /** Включённый тумблер с пустым или негодным адресом: трафик пойдёт напрямую. */
 const badConfig = computed(() => enabled.value && !isProxyUsable(currentConfig()))
 
-// Кнопка перезапуска показывается только там, где он что-то изменит. На приставке прокси окну недоступен вовсе (перезапуск лечит ключи WebView2): исход придёт windowUnsupported и кнопка встала бы навечно.
+// Кнопка перезапуска — только там, где он что-то изменит: на приставке прокси окну
+// недоступен (исход windowUnsupported), кнопка встала бы постоянно.
 const needsRestart = computed(
   () =>
     !isWeakPlatform() && status.value !== null && proxyRestartNeeded(status.value, currentConfig()),

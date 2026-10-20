@@ -9,11 +9,8 @@ import android.support.v4.media.session.PlaybackStateCompat
 import android.webkit.WebView
 
 /**
- * Медиа-слой приложения.
- *
- * Держит одну MediaSession на всё приложение: её PlaybackState даёт кнопки пуск/пауза и смены
- * серий в PiP-оверлее. Страница сообщает состояние, заголовок и позицию, а взамен получает обрат
- * команды «переключить», «предыдущая» и «следующая» — они уходят в WebView.
+ * Медиа-слой: одна MediaSession на приложение, её PlaybackState даёт кнопки пуск/пауза
+ * и смены серий в PiP-оверлее. Состояние и заголовок идут от страницы, обратно — команды.
  */
 object Media {
   @Volatile private var session: MediaSessionCompat? = null

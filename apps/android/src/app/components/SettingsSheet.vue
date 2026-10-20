@@ -147,7 +147,7 @@ onBeforeUnmount(() => {
       <button class="am-sheet__veil" type="button" aria-label="Закрыть" @click="onClose" />
 
       <div ref="sheet" class="am-sheet__box" role="dialog" aria-modal="true" :aria-label="title">
-        <!-- Заголовок в шапке, в ряду с выходом: крупный, на месте — раньше несли панели внутри. -->
+        <!-- Заголовок в шапке, в ряду с выходом: крупный и на месте. -->
         <header class="am-sheet__top">
           <h2 class="am-sheet__title">{{ title }}</h2>
           <span class="am-bar__gap" />

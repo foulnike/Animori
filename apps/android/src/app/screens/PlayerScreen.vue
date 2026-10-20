@@ -467,7 +467,7 @@ watch(menu, (now) => {
 
   void nextTick(() => {
     // В сросшемся ящике фокус ставим на текущую серию — по ней чаще всего заходят, и она в
-    // дальнем столбце. В шестерёнке — на выбранную строку, как раньше.
+    // дальнем столбце. В шестерёнке — на выбранную строку.
     const sel =
       menu.value === 'lists'
         ? rootEl.value?.querySelector<HTMLElement>('[data-part="episodes"] .am-play__opt--on')

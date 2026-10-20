@@ -13,10 +13,10 @@ use tauri::{AppHandle, Emitter, Manager, Url};
 use tauri::{WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_store::StoreExt;
 
-/// Порт приёмника. Постоянный, а не свободный из системы: этот же номер записан у клиента AniList в адресе возврата, и случайный пришлось бы согласовывать.
+/// Порт приёмника: постоянный, он записан у клиента AniList в адресе возврата.
 pub const PORT: u16 = 48513;
 
-/// Путь странички-стрелочника. Вместе с портом даёт адрес возврата, который должен стоять у клиента AniMori в консоли разработчика AniList.
+/// Путь реле-страницы: вместе с портом даёт адрес возврата для консоли AniList.
 const RELAY_PATH: &str = "/relay";
 
 const AUTHORIZE_BASE: &str = "https://anilist.co/api/v2/oauth/authorize";
