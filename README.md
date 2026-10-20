@@ -10,7 +10,6 @@
 к API и подставляет русские названия и описания из Shikimori —
 браузер и менеджер скриптов не нужны.
 
-[![Версия](https://img.shields.io/badge/версия-3.1.1-02A9FF?style=flat-square&labelColor=0B1622)](https://github.com/foulnike/Animori/releases)
 [![Лицензия](https://img.shields.io/badge/лицензия-MIT-02A9FF?style=flat-square&labelColor=0B1622)](LICENSE)
 [![Windows](https://img.shields.io/badge/Windows%2010%2F11-0078D4?style=flat-square&logo=windows&logoColor=white)](apps/windows)
 [![Android TV](https://img.shields.io/badge/Android%20TV%207.0%2B-3DDC84?style=flat-square&logo=androidtv&logoColor=black)](apps/android-tv)
