@@ -206,6 +206,46 @@ async function checkCoreConfig(windowsTsKeys) {
   return keys.length
 }
 
+/** Состав зависимостей как отсортированный список: порядок ключей не важен. */
+function depSet(deps) {
+  return Object.entries(deps ?? {})
+    .map(([name, range]) => `${name}@${range}`)
+    .sort()
+    .join(',')
+}
+
+/** Замок и манифесты обязаны совпадать: рассинхрон роняет `npm ci` в CI, и чинить
+ *  его приходится по логам, а не у себя. Поэтому сверяем и перечень рабочих областей,
+ *  и содержимое каждой области. */
+function checkLock() {
+  const lock = JSON.parse(read('package-lock.json'))
+  const manifest = JSON.parse(read('package.json'))
+  const lockWorkspaces = (lock.packages?.['']?.workspaces ?? []).slice().sort()
+  const manifestWorkspaces = (manifest.workspaces ?? []).slice().sort()
+  if (lockWorkspaces.join(',') !== manifestWorkspaces.join(','))
+    push('замок: перечень рабочих областей в package-lock.json разошёлся с package.json')
+
+  for (const app of APPS) {
+    const appManifest = JSON.parse(read('apps', app, 'package.json'))
+    const entry = lock.packages?.[`apps/${app}`]
+    if (!entry) {
+      push(`замок: рабочая область ${app} отсутствует в package-lock.json`)
+      continue
+    }
+    for (const field of ['name', 'version']) {
+      if (entry[field] !== appManifest[field])
+        push(
+          `замок: ${app} — ${field} «${entry[field]}» в замке и «${appManifest[field]}» в манифесте`,
+        )
+    }
+    for (const field of ['dependencies', 'devDependencies']) {
+      if (depSet(entry[field]) !== depSet(appManifest[field]))
+        push(`замок: ${app} — состав ${field} в замке и в манифесте разошёлся`)
+    }
+  }
+  return `${APPS.length} областей`
+}
+
 const report = []
 for (const app of APPS) report.push(`${app}: команд ${checkCommands(app)}`)
 for (const app of APPS)
@@ -214,6 +254,7 @@ for (const app of APPS)
   const windowsTsKeys = new Set(tsPaths('windows', 'tsconfig.json').keys())
   report.push(`корневой vitest.core: ключей ${await checkCoreConfig(windowsTsKeys)}`)
 }
+report.push(`замок: областей ${checkLock()}`)
 
 if (errors.length) {
   for (const message of errors) console.error(`  ${message}`)

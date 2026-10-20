@@ -23,7 +23,7 @@ AniMori.
 
 ## Состав
 
-Всего пакетов с указанной лицензией: **241**.
+Всего пакетов с указанной лицензией: **242**.
 
 ### Apache-2.0 (18)
 
@@ -106,7 +106,7 @@ AniMori.
 | siginfo | 2.0.0 |
 | which | 2.0.2 |
 
-### MIT (175)
+### MIT (176)
 
 | Пакет | Версия |
 | --- | --- |
@@ -146,6 +146,7 @@ AniMori.
 | @types/estree | 1.0.9 |
 | @types/json-schema | 7.0.15 |
 | @types/node | 24.19.1 |
+| @types/node | 24.19.2 |
 | @types/node | 26.6.4 |
 | @types/whatwg-mimetype | 3.0.2 |
 | @types/ws | 8.18.2 |
