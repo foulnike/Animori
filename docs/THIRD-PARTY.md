@@ -23,7 +23,7 @@ AniMori.
 
 ## Состав
 
-Всего пакетов с указанной лицензией: **231**.
+Всего пакетов с указанной лицензией: **241**.
 
 ### Apache-2.0 (18)
 
@@ -48,12 +48,22 @@ AniMori.
 | typescript | 5.9.3 |
 | xml-name-validator | 5.0.0 |
 
-### Apache-2.0 OR MIT (3)
+### Apache-2.0 OR MIT (13)
 
 | Пакет | Версия |
 | --- | --- |
 | @tauri-apps/api | 2.12.1 |
 | @tauri-apps/cli | 2.12.1 |
+| @tauri-apps/cli-darwin-arm64 | 2.12.1 |
+| @tauri-apps/cli-darwin-x64 | 2.12.1 |
+| @tauri-apps/cli-linux-arm-gnueabihf | 2.12.1 |
+| @tauri-apps/cli-linux-arm64-gnu | 2.12.1 |
+| @tauri-apps/cli-linux-arm64-musl | 2.12.1 |
+| @tauri-apps/cli-linux-riscv64-gnu | 2.12.1 |
+| @tauri-apps/cli-linux-x64-gnu | 2.12.1 |
+| @tauri-apps/cli-linux-x64-musl | 2.12.1 |
+| @tauri-apps/cli-win32-arm64-msvc | 2.12.1 |
+| @tauri-apps/cli-win32-ia32-msvc | 2.12.1 |
 | @tauri-apps/cli-win32-x64-msvc | 2.12.1 |
 
 ### BSD-2-Clause (8)

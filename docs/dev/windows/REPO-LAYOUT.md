@@ -12,17 +12,19 @@
 | `packages/core/tests` | Наборы общего ядра и заглушка моста |
 | `apps/windows` | Настольное приложение |
 | `apps/android-tv` | Приложение для телевизора |
+| `apps/android` | Приложение для телефона |
 | `docs` | Документация: правовая в корне, инженерная в `docs/dev/` |
-| `.github/workflows` | Сторож датасета, проверки, оба выпуска |
+| `.github/workflows` | Сторож датасета, проверки, все выпуски |
 
 ## Сборка и проверки
 
 ```bash
 npm ci                                      # корень
-npm test                                    # ядро, потом оба приложения
-npm run typecheck                           # оба приложения
+npm test                                    # ядро, потом все приложения
+npm run typecheck                           # все приложения
 npm run build:windows
 npm run build:android-tv
+npm run build:android
 ```
 
 Разработка идёт из каталога приложения:
@@ -30,6 +32,7 @@ npm run build:android-tv
 ```bash
 cd apps/windows && npm run tauri dev
 cd apps/android-tv && npm run tauri -- android dev
+cd apps/android && npm run tauri -- android dev
 ```
 
 ## Граница ядра
@@ -43,6 +46,7 @@ cd apps/android-tv && npm run tauri -- android dev
 | :--- | :--- | :--- |
 | Настольное | `windows-v<версия>` | NSIS, MSI, портативный архив |
 | Телевизор | `android-tv-v<версия>` | `armv7` и `arm64` |
+| Телефон | `android-v<версия>` | `arm64` и `armv7` |
 
 Номер в теге сверяется с `package.json` приложения; расхождение роняет прогон.
 
@@ -51,8 +55,8 @@ cd apps/android-tv && npm run tauri -- android dev
 Конвейер создаёт его заново на каждом выпуске и проверяет адрес, который читает
 апдейтер.
 
-Файлы приставки называются `AniMori_<версия>_<разрядность>.apk`; разрядность
-приложение выбирает по своёй.
+Файлы приставки и телефона называются `AniMori_<версия>_<разрядность>.apk`;
+разрядность приложение выбирает по своёй.
 
 ## Грабли
 

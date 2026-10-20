@@ -1,7 +1,9 @@
 # Content Security Policy
 
-Политика лежит в `app.security.csp` в `apps/windows/src-tauri/tauri.conf.json` и
-`apps/android-tv/src-tauri/tauri.conf.json`. На обеих платформах одинаковая.
+Политика лежит в `app.security.csp` в `tauri.conf.json` трёх приложений:
+`apps/windows`, `apps/android-tv`, `apps/android`. На всех трёх одинаковая,
+кроме `connect-src` телефона: там убран `http:` — весь белый список хостов
+телефона https.
 
 Схема читается в конфиге. Здесь только то, без чего политику сломают при правке: ломается
 тихо, окно открывается, а картинки или звук не грузятся.
