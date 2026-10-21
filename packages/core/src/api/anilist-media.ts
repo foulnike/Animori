@@ -898,5 +898,3 @@ export function forgetMediaMemory(): void {
   malMemory.clear()
   searchMemory.clear()
 }
-
-
