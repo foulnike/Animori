@@ -7,7 +7,6 @@
 ### Смотрите аниме и ведите списки — на ПК, ТВ и телефоне
 
 Неофициальный клиент AniList для Windows, Android TV и телефона. Перевод контента — Shikimori.
-Браузер и менеджер скриптов не нужны.
 
 [![Лицензия](https://img.shields.io/badge/лицензия-MIT-02A9FF?style=flat-square&labelColor=0B1622)](LICENSE)
 [![Windows](https://img.shields.io/badge/Windows%2010%2F11-0078D4?style=flat-square&logo=windows&logoColor=white)](apps/windows)
