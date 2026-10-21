@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Описание разметкой источника: начертания, перекрёстные ссылки, спойлеры, цитаты и списки.
-// Разбор живёт в core/rich-text.ts, здесь только показ. Компонент зовёт себя сам для вложенного уровня.
+// Разбор в core/rich-text.ts, здесь только показ. Компонент зовёт себя сам для вложенного уровня.
 import { computed, ref, watch } from 'vue'
 
 import { parseRich, type RichAim, type RichBlock, type RichPart } from '@/core/rich-text'

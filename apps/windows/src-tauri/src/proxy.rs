@@ -85,7 +85,7 @@ pub struct ProxyProbe {
     latency_ms: u64,
 }
 
-/// Состояние живёт в приложении: команда status вызывается из окна, а окно
+/// Состояние в приложении: команда status вызывается из окна, а окно
 /// про setup() не знает. Mutex — требование Tauri, запись всё равно одна.
 pub struct ProxyState(Mutex<ProxyStatus>);
 

@@ -57,7 +57,7 @@ export function runBackStop(): boolean {
   return true
 }
 
-// Окно открывается и закрывается и помимо нашей записи: галерея кадров и окно тем живут на своём состоянии.
+// Окно открывается и закрывается и помимо нашей записи: галерея кадров и окно тем на своём состоянии.
 const watch =
   typeof MutationObserver === 'function'
     ? new MutationObserver(function () {

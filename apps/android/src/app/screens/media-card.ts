@@ -401,7 +401,7 @@ export function useMediaCard(mediaId: Ref<number>): MediaCardView {
   /** Видимые части франшизы. Манга из дерева не показывается: открывать её карточку нечем, а плитка
    *  без перехода вводит в заблуждение. Взрослое убирается общим отбором. */
   const franchiseRows = computed<readonly FranchiseWork[]>(() => {
-    // Закладки частей живут в памяти коллекции: пересчёт после своих правок.
+    // Закладки частей в памяти коллекции: пересчёт после своих правок.
     void editStamp.value
     void franchiseStamp.value
 
@@ -731,7 +731,7 @@ export function useMediaCard(mediaId: Ref<number>): MediaCardView {
     return work.kind === null ? full : `${full} · ${work.kind}`
   }
 
-  /** Есть ли часть у источников видео. Счётчик в зависимостях не случаен: память ответов живёт вне
+  /** Есть ли часть у источников видео. Счётчик в зависимостях не случаен: память ответов вне
    *  реактивности Vue. */
   function franchisePlay(work: FranchiseWork): PlayState | null {
     void playStamp.value

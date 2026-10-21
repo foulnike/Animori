@@ -537,7 +537,7 @@ onBeforeUnmount(() => {
       />
     </ul>
 
-    <!-- Метка конца списка живёт всегда: смотритель берёт её один раз при сборке. -->
+    <!-- Метка конца списка всегда на месте: смотритель берёт её один раз при сборке. -->
     <div ref="tailMark" class="am-tail">
       <button v-if="hasMore" class="am-btn am-btn--soft" type="button" @click="showMore">
         Показать ещё · осталось {{ restCount }}

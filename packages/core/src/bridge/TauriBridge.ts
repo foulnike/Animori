@@ -38,7 +38,7 @@ let snapshot: Map<string, unknown> | null = null
 /** Незавершённая загрузка снимка: параллельные чтения не дёргают команду повторно. */
 let snapshotLoading: Promise<Map<string, unknown> | null> | null = null
 
-/** Закрытые ключи оболочки: дубль запрета, основной живёт в команде хранилища. */
+/** Закрытые ключи оболочки: дубль запрета, основной в команде хранилища. */
 const CLOSED_KEYS = new Set(['auth_token', 'auth_expires_at'])
 
 async function loadSnapshot(): Promise<Map<string, unknown> | null> {
@@ -189,7 +189,7 @@ type TauriProxyOption = TauriFetchOptions['proxy']
 type TauriResponse = Awaited<ReturnType<typeof tauriFetch>>
 
 /**
- * Подпись последней настройки, о негодности которой уже сказано в журнал; пароля в ней нет. Живёт в памяти до конца сеанса, чтобы не повторять одно и то же на каждый запрос.
+ * Подпись последней настройки, о негодности которой уже сказано в журнал; пароля в ней нет. В памяти до конца сеанса, чтобы не повторять одно и то же на каждый запрос.
  */
 let warnedBadProxy = ''
 

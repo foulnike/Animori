@@ -3,7 +3,7 @@
 import { Bridge } from '@/bridge'
 import { Logger } from '../utils/logger'
 
-/** Источник русских тайтлов: Шикимори. Второго источника нет — см. docs/dev/windows/DATA.md. */
+/** Источник русских тайтлов: Шикимори. Второго источника нет — см. docs/dev/windows/STORAGE.md. */
 export type TitleSource = 'shikimori' | 'off' | 'none'
 
 /**

@@ -55,7 +55,7 @@ export function richLinkLabel(aim: RichAim): string {
   return stubOf(aim)
 }
 
-/** Имя человека по номеру Шикимори: разрешение живёт в ядре. */
+/** Имя человека по номеру Шикимори: разрешение в ядре. */
 async function warmPerson(who: PersonKind, shikiId: number, key: string): Promise<void> {
   const target = await resolveShikiPerson(who, shikiId)
   if (target === null) return

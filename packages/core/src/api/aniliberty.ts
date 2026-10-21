@@ -29,7 +29,7 @@ export const NET_LABEL_ANILIBERTY = 'AniLiberty'
 const RATE_PAUSE_MS = 1500
 const REQUEST_TIMEOUT_MS = 10000
 
-/** Сколько релиз живёт в памяти: за одно открытие экран спросит его трижды. */
+/** Сколько релиз в памяти: за одно открытие экран спросит его трижды. */
 const RELEASE_MEMORY_MS = 600000
 
 /** Сколько названий пробуем в поиске: романдзи и ещё одно запасное; платит тот, кто открыл плеер. */
@@ -162,7 +162,7 @@ function matches(release: AniRelease, wanted: string[], year?: number): boolean 
   return true
 }
 
-/** Релиз целиком по номеру или псевдониму. Десять минут живёт в памяти. */
+/** Релиз целиком по номеру или псевдониму. Десять минут в памяти. */
 async function loadRelease(idOrAlias: string): Promise<AniRelease | null> {
   if (!idOrAlias) return null
 

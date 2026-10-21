@@ -14,7 +14,7 @@ import { loadSettings } from '@/core/settings'
 import { installGlobalErrorHandlers } from '@/utils/logger'
 import { initSplash } from './splash'
 
-// Стиль всплывающих подписей: плашка живёт в body, и scoped-правила
+// Стиль всплывающих подписей: плашка в body, и scoped-правила
 // компонентов до неё не достают.
 import './styles/tip.css'
 

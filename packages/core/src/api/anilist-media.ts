@@ -50,7 +50,7 @@ function dedupeBriefs(items: MediaBrief[]): MediaBrief[] {
   return out
 }
 
-/** MAL-соответствия живут весь запуск: один тайтл нужен нескольким виджетам. */
+/** MAL-соответствия на весь запуск: один тайтл нужен нескольким виджетам. */
 const malMemory = new Map<number, number | null>()
 
 /** Страница выдачи и час, когда она пришла. */
@@ -604,7 +604,7 @@ function textOrNull(value: string | null | undefined): string | null {
 /** Адреса ролика по площадке: страница встраивания и обычная ссылка. Таблица, а не шаблон — вид
  * адреса у каждой площадки свой; незнакомая даёт `null`. Новая площадка обязана входить в
  * `frame-src` обоих tauri.conf.json: iframe без хоста блокируется CSP молча (см. docs/dev/CSP.md);
- * vimeo в таблице нет — в данных AniList его трейлеры не находятся (замер выборкой). */
+ * vimeo в таблице нет — в данных AniList его трейлеров нет (замер выборкой). */
 const TRAILER_SITES: ReadonlyArray<
   readonly [string, (id: string) => string, (id: string) => string]
 > = [
@@ -714,7 +714,7 @@ async function loadCard(mediaId: number): Promise<MediaCard | null> {
     return null
   }
 
-  // Пара номеров досталась бесплатно вместе с карточкой: пусть переживёт запуск и снимет с сети один вопрос из пачки в следующий раз.
+  // Пара номеров досталась бесплатно вместе с карточкой: пусть перенаходится запуск и снимет с сети один вопрос из пачки в следующий раз.
   rememberMalId(media.id, countOrNull(media.idMal))
 
   const card: MediaCard = {
@@ -898,3 +898,5 @@ export function forgetMediaMemory(): void {
   malMemory.clear()
   searchMemory.clear()
 }
+
+

@@ -78,7 +78,7 @@ export function partsAired(look: { airingEpisode: number | null } | null): numbe
   return Math.max(0, look.airingEpisode - 1)
 }
 
-/** Анонс ли это: сравнение живёт в ядре, чтобы строка статуса не разъехалась по экранам. */
+/** Анонс ли это: сравнение в ядре, чтобы строка статуса не разъехалась по экранам. */
 export function notOutYet(look: MediaLook | null): boolean {
   return look !== null && look.status === SOON_STATUS
 }

@@ -47,7 +47,7 @@ https://github.com/foulnike/Animori/releases/latest/download/latest.json
 
 Настольное приложение 3.1.0 и новее этот адрес **не читает**: его апдейтер ходит в
 собственный канал. Адрес держится ради сборок 3.0.x и старше, у которых адрес манифеста
-вшит в бильник:
+вшит в бинарный файл:
 
 ```
 https://github.com/foulnike/Animori-Desktop/releases/latest/download/latest.json
@@ -73,7 +73,7 @@ https://github.com/foulnike/Animori-Desktop/releases/latest/download/latest.json
    По нему апдейтер отличает свой выпуск от чужого.
 
 5. **Своё имя канала, а не `releases/latest`**, в конфиге: адрес вписывается в
-   бильник при сборке, и смена его не доедет до уже установленных копий.
+   бинарный файл при сборке, и смена его не доедет до уже установленных копий.
 
 ## Чего не ждать
 

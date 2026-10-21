@@ -13,7 +13,7 @@ import { Logger } from '../utils/logger'
 import { isFresh, LIFE_DATASET_CHECK } from './cache-life'
 import { getEntry } from './collection'
 
-/** Имя файла в приватном каталоге. Разрешённые имена живут в src-tauri/src/files.rs. */
+/** Имя файла в приватном каталоге. Разрешённые имена в src-tauri/src/files.rs. */
 const DATASET_FILE = 'animori-dataset.json'
 
 /** Имена файлов выпуска выбираются точно: под маску подходят соседние. */

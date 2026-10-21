@@ -5,7 +5,7 @@ import { Bridge } from '@/bridge'
 import { Logger } from '../utils/logger'
 import { githubLimiter } from './rate-limit'
 
-/** Постоянный адрес файлов последнего выпуска; зеркала нет: jsDelivr выпуски не раздаёт (docs/dev/windows/DATA.md). */
+/** Постоянный адрес файлов последнего выпуска; зеркала нет: jsDelivr выпуски не раздаёт (docs/dev/windows/STORAGE.md). */
 const RELEASE_BASE = 'https://github.com/foulnike/animori-data/releases/latest/download'
 
 /** Таймауты: опись крошечная, файлы — до полутора мегабайтов в сжатом виде. */
@@ -125,7 +125,7 @@ async function gunzipText(packed: Uint8Array<ArrayBuffer>): Promise<string> {
 
 /**
  * Опись последнего выпуска: с `knownEtag` запрос идёт с If-None-Match, код 304 проверяется ДО `res.ok` — у него
- * `ok` ложно. Хранения отпечатка здесь нет: память между запусками живёт в core/dataset-names.ts.
+ * `ok` ложно. Хранения отпечатка здесь нет: память между запусками в core/dataset-names.ts.
  */
 export async function fetchDatasetIndex(knownEtag?: string | null): Promise<DatasetIndexAnswer> {
   const url = `${RELEASE_BASE}/index.json`

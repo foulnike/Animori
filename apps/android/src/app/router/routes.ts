@@ -32,7 +32,7 @@ export type MenuItem = {
 }
 
 // В меню нет карточки, студии, плеера и журнала: вход в них — из списков, поиска, карточки и адресом #/log.
-// Подписи и имена экранов раздельны: имя 'lists' живёт в адресе и памяти отбора. `icon` — имя вектора в RailIcon.vue.
+// Подписи и имена экранов раздельны: имя 'lists' — в адресе и памяти отбора. `icon` — имя вектора в RailIcon.vue.
 export const MENU: ReadonlyArray<MenuItem> = [
   { name: 'home', title: 'Главная', icon: 'home' },
   { name: 'lists', title: 'Моё', icon: 'lists' },

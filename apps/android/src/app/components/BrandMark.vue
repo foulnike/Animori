@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Знак сервиса: плита фирменного цвета и вектор из src/app/brand (simple-icons CC0, lucide
-// ISC, либо растр внутри файла). SVG, а не PNG: знак живёт на 24-28 px и дробном масштабе.
+// ISC, либо растр внутри файла). SVG, а не PNG: знак на 24-28 px и дробном масштабе.
 
 import { computed } from 'vue'
 

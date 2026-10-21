@@ -80,7 +80,7 @@ interface Tag {
 
 const TAG_RE = /\[(\/)?([a-z*][a-z0-9_-]*)(?:=([^\]\n]*))?\]/gi
 
-/** Адрес любого зеркала Шикимори: в описаниях живут и .one, и .org, и .io. */
+/** Адрес любого зеркала Шикимори: в описаниях и .one, и .org, и .io. */
 const SHIKI_HOST_RE = /^https?:\/\/(?:www\.)?shikimori\.[a-z]+\//i
 
 /** Человек в адресе: /characters/293411-… и /people/9-…. */
@@ -166,7 +166,7 @@ function entityAim(path: string, arg: string | null): RichAim | null {
   // Номер аниме у Шикимори — номер MyAnimeList: карточка найдётся внутри.
   if (path === 'animes') return { kind: 'media', malId: id, url }
 
-  // Номер человека свой, но по нему находится имя, а по имени — карточка.
+  // Номер человека свой, но по нему — имя, а по имени — карточка.
   const who = PERSON_WHO[path]
   return who === undefined ? { kind: 'web', url } : { kind: 'person', who, shikiId: id, url }
 }

@@ -51,7 +51,7 @@ import { sprayGrains, type Grain, type KeepOut } from './home-spray'
 /** Сколько постеров класть на свою полку. */
 const SHELF_SIZE = 14
 
-/** Фраза плашки на этот запуск: реестр живёт в app/splash.ts, инициализируется он оттуда же при старте. */
+/** Фраза плашки на этот запуск: реестр в app/splash.ts, инициализируется он оттуда же при старте. */
 const splash = splashLine()
 
 /** Пропорция розетки для `aspect-ratio`: та же, что в sakura.ts, своими пикселями тут не считаем. */

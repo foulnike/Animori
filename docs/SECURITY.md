@@ -71,7 +71,7 @@
 - **CSP** (`script-src 'self'`, `object-src 'none'`, `base-uri 'self'`,
   `form-action 'none'`) — нет `unsafe-eval` и `unsafe-inline` для скриптов:
   `eval`, `new Function` и подключение внешнего скрипта блокируются.
-- **Окно грузит только свою сборку** (`WebviewUrl::default()` = `index.html` из
+- **Окно загружает только свою сборку** (`WebviewUrl::default()` = `index.html` из
   `frontendDist`). Удалённые адреса в IPC не пущены: `withGlobalTauri: false`,
   глобального `__TAURI__` в окне нет, `dangerousRemoteDomainIpcAccess` не
   включён.

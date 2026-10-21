@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Корень приложения. Выбор экрана по адресу и подписка на смену; рамка — в AppShell. Окошко человека живёт здесь же: открывают и состав тайтла, и ссылка из любого описания.
+// Корень приложения. Выбор экрана по адресу и подписка на смену; рамка — в AppShell. Окошко человека здесь же: открывают и состав тайтла, и ссылка из любого описания.
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, type Component } from 'vue'
 
 import { markFirstPaint } from '@/core/playable'
