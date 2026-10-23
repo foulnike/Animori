@@ -1389,21 +1389,23 @@ onBeforeUnmount(() => {
                 <div class="am-play__clip am-play__clip--end">
                   <!-- Скорость списком, а не ползунком: доли вроде 1,15× на ползунке ловятся только случайно. -->
                   <div class="am-play__pick">
-                    <ul v-if="menu === 'rate'" class="am-play__menu" data-zone="menu">
-                      <li v-for="value in RATES" :key="value">
-                        <button
-                          class="am-play__opt"
-                          :class="{ 'am-play__opt--on': value === rate }"
-                          type="button"
-                          @click="takeRate(value)"
-                        >
-                          <span class="am-play__opt-tick">
-                            <Icon v-if="value === rate" :line="LINE.tick" />
-                          </span>
-                          <span>{{ value === NORMAL_RATE ? 'Обычная' : rateLabel(value) }}</span>
-                        </button>
-                      </li>
-                    </ul>
+                    <Transition name="am-play-menu">
+                      <ul v-if="menu === 'rate'" class="am-play__menu" data-zone="menu">
+                        <li v-for="value in RATES" :key="value">
+                          <button
+                            class="am-play__opt"
+                            :class="{ 'am-play__opt--on': value === rate }"
+                            type="button"
+                            @click="takeRate(value)"
+                          >
+                            <span class="am-play__opt-tick">
+                              <Icon v-if="value === rate" :line="LINE.tick" />
+                            </span>
+                            <span>{{ value === NORMAL_RATE ? 'Обычная' : rateLabel(value) }}</span>
+                          </button>
+                        </li>
+                      </ul>
+                    </Transition>
 
                     <button
                       class="am-play__key am-play__key--word"
@@ -1417,21 +1419,23 @@ onBeforeUnmount(() => {
                   </div>
 
                   <div v-if="qualities.length > 0" class="am-play__pick">
-                    <ul v-if="menu === 'quality'" class="am-play__menu" data-zone="menu">
-                      <li v-for="quality in qualities" :key="quality.height">
-                        <button
-                          class="am-play__opt"
-                          :class="{ 'am-play__opt--on': quality.on }"
-                          type="button"
-                          @click="takeHeight(quality.height)"
-                        >
-                          <span class="am-play__opt-tick">
-                            <Icon v-if="quality.on" :line="LINE.tick" />
-                          </span>
-                          <span>{{ quality.label }}</span>
-                        </button>
-                      </li>
-                    </ul>
+                    <Transition name="am-play-menu">
+                      <ul v-if="menu === 'quality'" class="am-play__menu" data-zone="menu">
+                        <li v-for="quality in qualities" :key="quality.height">
+                          <button
+                            class="am-play__opt"
+                            :class="{ 'am-play__opt--on': quality.on }"
+                            type="button"
+                            @click="takeHeight(quality.height)"
+                          >
+                            <span class="am-play__opt-tick">
+                              <Icon v-if="quality.on" :line="LINE.tick" />
+                            </span>
+                            <span>{{ quality.label }}</span>
+                          </button>
+                        </li>
+                      </ul>
+                    </Transition>
 
                     <button
                       class="am-play__key am-play__key--word"
@@ -1446,21 +1450,23 @@ onBeforeUnmount(() => {
                   <!-- Озвучка и серия — две разные кнопки, а не один ящик на двоих: в общем списке они мешали друг другу,
      а закрыть его можно было только повторным нажатием. Ящик справа остался компьютеру, где место есть. -->
                   <div v-if="lite && voices.length > 0" class="am-play__pick">
-                    <ul v-if="menu === 'voices'" class="am-play__menu" data-zone="menu">
-                      <li v-for="voice in voices" :key="voice.key">
-                        <button
-                          class="am-play__opt"
-                          :class="{ 'am-play__opt--on': voice.key === voiceKey }"
-                          type="button"
-                          @click="takeVoice(voice.key)"
-                        >
-                          <span class="am-play__opt-tick">
-                            <Icon v-if="voice.key === voiceKey" :line="LINE.tick" />
-                          </span>
-                          <span>{{ voiceLine(voice) }}</span>
-                        </button>
-                      </li>
-                    </ul>
+                    <Transition name="am-play-menu">
+                      <ul v-if="menu === 'voices'" class="am-play__menu" data-zone="menu">
+                        <li v-for="voice in voices" :key="voice.key">
+                          <button
+                            class="am-play__opt"
+                            :class="{ 'am-play__opt--on': voice.key === voiceKey }"
+                            type="button"
+                            @click="takeVoice(voice.key)"
+                          >
+                            <span class="am-play__opt-tick">
+                              <Icon v-if="voice.key === voiceKey" :line="LINE.tick" />
+                            </span>
+                            <span>{{ voiceLine(voice) }}</span>
+                          </button>
+                        </li>
+                      </ul>
+                    </Transition>
 
                     <button
                       class="am-play__key am-play__key--word"
@@ -1473,23 +1479,25 @@ onBeforeUnmount(() => {
                   </div>
 
                   <div v-if="lite && episodes.length > 0" class="am-play__pick am-play__pick--jump">
-                    <ul v-if="menu === 'episodes'" class="am-play__menu" data-zone="menu">
-                      <li v-for="item in episodes" :key="item.number">
-                        <button
-                          class="am-play__opt"
-                          :class="{ 'am-play__opt--on': item.number === episode }"
-                          type="button"
-                          @click="takeEpisode(item.number)"
-                        >
-                          <span class="am-play__opt-tick">
-                            <Icon v-if="item.number === episode" :line="LINE.tick" />
-                          </span>
-                          <span class="am-play__word-cut">
-                            {{ item.number }}. {{ item.title ?? 'Серия' }}
-                          </span>
-                        </button>
-                      </li>
-                    </ul>
+                    <Transition name="am-play-menu">
+                      <ul v-if="menu === 'episodes'" class="am-play__menu" data-zone="menu">
+                        <li v-for="item in episodes" :key="item.number">
+                          <button
+                            class="am-play__opt"
+                            :class="{ 'am-play__opt--on': item.number === episode }"
+                            type="button"
+                            @click="takeEpisode(item.number)"
+                          >
+                            <span class="am-play__opt-tick">
+                              <Icon v-if="item.number === episode" :line="LINE.tick" />
+                            </span>
+                            <span class="am-play__word-cut">
+                              {{ item.number }}. {{ item.title ?? 'Серия' }}
+                            </span>
+                          </button>
+                        </li>
+                      </ul>
+                    </Transition>
 
                     <!-- Края списка стоят отдельно, а не строкой внутри: внутри они уезжали бы вместе с прокруткой. -->
                     <div v-if="menu === 'episodes'" class="am-play__jump" data-zone="jump">

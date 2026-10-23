@@ -44,6 +44,56 @@ function closeDrawer(): void {
   menuBtn.value?.focus()
 }
 
+// Свайпы: открытие — от левого края экрана, закрытие — влево по шторке. Кнопка в шапке остаётся
+// запасным путём: жест есть не на каждом устройстве и не для клавиатуры.
+const EDGE_PX = 28
+const SWIPE_PX = 56
+const SWIPE_SLANT = 48
+
+let edgeX = 0
+let edgeY = 0
+let edgeOn = false
+let swipeX = 0
+let swipeY = 0
+
+function onEdgeStart(event: TouchEvent): void {
+  if (drawer.value) return
+
+  const touch = event.changedTouches[0]
+  if (touch === undefined || touch.clientX > EDGE_PX) return
+
+  edgeOn = true
+  edgeX = touch.clientX
+  edgeY = touch.clientY
+}
+
+function onEdgeEnd(event: TouchEvent): void {
+  if (!edgeOn) return
+
+  edgeOn = false
+  const touch = event.changedTouches[0]
+  if (touch === undefined) return
+
+  const dx = touch.clientX - edgeX
+  if (dx > SWIPE_PX && Math.abs(touch.clientY - edgeY) < SWIPE_SLANT) openDrawer()
+}
+
+function onSwipeStart(event: TouchEvent): void {
+  const touch = event.changedTouches[0]
+  if (touch === undefined) return
+
+  swipeX = touch.clientX
+  swipeY = touch.clientY
+}
+
+function onSwipeEnd(event: TouchEvent): void {
+  const touch = event.changedTouches[0]
+  if (touch === undefined) return
+
+  const dx = touch.clientX - swipeX
+  if (dx < -SWIPE_PX && Math.abs(touch.clientY - swipeY) < SWIPE_SLANT) closeDrawer()
+}
+
 // Аппаратная «Назад» закрывает шторку, а не листает историю: запись, пока шторка открыта.
 // Фокус уходит на панель, чтобы Tab и скринридер начинали с содержимого шторки, а не с экрана под ней.
 watch(drawer, (on) => {
@@ -93,10 +143,14 @@ function onKey(event: KeyboardEvent): void {
 
 onMounted(() => {
   window.addEventListener('keydown', onKey)
+  window.addEventListener('touchstart', onEdgeStart, { passive: true })
+  window.addEventListener('touchend', onEdgeEnd, { passive: true })
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKey)
+  window.removeEventListener('touchstart', onEdgeStart)
+  window.removeEventListener('touchend', onEdgeEnd)
   dropStop?.()
   dropStop = null
 })
@@ -155,55 +209,64 @@ onBeforeUnmount(() => {
     </div>
 
     <Teleport to="body">
-      <div v-if="drawer" id="am-drawer" class="am-drawer" @click="closeDrawer">
-        <!-- Панель — диалог: так обход и скринридер получают границу «окно поверх страницы».
-             tabindex="-1" — фокус на панель без видимой рамки. -->
-        <aside
-          ref="panel"
-          class="am-drawer__panel"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Меню"
-          tabindex="-1"
-          @click.stop
+      <Transition name="am-drawer">
+        <div
+          v-if="drawer"
+          id="am-drawer"
+          class="am-drawer"
+          @click="closeDrawer"
+          @touchstart="onSwipeStart"
+          @touchend="onSwipeEnd"
         >
-          <div class="am-drawer__brand">
-            <AppMark class="am-drawer__logo" />
-            <span class="am-drawer__name">AniMori</span>
-          </div>
+          <!-- Панель — диалог: так обход и скринридер получают границу «окно поверх страницы».
+             tabindex="-1" — фокус на панель без видимой рамки. -->
+          <aside
+            ref="panel"
+            class="am-drawer__panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Меню"
+            tabindex="-1"
+            @click.stop
+          >
+            <div class="am-drawer__brand">
+              <AppMark class="am-drawer__logo" />
+              <span class="am-drawer__name">AniMori</span>
+            </div>
 
-          <nav class="am-drawer__menu">
-            <button
-              v-for="item in MENU"
-              :key="item.name"
-              class="am-drawer__item"
-              :class="{ 'am-drawer__item--on': item.name === active }"
-              type="button"
-              :aria-current="item.name === active ? 'page' : undefined"
-              @click="onPick(item.name, $event)"
-            >
-              <span class="am-drawer__icon"><RailIcon :name="item.icon" /></span>
-              <span class="am-drawer__text">{{ item.title }}</span>
-            </button>
-          </nav>
+            <nav class="am-drawer__menu">
+              <button
+                v-for="item in MENU"
+                :key="item.name"
+                class="am-drawer__item"
+                :class="{ 'am-drawer__item--on': item.name === active }"
+                type="button"
+                :aria-current="item.name === active ? 'page' : undefined"
+                @click="onPick(item.name, $event)"
+              >
+                <span class="am-drawer__icon"><RailIcon :name="item.icon" /></span>
+                <span class="am-drawer__text">{{ item.title }}</span>
+              </button>
+            </nav>
 
-          <div class="am-drawer__acts">
-            <!-- Пункт обновления появляется сам, когда проверка при старте нашла выпуск новее,
+            <div class="am-drawer__acts">
+              <!-- Пункт обновления появляется сам, когда проверка при старте нашла выпуск новее,
          и последний: он не действие на каждый день, а редкий случай. -->
-            <button
-              v-if="updateOffer"
-              class="am-drawer__item am-drawer__item--new"
-              type="button"
-              @click="updateOpen = true"
-            >
-              <span class="am-drawer__icon am-drawer__icon--dot"><RailIcon name="update" /></span>
-              <span class="am-drawer__text">Новая версия</span>
-            </button>
-          </div>
+              <button
+                v-if="updateOffer"
+                class="am-drawer__item am-drawer__item--new"
+                type="button"
+                @click="updateOpen = true"
+              >
+                <span class="am-drawer__icon am-drawer__icon--dot"><RailIcon name="update" /></span>
+                <span class="am-drawer__text">Новая версия</span>
+              </button>
+            </div>
 
-          <span class="am-drawer__foot">{{ version }}</span>
-        </aside>
-      </div>
+            <span class="am-drawer__foot">{{ version }}</span>
+          </aside>
+        </div>
+      </Transition>
     </Teleport>
   </div>
 </template>
@@ -425,6 +488,30 @@ onBeforeUnmount(() => {
   }
 }
 
+.am-drawer-leave-active {
+  pointer-events: none;
+  animation: am-veil-out var(--am-mid) var(--am-ease) both;
+}
+
+.am-drawer-leave-active .am-drawer__panel {
+  animation: am-drawer-out var(--am-mid) var(--am-ease) both;
+}
+
+@keyframes am-veil-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes am-drawer-out {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
 .am-drawer__brand {
   display: flex;
   gap: 11px;
@@ -620,7 +707,9 @@ onBeforeUnmount(() => {
 @media (prefers-reduced-motion: reduce) {
   .am-view__hold,
   .am-drawer,
-  .am-drawer__panel {
+  .am-drawer__panel,
+  .am-drawer-leave-active,
+  .am-drawer-leave-active .am-drawer__panel {
     animation: none;
   }
 }

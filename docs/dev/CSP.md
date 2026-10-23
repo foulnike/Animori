@@ -16,7 +16,7 @@
 | `ipc: http://ipc.localhost` | Служебные каналы Tauri. Tauri их не подставляет сам. Без них пропадает `invoke`, а с ним сеть, хранилище и авторизация |
 | `script-src 'self'` | Без `'unsafe-inline'` и `'unsafe-eval'`. Это смысл всей политики |
 | `style-src 'unsafe-inline'` | Компоненты задают цвета через `:style` |
-| `img-src data:` | Заставка в `index.html` встроена как data-URI, плюс SVG-заглушки и blob-постеры |
+| `img-src data:` | SVG-заглушки, blob-постеры (локальные обложки из IndexedDB) и data-URI вёрстки. Заставка в `index.html` — обычный `<img src="...png">`, data не обязывает |
 | `frame-src` (youtube, dailymotion) | Трейлеры — iframe только из этого списка. Новая площадка трейлеров требует хост и здесь, и в `TRAILER_SITES` (`packages/core/src/api/anilist-media.ts`): без хоста iframe блокируется молча |
 
 ## Почему остальное широкое

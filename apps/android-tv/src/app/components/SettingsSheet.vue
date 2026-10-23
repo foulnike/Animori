@@ -138,42 +138,44 @@ onBeforeUnmount(() => {
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="am-sheet">
-      <!-- Занавес — кнопка: клик мимо коробки закрывает, и это доступно с клавиатуры. -->
-      <button class="am-sheet__veil" type="button" aria-label="Закрыть" @click="onClose" />
+    <Transition name="am-sheet">
+      <div v-if="open" class="am-sheet">
+        <!-- Занавес — кнопка: клик мимо коробки закрывает, и это доступно с клавиатуры. -->
+        <button class="am-sheet__veil" type="button" aria-label="Закрыть" @click="onClose" />
 
-      <div ref="sheet" class="am-sheet__box" role="dialog" aria-modal="true" :aria-label="title">
-        <!-- Крест один во всей рамке: заголовок несёт панель, шапке остаётся выход. -->
-        <header class="am-sheet__top">
-          <span class="am-bar__gap" />
-          <button
-            ref="close"
-            class="am-sheet__close"
-            type="button"
-            data-am-last
-            aria-label="Закрыть"
-            @click="onClose"
-          >
-            ✕
-          </button>
-        </header>
+        <div ref="sheet" class="am-sheet__box" role="dialog" aria-modal="true" :aria-label="title">
+          <!-- Крест один во всей рамке: заголовок несёт панель, шапке остаётся выход. -->
+          <header class="am-sheet__top">
+            <span class="am-bar__gap" />
+            <button
+              ref="close"
+              class="am-sheet__close"
+              type="button"
+              data-am-last
+              aria-label="Закрыть"
+              @click="onClose"
+            >
+              ✕
+            </button>
+          </header>
 
-        <!-- tabindex у тела: с фокусом на нём пульт видит, что находится внутри окна,
+          <!-- tabindex у тела: с фокусом на нём пульт видит, что находится внутри окна,
              и не считает окно пустым. Метка `data-am-seed` — тело контейнер, а не цель: ходить
              по нему нельзя, его прямоугольник перекрывает всю панель, и фокус вставал бы туда,
              где подсветки нет. -->
-        <div ref="body" class="am-sheet__body" tabindex="0" data-am-seed>
-          <slot />
-        </div>
+          <div ref="body" class="am-sheet__body" tabindex="0" data-am-seed>
+            <slot />
+          </div>
 
-        <!-- «Готово» — общий выход: панель правят по месту, подтверждать нечего. -->
-        <footer class="am-sheet__foot">
-          <button class="am-btn am-btn--soft am-sheet__go" type="button" @click="onClose">
-            Готово
-          </button>
-        </footer>
+          <!-- «Готово» — общий выход: панель правят по месту, подтверждать нечего. -->
+          <footer class="am-sheet__foot">
+            <button class="am-btn am-btn--soft am-sheet__go" type="button" @click="onClose">
+              Готово
+            </button>
+          </footer>
+        </div>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 </template>
 

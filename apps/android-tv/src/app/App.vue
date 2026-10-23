@@ -78,7 +78,9 @@ onBeforeUnmount(() => {
 
   <!-- Рядом с рамкой, а не внутри неё: блюр рельса создаёт свой контекст
        наложения, и окошко внутри него прижалось бы к содержимому. -->
-  <PersonSheet v-if="shownPerson" :start="shownPerson" @close="closePerson" />
+  <Transition name="am-sheet">
+    <PersonSheet v-if="shownPerson" :start="shownPerson" @close="closePerson" />
+  </Transition>
 
   <!-- Окно обновления уводится в body само (Teleport). Открыто оно бывает редко,
        но открыть его могут откуда угодно, поэтому стоит здесь, в корне. -->

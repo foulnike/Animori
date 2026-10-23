@@ -428,7 +428,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div
-    class="am-sheet"
+    class="am-sheet am-sheet--veil"
     :class="{ 'am-sheet--tv': lite }"
     role="dialog"
     aria-modal="true"

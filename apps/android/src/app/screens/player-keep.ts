@@ -1,6 +1,4 @@
-// Что просмотр помнит между запусками: где остановились, что выбрали, что смотрели. Всё лежит одной записью.
-// История — не метки: метка умирает по досмотру, ключ истории склеен из аниме и серии без озвучки.
-
+// Просмотр между запусками: где остановились, что выбрали, что смотрели — одной записью через мост.
 import { Bridge } from '@/bridge'
 import { Logger } from '@/utils/logger'
 
@@ -9,21 +7,25 @@ const STORE_KEY = 'am_watch_marks'
 /** Сколько ждать перед записью: серия идёт долго, спешить некуда. */
 const WRITE_DELAY_MS = 4000
 
+/** Сколько серий помним. Дальше вытесняются самые давние. */
 const MARK_LIMIT = 600
 
-/** Сколько записей истории помним. Потолок выше, чем у меток: записей заведомо меньше,
- *  а восстанавливать историю нечем — метку восстанавливают просмотром. */
+/** Сколько записей истории помним. Потолок выше, чем у меток: историю не восстанавливают —
+ *  метку восстанавливают просмотром. */
 const HISTORY_LIMIT = 500
 
+/** Сколько тайтлов помнят выбор озвучки и серии. */
 const PICK_LIMIT = 200
 
 /** Меньше этого за просмотр не считаем: заставка — не место остановки. */
 const MIN_SEC = 15
 
-/** Хвост серии считается досмотренным: без отступа «продолжить» возвращало бы на титры той же серии. */
+/** Хвост серии — досмотрен: иначе «продолжить» возвращало бы на титры той же серии. */
 const TAIL_SEC = 90
 
+/** Что помним про одну серию. */
 export interface WatchMark {
+  /** Секунда остановки. */
   at: number
   /** Длина серии по самому кадру; 0 — источник её так и не назвал. */
   full: number
@@ -38,15 +40,16 @@ export interface WatchPick {
   when: number
 }
 
+/** Из чего состоит ключ места остановки. */
 export interface SpotParts {
   mediaId: number
   voiceKey: string
   episode: number
 }
 
-/** Что записать в историю рядом с меткой. Номеров здесь нет: они берутся из ключа, а снимок нужен
- *  только тот, которого в ключе не бывает. */
+/** Что записать в историю рядом с меткой; номеров нет — они берутся из ключа. */
 export interface WatchWhat {
+  /** Заголовок тайтла на момент просмотра. */
   title: string
   /** Обложка на момент просмотра; null — карточка её не дала. */
   cover: string | null
@@ -54,17 +57,20 @@ export interface WatchWhat {
   voiceLabel: string
 }
 
+/** Строка истории: одна серия одного тайтла. */
 export interface WatchRow {
   mediaId: number
   /** Озвучка последнего просмотра: по ней серия и продолжится. */
   voiceKey: string
   episode: number
+  /** Секунда остановки. */
   at: number
   /** Длина серии; 0 — источник её так и не назвал. */
   full: number
   title: string
   cover: string | null
   voiceLabel: string
+  /** Когда эту серию открыли впервые. */
   first: number
   /** Когда смотрели в последний раз: по этому полю идёт порядок. */
   when: number
@@ -126,8 +132,7 @@ function readPicks(raw: unknown): Record<string, WatchPick> {
   return out
 }
 
-/** История читается терпимо: запись без номера аниме или серии никуда не ведёт. Так же переживается
- *  склад, писавшийся до появления истории: поля history в нём просто нет. */
+/** Читается терпимо: запись без номера аниме или серии никуда не ведёт, склад без поля history — тоже. */
 function readHistory(raw: unknown): Record<string, WatchRow> {
   const out: Record<string, WatchRow> = {}
   if (typeof raw !== 'object' || raw === null) return out
@@ -172,8 +177,7 @@ async function read(): Promise<void> {
   }
 }
 
-/** Готовность меток: ждать её обязан тот, кто собирается читать. Чтение синхронное, но до первого
- *  ответа хранилища оно честно вернёт пустоту. */
+/** Готовность меток: до первого ответа хранилища чтение честно вернёт пустоту. */
 export function whenWatchReady(): Promise<void> {
   reading ??= read()
   return reading
@@ -191,7 +195,8 @@ async function write(): Promise<void> {
   }
 }
 
-/** Откладывает запись. Повторный зов срок не продлевает: иначе идущая серия откладывала бы её вечно. */
+/** Откладывает запись. Повторный зов срок не продлевает: иначе идущая серия
+ * откладывала бы её вечно и на диск не попало бы ничего. */
 function schedule(): void {
   if (writeTimer !== 0) return
 
@@ -211,6 +216,7 @@ export function flushWatchKeep(): void {
   void write()
 }
 
+/** Вытесняет давние записи: список не должен расти вечно. */
 function trim(rows: Record<string, { when: number }>, limit: number): void {
   const keys = Object.keys(rows)
   if (keys.length <= limit) return
@@ -225,8 +231,7 @@ export function spotKey(mediaId: number, voiceKey: string, episode: number): str
   return `${mediaId}|${voiceKey}|${episode}`
 }
 
-/** Разбирает ключ обратно на части. Резать по обоим разделителям сразу нельзя: номер аниме берётся
- *  до первого разделителя, номер серии после последнего, а вся середина целиком уходит озвучке. */
+/** Разбирает ключ: аниме — до первого разделителя, серия — после последнего, середина — озвучке. */
 export function splitSpot(key: string): SpotParts | null {
   const head = key.indexOf('|')
   const tail = key.lastIndexOf('|')
@@ -261,10 +266,9 @@ function historyKey(mediaId: number, episode: number): string {
   return `${mediaId}|${episode}`
 }
 
-/** Кладёт просмотр в историю. Заголовок, обложка и подпись озвучки пустотой не затираются: пустое имя
- *  приходит как раз тогда, когда карточка ещё не доехала. */
+/** Кладёт просмотр в историю; снимок пустотой не затирается: пустое имя = карточка ещё не доехала. */
 function noteWatch(parts: SpotParts, at: number, full: number, what: WatchWhat): void {
-  // Нулевой номер серии — это «ещё не выбрано»: такая запись никуда не ведёт.
+  // Нулевой номер серии — это «ещё не выбрано», а не серия: такая запись никуда не ведёт, и в списке ей делать нечего.
   if (parts.mediaId <= 0 || parts.episode <= 0) return
 
   const key = historyKey(parts.mediaId, parts.episode)
@@ -286,6 +290,9 @@ function noteWatch(parts: SpotParts, at: number, full: number, what: WatchWhat):
 
   trim(keep.history, HISTORY_LIMIT)
   schedule()
+
+  // В календарь активности плеер не пишет: он не различает, что человек делал с серией, а отметка стоила
+  // «Серия просмотрена». Сетку ведёт человек сам (закладка, счёт, оценка) — в ней нет ни одной чужой записи.
 }
 
 /** Запоминает место остановки. Первые секунды не считаются за просмотр. */
@@ -303,7 +310,7 @@ export function rememberSpot(key: string, seconds: number, full: number, what?: 
   keep.marks[key] = { at, full: length, when: Date.now() }
   trim(keep.marks, MARK_LIMIT)
 
-  // В историю попадает ровно то же, что и в метку: заставка просмотром не считается.
+  // В историю попадает ровно то же, что и в метку: заставка и десятисекундный заход просмотром не считаются, и в списке им делать нечего.
   if (what !== undefined) {
     const parts = splitSpot(key)
     if (parts !== null) noteWatch(parts, at, length, what)
@@ -312,8 +319,7 @@ export function rememberSpot(key: string, seconds: number, full: number, what?: 
   schedule()
 }
 
-/** Серия досмотрена до конца: место остановки больше не нужно, а в истории серия должна стоять целой.
- *  Длина приходит от кадра: у неизвестной запись выйдет без числа — выдуманный итог хуже отсутствующего. */
+/** Серия досмотрена: метка не нужна, в истории серия целая; неизвестную длину не выдумываем. */
 export function finishSpot(key: string, full: number, what?: WatchWhat): void {
   if (key === '') return
 
@@ -335,6 +341,7 @@ export function forgetSpot(key: string): void {
   schedule()
 }
 
+/** Что смотрели у этого тайтла в прошлый раз. */
 export function peekPick(mediaId: number): WatchPick | null {
   return keep.picks[String(mediaId)] ?? null
 }
@@ -352,7 +359,7 @@ export function rememberPick(
   schedule()
 }
 
-/** Всё, что смотрели, свежее вперёд. Отдаётся копией: порядок на экране правит сам экран. */
+/** Всё, что смотрели, свежее вперёд; порядок на экране правит сам экран. */
 export function peekHistory(): WatchRow[] {
   return Object.values(keep.history).sort((a, b) => b.when - a.when)
 }
@@ -366,16 +373,14 @@ export function forgetWatch(mediaId: number, episode: number): void {
   schedule()
 }
 
-/** Забыть всё, что смотрели. Метки продолжения уходят вместе с историей: иначе на диске остались бы
- *  сведения о том, где человек остановился. Выбор озвучки и серии остаётся — это настройка тайтла. */
+/** Забыть всё, что смотрели; выбор озвучки остаётся: это настройка тайтла, а не след просмотра. */
 export function wipeWatch(): void {
   keep.history = {}
   keep.marks = {}
   schedule()
 }
 
-/** Делает запись истории нынешним выбором тайтла: без этой записи плеер открыл бы другую серию.
- *  Качество переносится только вместе с озвучкой: у другой дорожки свои высоты. Нулевая высота — «по умолчанию». */
+/** Запись истории становится выбором тайтла: иначе «Продолжить» открыло бы другую серию. */
 export function resumeWatch(row: WatchRow): void {
   const seen = peekPick(row.mediaId)
   const height = seen !== null && seen.voiceKey === row.voiceKey ? seen.height : 0

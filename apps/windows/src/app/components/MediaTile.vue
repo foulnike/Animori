@@ -34,6 +34,8 @@ interface Props {
   /** Доля пройденного от нуля до единицы: полоса внизу постера. */
   done?: number
   adult?: boolean
+  /** Закреплённый угол: слева повторы с заметкой и оценкой, ниже закладка; справа 18+ под рейтингом. */
+  stackTags?: boolean
   /** Крестик «не интересует» поверх постера: только для плиток витрины. */
   hidable?: boolean
   /** Кнопка правки записи: только там, где запись уже есть. */
@@ -54,6 +56,7 @@ const props = withDefaults(defineProps<Props>(), {
   own: null,
   done: 0,
   adult: false,
+  stackTags: false,
   hidable: false,
   editable: false,
 })
@@ -81,7 +84,7 @@ const letter = computed(() => props.title.trim().charAt(0).toUpperCase() || '?')
 const donePart = computed(() => `${Math.round(Math.min(1, Math.max(0, props.done)) * 100)}%`)
 
 /** Подсказка отметки повторов; цифры на плитке нет: она читалась бы второй оценкой. */
-const repeatHint = computed(() => `Повторных проходов: ${props.repeat}`)
+const repeatHint = computed(() => `Повторных просмотров: ${props.repeat}`)
 
 /** Метка доступности. У анонса её нет: метка анонса уже сказала то же.
  *  В правом нижнем углу, а не среди меток: она про плеер, а не про аниме. */
@@ -94,10 +97,20 @@ const playHint = computed(() => (playMark.value === 'yes' ? 'Можно посм
 const hasTags = computed(
   () => props.mark !== null || props.adult || props.soon || props.repeat > 0 || props.note !== null,
 )
+
+/** Левый угол закреплённой раскладки: 18+ и «Скоро» в нём не участвуют. */
+const hasStackTags = computed(() => props.mark !== null || props.soon || props.ongoing)
 </script>
 
 <template>
-  <li class="am-tile" :class="{ 'am-tile--hidable': hidable, 'am-tile--edit': editable }">
+  <li
+    class="am-tile"
+    :class="{
+      'am-tile--hidable': hidable,
+      'am-tile--edit': editable,
+      'am-tile--stack': stackTags,
+    }"
+  >
     <button v-tip="title" class="am-tile__hit" type="button" @click="emit('open')">
       <span class="am-tile__art" :style="artStyle">
         <img
@@ -114,7 +127,17 @@ const hasTags = computed(
         <span class="am-tile__shade" aria-hidden="true" />
         <span class="am-tile__sheen" aria-hidden="true" />
 
-        <span v-if="hasTags" class="am-tile__tags">
+        <span v-if="stackTags && hasStackTags" class="am-tile__tags">
+          <span v-if="mark" class="am-tile__tag">{{ mark }}</span>
+
+          <span v-if="soon" v-tip="soonHint()" class="am-tile__tag am-tile__tag--soon">
+            {{ soonWord() }}
+          </span>
+
+          <span v-if="ongoing" v-tip="'Сезон идёт: части ещё выходят'" class="am-tile__live" />
+        </span>
+
+        <span v-else-if="!stackTags && hasTags" class="am-tile__tags">
           <span v-if="soon" v-tip="soonHint()" class="am-tile__tag am-tile__tag--soon">
             {{ soonWord() }}
           </span>
@@ -130,13 +153,17 @@ const hasTags = computed(
           <span v-if="adult" class="am-tile__tag am-tile__tag--adult">18+</span>
         </span>
 
+        <span v-if="stackTags && adult" class="am-tile__tag am-tile__tag--adult am-tile__adult">
+          18+
+        </span>
+
         <span v-if="score" class="am-tile__score">{{ score }}</span>
 
         <span
           v-if="ongoing"
           v-tip="'Сезон идёт: части ещё выходят'"
           class="am-tile__live"
-          :class="{ 'am-tile__live--low': score !== null }"
+          :class="{ 'am-tile__live--low': score !== null && !stackTags }"
         />
 
         <span v-if="own" class="am-tile__own" :class="{ 'am-tile__own--play': playMark !== null }">
@@ -376,6 +403,26 @@ const hasTags = computed(
   color: var(--am-on-art);
   background: color-mix(in srgb, var(--am-bad) 62%, transparent);
   border-color: color-mix(in srgb, var(--am-bad) 70%, transparent);
+}
+
+/* Студия и поиск: угол закреплён. Левый столбец двумя рядами — сверху повторы,
+   заметка и своя оценка, снизу закладка; пересечений со счётом нет в принципе. */
+.am-tile--stack .am-tile__tags {
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+/* 18+ под рейтингом каталога: правая колонка симметрична левой. */
+.am-tile--stack .am-tile__adult {
+  position: absolute;
+  top: 36px;
+  right: 8px;
+}
+
+/* Точка сезона в колонке меток: под «Анонсом», без absolute-позиции. */
+.am-tile--stack .am-tile__live {
+  position: static;
+  align-self: flex-start;
 }
 
 /* Оценка каталога: стекло с тёплым текстом. Заливка жёлтым кричала

@@ -15,7 +15,7 @@ on:
       tag:
         description: 'Тег выпуска'
         required: true
-        default: 'android-tv-v3.1.1'
+        default: 'android-tv-v3.1.2'
       dry:
         description: 'Пробный прогон: собрать и подписать, но релиз не публиковать'
         type: boolean
@@ -327,7 +327,7 @@ jobs:
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
           # Платформа в названии: оба продукта живут в одном репозитории, и без неё
-          # на странице Releases две строки «AniMori 3.1.1» не отличить. Апдейтер
+          # на странице Releases две строки «AniMori 3.1.2» не отличить. Апдейтер
           # приставки название не читает вовсе — он смотрит на tag_name и body.
           name: AniMori ${{ steps.ver.outputs.version }} — Android TV
           body: ${{ steps.notes.outputs.body }}

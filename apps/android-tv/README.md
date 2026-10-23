@@ -6,8 +6,8 @@
 
 **Плеер, русские названия и списки AniList на приставке. Без рекламы, телеметрии и своих серверов.**
 
-[![Версия](https://img.shields.io/badge/%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%8F-3.1.1-02A9FF?style=flat-square&labelColor=0B1622)](https://github.com/foulnike/Animori/releases/latest)
-[![Загрузка](https://img.shields.io/badge/APK-3.1.1-02A9FF?style=flat-square&labelColor=0B1622)](https://github.com/foulnike/Animori/releases/latest)
+[![Версия](https://img.shields.io/badge/%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%8F-3.1.2-02A9FF?style=flat-square&labelColor=0B1622)](https://github.com/foulnike/Animori/releases/latest)
+[![Загрузка](https://img.shields.io/badge/APK-3.1.2-02A9FF?style=flat-square&labelColor=0B1622)](https://github.com/foulnike/Animori/releases/latest)
 [![Лицензия](https://img.shields.io/badge/%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-MIT-02A9FF?style=flat-square&labelColor=0B1622)](../../LICENSE)
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
@@ -49,7 +49,7 @@
 ## Установка
 
 Файл — на [странице выпусков](https://github.com/foulnike/Animori/releases/latest):
-`AniMori_3.1.1_armv7.apk` для 32-разрядных приставок, `AniMori_3.1.1_arm64.apk`
+`AniMori_3.1.2_armv7.apk` для 32-разрядных приставок, `AniMori_3.1.2_arm64.apk`
 для 64-разрядных. Разрядность — `adb shell getprop ro.product.cpu.abi`.
 
 Ставится как обычное приложение: с флешки проводником или командой
@@ -87,7 +87,7 @@ AniList с живой проверкой, обновление по кнопке
 поддерживается.
 
 **Управлять с пульта.** Фокус ходит стрелками, рельс вынесен отдельной полосой,
-окна поверх экрана закрываются «Назад» — `docs/dev/android-tv/ARCHITECTURE.md`, раздел «Интерфейс».
+окна поверх экрана закрываются «Назад» — [`docs/dev/android-tv/ARCHITECTURE.md`](../../docs/dev/android-tv/ARCHITECTURE.md), раздел «Интерфейс».
 
 Разделы — **Главная**, **Моё**, **История**, **Поиск**, **Настройки**; из них
 открываются **Тайтл**, **Студия** и **Просмотр**. Приложение ведёт только аниме и
@@ -95,7 +95,7 @@ AniList с живой проверкой, обновление по кнопке
 Запросы к API идут из процесса приложения, а не из веб-части, поэтому ограничения
 браузера не мешают, а заголовки запросов под контролем.
 
-Источники — `docs/dev/android-tv/ARCHITECTURE.md`, список и облако — `docs/dev/android-tv/STORAGE.md`.
+Источники — [`docs/dev/android-tv/ARCHITECTURE.md`](../../docs/dev/android-tv/ARCHITECTURE.md), список и облако — [`docs/dev/android-tv/STORAGE.md`](../../docs/dev/android-tv/STORAGE.md).
 
 ## Сборка
 
@@ -105,7 +105,7 @@ npm run build:app
 npm run tauri -- android build -t armv7
 ```
 
-Подпись и грабли инструментов — в `docs/dev/android-tv/ARCHITECTURE.md`, раздел «Обновление».
+Каналы обновлений и статус выпусков — в [`docs/dev/RELEASES.md`](../../docs/dev/RELEASES.md).
 
 ## Источники данных
 

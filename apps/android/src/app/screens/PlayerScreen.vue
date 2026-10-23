@@ -89,8 +89,6 @@ const SIGN = {
   pause: 'M6 5h4v14H6zm8 0h4v14h-4z',
   prev: 'M6 6h2.4v12H6zm12 0v12l-8.6-6z',
   next: 'M15.6 6H18v12h-2.4zM6 6l8.6 6L6 18z',
-  rewind: 'M11.4 6v12L3 12zm9.6 0v12l-8.4-6z',
-  ahead: 'M3 6l8.4 6L3 18zm9.6 0 8.4 6-8.4 6z',
   sound: 'M4 9.5h3.2L12 5.4v13.2L7.2 14.5H4z',
   againHead: 'M12 1.2l3.4 2.8L12 6.8z',
 } as const
@@ -128,6 +126,12 @@ interface Key {
 
 /** Сколько держится плашка продолжения. Дальше она мешает смотреть. */
 const RESUME_SHOW_MS = 7000
+
+/** Потолок паузы между тапами одного двойного нажатия: окно, в котором ждём второго. */
+const DOUBLE_TAP_WINDOW_MS = 300
+
+/** Сколько держится плашка перемотки двойным тапом. */
+const SEEK_FLASH_MS = 700
 
 /** За сколько до конца подписи просим новый адрес. Запас больше проверки срока в ядре:
  * там речь о том, годится ли ссылка к запуску, а здесь — чтобы замена прошла под живым потоком. */
@@ -763,15 +767,86 @@ function onRolling(): void {
   stalled.value = false
 }
 
-/** Тап по кадру. Первый тап, когда панель уехала, только поднимает её: иначе панель и так бы
- *  дёрнулась от касания, и человек, желая увидеть кнопки, ставил бы паузу. Дальше тап идёт в кадр. */
-function onStageTap(): void {
-  if (calm.value) {
-    wake()
+/** Движение мыши возвращает панель; касание — нет: дрожание пальца до клика поднимало
+ *  панель раньше тапа, и первый тап ставил паузу вместо «показать управление». */
+function onStageMove(event: PointerEvent): void {
+  if (event.pointerType === 'mouse') wake()
+}
+
+/** Окно одиночного тапа. Тап нельзя разобрать в момент приземления: он может оказаться
+ *  первым в двойном. Пуск/пауза откладывается до конца окна и отменяется вторым тапом —
+ *  иначе двойной тап и ставил паузу, и крутил. Двойные подряд дают промотку подряд. */
+function onStageTap(event: MouseEvent): void {
+  if (veil.value) return
+
+  const wasCalm = calm.value
+  if (wasCalm) wake()
+
+  if (tapTimer !== 0) {
+    window.clearTimeout(tapTimer)
+    tapTimer = 0
+    doubleSeek(event)
     return
   }
 
-  doToggle()
+  tapTimer = window.setTimeout(() => {
+    tapTimer = 0
+    // Первый тап, когда панель была спрятана, только её и вернул.
+    if (wasCalm) return
+
+    doToggle()
+  }, DOUBLE_TAP_WINDOW_MS)
+}
+
+/** Таймер ожидания второго тапа; ноль — окно закрыто. */
+let tapTimer = 0
+
+/** Двойной тап: края кадра крутят на десять секунд, середина разворачивает кадр. */
+function doubleSeek(event: MouseEvent): void {
+  const el = videoEl.value
+  if (el === null) return
+
+  const box = el.getBoundingClientRect()
+  const share = box.width > 0 ? (event.clientX - box.left) / box.width : 0.5
+
+  if (share < 0.34) {
+    nudge(-STEP_SEC)
+    flashSeek('back')
+    return
+  }
+
+  if (share > 0.66) {
+    nudge(STEP_SEC)
+    flashSeek('ahead')
+    return
+  }
+
+  doFullscreen()
+}
+
+/** Плашка перемотки: на какой стороне кадра и сколько всего секунд накоплено серией двойных тапов. */
+const seekSide = ref<'' | 'back' | 'ahead'>('')
+const seekTotal = ref(0)
+let seekTimer = 0
+
+/** Потолок накопленных секунд: до него плашка наполняется, дальше растёт только счёт. */
+const SEEK_FILL_CEILING = 60
+
+/** Наполнение плашки: доля от потолка в процентах. */
+const seekFill = computed<number>(() => Math.min(100, (seekTotal.value / SEEK_FILL_CEILING) * 100))
+
+function flashSeek(side: 'back' | 'ahead'): void {
+  // Тап по другой стороне кадра начинает отсчёт заново.
+  if (seekSide.value !== '' && seekSide.value !== side) seekTotal.value = 0
+
+  seekSide.value = side
+  seekTotal.value += STEP_SEC
+  if (seekTimer !== 0) window.clearTimeout(seekTimer)
+  seekTimer = window.setTimeout(() => {
+    seekTimer = 0
+    seekSide.value = ''
+    seekTotal.value = 0
+  }, SEEK_FLASH_MS)
 }
 
 function doToggle(): void {
@@ -984,17 +1059,16 @@ function doExit(): void {
   openCard()
 }
 
-/** Левый кластер: серии, перемотка и пуск. Порядок тот же, что у всех плееров. */
+/** Левый кластер: серии и пуск. Перемотки ±10 секунд здесь нет: её забрал двойной
+ * тап по краям кадра. Порядок тот же, что у всех плееров. */
 const leftKeys = computed<Key[]>(() => [
   { tip: 'Предыдущая серия', sign: SIGN.prev, off: prevNumber.value === 0, run: doPrev },
-  { tip: 'Назад 10 секунд', sign: SIGN.rewind, run: () => nudge(-STEP_SEC) },
   {
     tip: playing.value ? 'Пауза' : 'Смотреть',
     sign: playing.value ? SIGN.pause : SIGN.play,
     main: true,
     run: doToggle,
   },
-  { tip: 'Вперёд 10 секунд', sign: SIGN.ahead, run: () => nudge(STEP_SEC) },
   { tip: 'Следующая серия', sign: SIGN.next, off: !hasNext.value, run: nextEpisode },
 ])
 
@@ -1302,6 +1376,8 @@ onBeforeUnmount(() => {
   markPipPlaying(false)
   if (calmTimer !== 0) window.clearTimeout(calmTimer)
   if (resumeTimer !== 0) window.clearTimeout(resumeTimer)
+  if (seekTimer !== 0) window.clearTimeout(seekTimer)
+  if (tapTimer !== 0) window.clearTimeout(tapTimer)
   if (renewTimer !== 0) {
     window.clearInterval(renewTimer)
     renewTimer = 0
@@ -1347,7 +1423,7 @@ onBeforeUnmount(() => {
           // Клажем интерфейс, как только кадр ушёл — каким бы путём это ни случилось.
           'am-play--pip': pipOn,
         }"
-        @pointermove="wake"
+        @pointermove="onStageMove"
       >
         <div class="am-play__main">
           <div class="am-play__head" data-zone="head">
@@ -1362,7 +1438,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <div class="am-play__stage" @dblclick="doFullscreen">
+          <div class="am-play__stage">
             <video
               ref="videoEl"
               class="am-play__frame"
@@ -1376,8 +1452,21 @@ onBeforeUnmount(() => {
               class="am-play__tap"
               type="button"
               :aria-label="calm ? 'Показать управление' : playing ? 'Пауза' : 'Смотреть'"
-              @click="onStageTap"
+              @click="onStageTap($event)"
             ></button>
+
+            <!-- Плашка двойного тапа: сторона, накопленные секунды и наполнение. -->
+            <span
+              v-if="seekSide !== ''"
+              class="am-play__dbl"
+              :class="`am-play__dbl--${seekSide}`"
+              aria-hidden="true"
+            >
+              <span class="am-play__word">
+                {{ seekSide === 'back' ? '−' : '+' }}{{ seekTotal }} с
+              </span>
+              <span class="am-play__dbl-fill" :style="{ width: seekFill + '%' }" />
+            </span>
 
             <!-- Центр кадра. Оба знака центрует сетка обёртки, а не сдвиг трансформацией: кольцу нужен свой
      поворот, и два разных списка трансформаций браузер сводил в одну матрицу — знак уезжал. Колесо главнее паузы. -->
@@ -1527,49 +1616,51 @@ onBeforeUnmount(() => {
                   <div class="am-play__pick">
                     <!-- Скорость и качество под одной шестерёнкой и тоже двумя столбцами: как и списки рядом,
                        каждый столбец крутится сам, а не один под другим. -->
-                    <div v-if="menu === 'tune'" class="am-play__pop am-play__pop--tune">
-                      <div class="am-play__menu am-play__menu--pair" data-zone="menu">
-                        <div class="am-play__col">
-                          <span class="am-play__col-h">Скорость</span>
-                          <div v-for="value in RATES" :key="'r' + value" class="am-play__cell">
-                            <button
-                              class="am-play__opt"
-                              :class="{ 'am-play__opt--on': value === rate }"
-                              type="button"
-                              @click="takeRate(value)"
-                            >
-                              <span class="am-play__opt-tick">
-                                <Icon v-if="value === rate" :line="LINE.tick" />
-                              </span>
-                              <span class="am-play__word-cut">{{
-                                value === NORMAL_RATE ? 'Обычная' : rateLabel(value)
-                              }}</span>
-                            </button>
+                    <Transition name="am-play-menu">
+                      <div v-if="menu === 'tune'" class="am-play__pop am-play__pop--tune">
+                        <div class="am-play__menu am-play__menu--pair" data-zone="menu">
+                          <div class="am-play__col">
+                            <span class="am-play__col-h">Скорость</span>
+                            <div v-for="value in RATES" :key="'r' + value" class="am-play__cell">
+                              <button
+                                class="am-play__opt"
+                                :class="{ 'am-play__opt--on': value === rate }"
+                                type="button"
+                                @click="takeRate(value)"
+                              >
+                                <span class="am-play__opt-tick">
+                                  <Icon v-if="value === rate" :line="LINE.tick" />
+                                </span>
+                                <span class="am-play__word-cut">{{
+                                  value === NORMAL_RATE ? 'Обычная' : rateLabel(value)
+                                }}</span>
+                              </button>
+                            </div>
                           </div>
-                        </div>
 
-                        <div v-if="qualities.length > 0" class="am-play__col">
-                          <span class="am-play__col-h">Качество</span>
-                          <div
-                            v-for="quality in qualities"
-                            :key="'q' + quality.height"
-                            class="am-play__cell"
-                          >
-                            <button
-                              class="am-play__opt"
-                              :class="{ 'am-play__opt--on': quality.on }"
-                              type="button"
-                              @click="takeHeight(quality.height)"
+                          <div v-if="qualities.length > 0" class="am-play__col">
+                            <span class="am-play__col-h">Качество</span>
+                            <div
+                              v-for="quality in qualities"
+                              :key="'q' + quality.height"
+                              class="am-play__cell"
                             >
-                              <span class="am-play__opt-tick">
-                                <Icon v-if="quality.on" :line="LINE.tick" />
-                              </span>
-                              <span class="am-play__word-cut">{{ quality.label }}</span>
-                            </button>
+                              <button
+                                class="am-play__opt"
+                                :class="{ 'am-play__opt--on': quality.on }"
+                                type="button"
+                                @click="takeHeight(quality.height)"
+                              >
+                                <span class="am-play__opt-tick">
+                                  <Icon v-if="quality.on" :line="LINE.tick" />
+                                </span>
+                                <span class="am-play__word-cut">{{ quality.label }}</span>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </Transition>
 
                     <button
                       class="am-play__key"
@@ -1589,69 +1680,73 @@ onBeforeUnmount(() => {
                     v-if="lite && (voices.length > 0 || episodes.length > 0)"
                     class="am-play__pick am-play__pick--lists"
                   >
-                    <div v-if="menu === 'lists'" class="am-play__pop">
-                      <div class="am-play__menu am-play__menu--pair" data-zone="menu">
-                        <div class="am-play__col" data-part="voices">
-                          <span class="am-play__col-h">Озвучка</span>
-                          <div v-for="voice in voices" :key="voice.key" class="am-play__cell">
-                            <button
-                              class="am-play__opt"
-                              :class="{ 'am-play__opt--on': voice.key === voiceKey }"
-                              type="button"
-                              @click="takeVoice(voice.key)"
-                            >
-                              <span class="am-play__opt-tick">
-                                <Icon v-if="voice.key === voiceKey" :line="LINE.tick" />
-                              </span>
-                              <span class="am-play__word-cut">{{ voiceLine(voice) }}</span>
-                            </button>
+                    <Transition name="am-play-menu">
+                      <div v-if="menu === 'lists'" class="am-play__pop">
+                        <div class="am-play__menu am-play__menu--pair" data-zone="menu">
+                          <div class="am-play__col" data-part="voices">
+                            <span class="am-play__col-h">Озвучка</span>
+                            <div v-for="voice in voices" :key="voice.key" class="am-play__cell">
+                              <button
+                                class="am-play__opt"
+                                :class="{ 'am-play__opt--on': voice.key === voiceKey }"
+                                type="button"
+                                @click="takeVoice(voice.key)"
+                              >
+                                <span class="am-play__opt-tick">
+                                  <Icon v-if="voice.key === voiceKey" :line="LINE.tick" />
+                                </span>
+                                <span class="am-play__word-cut">{{ voiceLine(voice) }}</span>
+                              </button>
+                            </div>
+                            <p v-if="voices.length === 0" class="am-play__none">Озвучек нет.</p>
                           </div>
-                          <p v-if="voices.length === 0" class="am-play__none">Озвучек нет.</p>
+
+                          <div class="am-play__col" data-part="episodes">
+                            <span class="am-play__col-h">Серии</span>
+                            <div v-for="item in episodes" :key="item.number" class="am-play__cell">
+                              <button
+                                class="am-play__opt"
+                                :class="{ 'am-play__opt--on': item.number === episode }"
+                                type="button"
+                                @click="takeEpisode(item.number)"
+                              >
+                                <span class="am-play__opt-tick">
+                                  <Icon v-if="item.number === episode" :line="LINE.tick" />
+                                </span>
+                                <span class="am-play__word-cut">
+                                  {{ item.number }}. {{ item.title ?? 'Серия' }}
+                                </span>
+                              </button>
+                            </div>
+                            <p v-if="episodes.length === 0" class="am-play__none">
+                              Серий пока нет.
+                            </p>
+                          </div>
                         </div>
 
-                        <div class="am-play__col" data-part="episodes">
-                          <span class="am-play__col-h">Серии</span>
-                          <div v-for="item in episodes" :key="item.number" class="am-play__cell">
-                            <button
-                              class="am-play__opt"
-                              :class="{ 'am-play__opt--on': item.number === episode }"
-                              type="button"
-                              @click="takeEpisode(item.number)"
-                            >
-                              <span class="am-play__opt-tick">
-                                <Icon v-if="item.number === episode" :line="LINE.tick" />
-                              </span>
-                              <span class="am-play__word-cut">
-                                {{ item.number }}. {{ item.title ?? 'Серия' }}
-                              </span>
-                            </button>
-                          </div>
-                          <p v-if="episodes.length === 0" class="am-play__none">Серий пока нет.</p>
-                        </div>
-                      </div>
-
-                      <!-- Края списка серий живут в том же блоке, что и список: столбик тянется на всю
+                        <!-- Края списка серий живут в том же блоке, что и список: столбик тянется на всю
                            высоту, и кнопки расходятся по краям, а не скопом в середине. -->
-                      <div v-if="episodes.length > 0" class="am-play__jump" data-zone="jump">
-                        <button
-                          class="am-play__jump-key"
-                          type="button"
-                          aria-label="Первая серия"
-                          @click="jumpEpisode('start')"
-                        >
-                          <Icon :line="LINE.first" />
-                        </button>
+                        <div v-if="episodes.length > 0" class="am-play__jump" data-zone="jump">
+                          <button
+                            class="am-play__jump-key"
+                            type="button"
+                            aria-label="Первая серия"
+                            @click="jumpEpisode('start')"
+                          >
+                            <Icon :line="LINE.first" />
+                          </button>
 
-                        <button
-                          class="am-play__jump-key"
-                          type="button"
-                          aria-label="Последняя серия"
-                          @click="jumpEpisode('end')"
-                        >
-                          <Icon :line="LINE.last" />
-                        </button>
+                          <button
+                            class="am-play__jump-key"
+                            type="button"
+                            aria-label="Последняя серия"
+                            @click="jumpEpisode('end')"
+                          >
+                            <Icon :line="LINE.last" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    </Transition>
 
                     <button
                       class="am-play__key am-play__key--word"

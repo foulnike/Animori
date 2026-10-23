@@ -5,6 +5,7 @@ import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import { fetchMalIds } from '@/api/anilist-media'
 import { fetchAiringSchedules, fetchPopularOngoing, type AiringEntry } from '@/api/anilist-schedule'
 import { adultAllowed, hiddenCount, keepAllowed } from '@/core/adult'
+import { dbGet, dbSet } from '@/core/db'
 import { peekLook, warmLooks } from '@/core/media-looks'
 import { peekRussianName, prefetchRussianNames } from '@/core/media-title'
 import {
@@ -228,6 +229,56 @@ export function buildDays(entries: AiringEntry[], start: number, today: number):
   return out
 }
 
+/** Ключ кэша расписания в mediaCache: один на все области. */
+const CACHE_KEY = 'schedule:week'
+
+/** Ответ расписания в кэше: сырьё до отбора 18+, неделя и обе области показа. */
+interface CalendarCache {
+  /** Местный понедельник, к которому относится ответ. */
+  monday: number
+  /** Ответ по областям: «Моё» и «Популярное» спрашиваются разными списками. */
+  found: Partial<Record<CalendarScope, AiringEntry[]>>
+}
+
+/** Кэш недели живёт до следующего понедельника: перезагрузка не гоняет сеть. */
+async function readCalendarCache(): Promise<CalendarCache | null> {
+  const record = await dbGet<{ key: string; data: CalendarCache | null }>('mediaCache', CACHE_KEY)
+  return record?.data?.monday === startKey.value ? record.data : null
+}
+
+/** Кладёт ответ в кэш: неделя и область фиксируются до записи, а не вычитываются на лету. */
+async function writeCalendarCache(found: AiringEntry[]): Promise<void> {
+  const area = scope.value
+  const known = await readCalendarCache()
+  const data: CalendarCache = known ?? { monday: startKey.value, found: {} }
+  data.found[area] = found
+
+  await dbSet('mediaCache', { key: CACHE_KEY, data, ts: Date.now() })
+}
+
+/** Раскладка ответа по показу: отбор 18+ и счёт скрытого стоят до доборов. */
+function applyFound(found: AiringEntry[]): void {
+  hidden.value = hiddenCount(found, (entry) => entry.isAdult)
+
+  const hushed = new Set<number>()
+  for (const entry of found) {
+    if (!adultAllowed(entry.isAdult)) hushed.add(dayStart(entry.airingAt * 1000))
+  }
+  hiddenDays.value = hushed
+
+  entries.value = keepAllowed(found, (entry) => entry.isAdult) as AiringEntry[]
+}
+
+/** Показ кэшированного ответа: дни рисуются сразу, доборы идут фоном. */
+function showCached(found: AiringEntry[]): void {
+  failed.value = false
+  busy.value = false
+  applyFound(found)
+  void warmNames()
+  void warmCovers()
+  void warmPlay()
+}
+
 /** Всё, что разметка календаря берёт готовым. */
 export interface HomeCalendar {
   /** Идёт запрос расписания. */
@@ -437,17 +488,10 @@ async function fetchWeek(mediaIds: number[]): Promise<void> {
     const found = await fetchAiringSchedules(ids, from, to)
     if (mine !== run) return
 
-    // Отбор взрослого стоит здесь, до доборов: спрятанный выход не тянет
-    // за собой ни имени, ни обложки, ни вопроса о доступности.
-    hidden.value = hiddenCount(found, (entry) => entry.isAdult)
+    applyFound(found)
 
-    const hushed = new Set<number>()
-    for (const entry of found) {
-      if (!adultAllowed(entry.isAdult)) hushed.add(dayStart(entry.airingAt * 1000))
-    }
-    hiddenDays.value = hushed
-
-    entries.value = keepAllowed(found, (entry) => entry.isAdult) as AiringEntry[]
+    // Кэш пишется сырьём: ответ пригоден и для включённого показа 18+.
+    void writeCalendarCache(found)
 
     void warmNames()
     void warmCovers()
@@ -471,6 +515,17 @@ async function load(mediaIds: number[]): Promise<void> {
   todayKey.value = dayStart(Date.now())
   picked.value = 0
 
+  // Занято уже на чтение кэша: смена заканчивается либо показом, либо сетью.
+  busy.value = true
+
+  // Кэш недели первым: иначе перезагрузка держала бы полосу пустой до сети.
+  const cache = await readCalendarCache()
+  const found = cache?.found[scope.value]
+  if (found !== undefined) {
+    showCached(found)
+    return
+  }
+
   await fetchWeek(mediaIds)
 }
 
@@ -484,6 +539,17 @@ async function setScope(next: CalendarScope, mediaIds: number[]): Promise<void> 
   hidden.value = 0
   hiddenDays.value = new Set()
   scope.value = next
+
+  // Занято уже на чтение кэша: смена заканчивается либо показом, либо сетью.
+  busy.value = true
+
+  // Смена области первым делом смотрит в кэш: ответ у него есть до понедельника.
+  const cache = await readCalendarCache()
+  const found = cache?.found[next]
+  if (found !== undefined) {
+    showCached(found)
+    return
+  }
 
   await fetchWeek(mediaIds)
 }

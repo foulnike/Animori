@@ -206,8 +206,6 @@ const {
   shown: calendarDay,
   span: calendarSpan,
   scope: calendarScope,
-  hidden: calendarHidden,
-  hiddenDays: calendarHiddenDays,
   pick: pickDay,
   setScope: setCalendarScope,
   load: loadCalendar,
@@ -1181,19 +1179,10 @@ watch(
         />
       </ul>
 
-      <!-- Пустой день — пустое состояние со знаком; день, где всё спрятал отбор 18+, пустым
-           не объявляется: «выходов нет» было бы неправдой. -->
-      <p v-else-if="calendarHiddenDays.has(calendarDay?.key ?? 0)" class="am-cal__note">
-        В этот день выходы скрыты меткой 18+.
-      </p>
-
+      <!-- Пустой день — пустое состояние со знаком. -->
       <p v-else class="am-cal__note am-cal__note--none">
         <span class="am-cal__mark"><EmptyMark name="calendar" /></span>
         <span>В этот день выходов нет.</span>
-      </p>
-
-      <p v-if="calendarHidden > 0" class="am-cal__note">
-        Скрыто с меткой 18+: {{ calendarHidden }} · показ взрослого включается в настройках
       </p>
     </section>
 
@@ -1386,28 +1375,30 @@ watch(
     <FilterSheet :open="sheetOpen" :pick="homePick" @close="sheetOpen = false" @apply="onApply" />
 
     <!-- То же окно, что на карточке и в списках: метку ставят с плитки, не заходя в тайтл. -->
-    <EntrySheet
-      v-if="editRow"
-      :title="editName"
-      :status="editStatus"
-      :score10="editRow.score10"
-      :progress="editRow.progress"
-      :parts-total="editParts"
-      :ongoing="editOngoing"
-      :repeat="editRow.repeat"
-      :started-at="editRow.startedAt"
-      :completed-at="editRow.completedAt"
-      :notes="editRow.notes"
-      @close="closeEdit"
-      @status="onEditStatus"
-      @remove="onEditRemove"
-      @score="onEditScore"
-      @progress="onEditProgress"
-      @repeat="onEditRepeat"
-      @started-at="onEditStarted"
-      @completed-at="onEditCompleted"
-      @notes="onEditNotes"
-    />
+    <Transition name="am-sheet">
+      <EntrySheet
+        v-if="editRow"
+        :title="editName"
+        :status="editStatus"
+        :score10="editRow.score10"
+        :progress="editRow.progress"
+        :parts-total="editParts"
+        :ongoing="editOngoing"
+        :repeat="editRow.repeat"
+        :started-at="editRow.startedAt"
+        :completed-at="editRow.completedAt"
+        :notes="editRow.notes"
+        @close="closeEdit"
+        @status="onEditStatus"
+        @remove="onEditRemove"
+        @score="onEditScore"
+        @progress="onEditProgress"
+        @repeat="onEditRepeat"
+        @started-at="onEditStarted"
+        @completed-at="onEditCompleted"
+        @notes="onEditNotes"
+      />
+    </Transition>
   </section>
 </template>
 

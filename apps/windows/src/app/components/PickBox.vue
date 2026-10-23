@@ -3,6 +3,8 @@
 // окна, а не наши стили, и на тёмных темах он выпадал белым и нечитаемым.
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
+import EmptyMark from './EmptyMark.vue'
+
 /** Строка выбора: ключ уходит наружу, подпись видна человеку. */
 export interface PickItem {
   key: string
@@ -15,12 +17,14 @@ const props = withDefaults(
     items: ReadonlyArray<PickItem>
     /** Значок слева от текущего значения. */
     mark?: string | null
+    /** Значок утилиты (EmptyMark) вместо текстового mark. */
+    icon?: 'sort' | null
     /** Подпись для читалок экрана. */
     label?: string | null
     /** Ширина во всю доступную полосу: для рядов настроек. */
     wide?: boolean
   }>(),
-  { mark: null, label: null, wide: false },
+  { mark: null, icon: null, label: null, wide: false },
 )
 
 const emit = defineEmits<{ (e: 'update:modelValue', value: string): void }>()
@@ -122,7 +126,8 @@ watch(
       @keydown.space.prevent="onEnter"
       @keydown.esc="close"
     >
-      <span v-if="mark" class="am-roll__mark" aria-hidden="true">{{ mark }}</span>
+      <EmptyMark v-if="icon" :name="icon" class="am-roll__mark" />
+      <span v-else-if="mark" class="am-roll__mark" aria-hidden="true">{{ mark }}</span>
       <span class="am-roll__now">{{ nowTitle }}</span>
       <span class="am-roll__arrow" :class="{ 'am-roll__arrow--up': open }" aria-hidden="true">
         ⌄
@@ -131,25 +136,27 @@ watch(
 
     <!-- Список только в раскрытом виде: скрытый слой перехватывал бы клики
          по плиткам под собой. -->
-    <ul v-if="open" class="am-roll__drop" role="listbox" :aria-label="label ?? undefined">
-      <li v-for="(item, at) in items" :key="item.key" class="am-roll__line">
-        <button
-          class="am-roll__item"
-          :class="{
-            'am-roll__item--on': item.key === modelValue,
-            'am-roll__item--hot': at === hot,
-          }"
-          type="button"
-          role="option"
-          :aria-selected="item.key === modelValue"
-          @click="pick(item.key)"
-          @mouseenter="hot = at"
-        >
-          <span class="am-roll__text">{{ item.title }}</span>
-          <span v-if="item.key === modelValue" class="am-roll__tick" aria-hidden="true">✓</span>
-        </button>
-      </li>
-    </ul>
+    <Transition name="am-roll">
+      <ul v-if="open" class="am-roll__drop" role="listbox" :aria-label="label ?? undefined">
+        <li v-for="(item, at) in items" :key="item.key" class="am-roll__line">
+          <button
+            class="am-roll__item"
+            :class="{
+              'am-roll__item--on': item.key === modelValue,
+              'am-roll__item--hot': at === hot,
+            }"
+            type="button"
+            role="option"
+            :aria-selected="item.key === modelValue"
+            @click="pick(item.key)"
+            @mouseenter="hot = at"
+          >
+            <span class="am-roll__text">{{ item.title }}</span>
+            <span v-if="item.key === modelValue" class="am-roll__tick" aria-hidden="true">✓</span>
+          </button>
+        </li>
+      </ul>
+    </Transition>
   </div>
 </template>
 
@@ -274,6 +281,22 @@ watch(
   }
 }
 
+.am-roll-leave-active {
+  pointer-events: none;
+  animation: am-roll-out var(--am-fast) var(--am-ease) both;
+}
+
+@keyframes am-roll-out {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+}
+
 .am-roll__line {
   display: flex;
 }
@@ -331,7 +354,8 @@ watch(
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .am-roll__drop {
+  .am-roll__drop,
+  .am-roll-leave-active {
     animation: none;
   }
 

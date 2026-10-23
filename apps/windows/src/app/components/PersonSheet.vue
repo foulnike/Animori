@@ -430,7 +430,7 @@ onBeforeUnmount(() => {
 <template>
   <div
     ref="root"
-    class="am-sheet"
+    class="am-sheet am-sheet--veil"
     role="dialog"
     aria-modal="true"
     aria-label="Карточка персоны"

@@ -1,13 +1,6 @@
 <script setup lang="ts">
-// Источники и права: какие сервисы стоят за данными и на каких условиях программа их показывает.
-//
-// Отдельной модалкой, а не блоком в окне настроек. Причина техническая: окно настроек листает обход
-// пультом, а обход скроллит только до фокусируемой цели — статичный текст под последней кнопкой он
-// не показывает, и оговорки оказывались недостижимы. Здесь тело окна листается стрелками само, как в
-// справке про перенос списка.
-//
-// Разметка и стили — те же, что у CloudHelp: окно, которое на приставке уже проверено, не должно
-// отличаться от второго окна ничем, кроме текста.
+// Источники и права: сервисы, на каких условиях программа их показывает. Модалка: в окне
+// настроек статичный текст под кнопками недостижим обходом. Стили — общие с CloudHelp.
 
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
@@ -131,57 +124,64 @@ onBeforeUnmount(() => {
     <button class="am-credits__btn" type="button" @click="open = true">Источники и права</button>
 
     <Teleport to="body">
-      <div
-        v-if="open"
-        class="am-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Источники и права"
-      >
-        <!-- Клик мимо закрывает: это справка, держать её силой незачем. -->
-        <div class="am-modal__veil" @click="onClose" />
+      <Transition name="am-modal">
+        <div
+          v-if="open"
+          class="am-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Источники и права"
+        >
+          <!-- Клик мимо закрывает: это справка, держать её силой незачем. -->
+          <div class="am-modal__veil" @click="onClose" />
 
-        <div class="am-modal__box">
-          <div class="am-modal__head">
-            <h3 class="am-modal__title">Источники и права</h3>
-            <button class="am-modal__x" type="button" aria-label="Закрыть" @click="onClose">
-              ✕
-            </button>
-          </div>
-
-          <!-- tabindex у тела: с фокусом на нём пульт видит, что находится внутри окна, и не считает окно пустым. -->
-          <div ref="body" class="am-modal__body" tabindex="0" data-am-seed>
-            <h4 class="am-modal__h">Откуда данные</h4>
-            <ul>
-              <li v-for="source in SOURCES" :key="source.name">
-                <b>{{ source.name }}</b> — {{ source.what }}
-              </li>
-            </ul>
-
-            <h4 class="am-modal__h">Оговорки</h4>
-            <ul>
-              <li v-for="term in TERMS" :key="term">{{ term }}</li>
-            </ul>
-
-            <div class="am-modal__warn">
-              Ссылки на видео ведут на сторонние сервисы, не связанные с AniMori. Программа ничего
-              не скачивает, не хранит и не копирует, лицензии на видеоматериал не получает, прав на
-              его распространение не имеет, источники не проверяет и за содержимое не отвечает.
+          <div class="am-modal__box">
+            <div class="am-modal__head">
+              <h3 class="am-modal__title">Источники и права</h3>
+              <button class="am-modal__x" type="button" aria-label="Закрыть" @click="onClose">
+                ✕
+              </button>
             </div>
 
-            <!-- Правовые документы: на приставке браузера нет — адрес показывается текстом. -->
-            <h4 class="am-modal__h">Правовые документы</h4>
-            <ul>
-              <li v-for="doc in DOCS" :key="doc.url">
-                <button v-if="outside" class="am-modal__link" type="button" @click="onDoc(doc.url)">
-                  {{ doc.name }}
-                </button>
-                <template v-else>{{ doc.name }} — {{ doc.url }}</template>
-              </li>
-            </ul>
+            <!-- tabindex у тела: с фокусом на нём пульт видит, что находится внутри окна, и не считает окно пустым. -->
+            <div ref="body" class="am-modal__body" tabindex="0" data-am-seed>
+              <h4 class="am-modal__h">Откуда данные</h4>
+              <ul>
+                <li v-for="source in SOURCES" :key="source.name">
+                  <b>{{ source.name }}</b> — {{ source.what }}
+                </li>
+              </ul>
+
+              <h4 class="am-modal__h">Оговорки</h4>
+              <ul>
+                <li v-for="term in TERMS" :key="term">{{ term }}</li>
+              </ul>
+
+              <div class="am-modal__warn">
+                Ссылки на видео ведут на сторонние сервисы, не связанные с AniMori. Программа ничего
+                не скачивает, не хранит и не копирует, лицензии на видеоматериал не получает, прав
+                на его распространение не имеет, источники не проверяет и за содержимое не отвечает.
+              </div>
+
+              <!-- Правовые документы: на приставке браузера нет — адрес показывается текстом. -->
+              <h4 class="am-modal__h">Правовые документы</h4>
+              <ul>
+                <li v-for="doc in DOCS" :key="doc.url">
+                  <button
+                    v-if="outside"
+                    class="am-modal__link"
+                    type="button"
+                    @click="onDoc(doc.url)"
+                  >
+                    {{ doc.name }}
+                  </button>
+                  <template v-else>{{ doc.name }} — {{ doc.url }}</template>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
-      </div>
+      </Transition>
     </Teleport>
   </div>
 </template>

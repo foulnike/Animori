@@ -478,7 +478,7 @@ function onDropList(): void {
     note.value = ''
     await forgetCollection()
     await readState()
-    note.value = 'Список удалён. На AniList ваши записи остались нетронутыми.'
+    note.value = 'Список удалён.'
   })
 }
 

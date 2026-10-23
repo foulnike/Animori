@@ -790,6 +790,51 @@ html {
   }
 }
 
+/* Закрытие окон: обратный ход открытия. Классы вешает <Transition>; длительность
+   на корне читает Vue — по ней узел держится до конца движения. */
+.am-sheet.am-sheet-leave-active,
+.am-modal.am-modal-leave-active {
+  pointer-events: none;
+  animation-duration: var(--am-mid);
+}
+
+/* Лист, который затемняет сам (правка записи, персонаж, день активности). */
+.am-sheet--veil.am-sheet.am-sheet-leave-active {
+  animation: am-veil-out var(--am-mid) var(--am-ease-soft) both;
+}
+
+.am-sheet.am-sheet-leave-active .am-sheet__veil {
+  animation: am-veil-out var(--am-mid) var(--am-ease) both;
+}
+
+.am-sheet.am-sheet-leave-active .am-sheet__box {
+  animation: am-sheet-out var(--am-mid) var(--am-ease-soft) both;
+}
+
+.am-modal.am-modal-leave-active .am-modal__box {
+  animation: am-modal-out var(--am-mid) var(--am-ease) both;
+}
+
+@keyframes am-veil-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes am-sheet-out {
+  to {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+
+@keyframes am-modal-out {
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}
+
 /* Системная просьба о покое сильнее наших красот: гасим всё движение,
    а не только часть. */
 @media (prefers-reduced-motion: reduce) {

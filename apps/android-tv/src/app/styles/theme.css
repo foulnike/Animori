@@ -786,8 +786,8 @@ html {
 
 /* «Вы здесь» — та же капсула, но акцентом: это не роль, а место человека в списке. */
 .am-face__role--here {
-  color: var(--am-accent);
-  background: rgb(var(--am-accent-rgb) / 0.18);
+  color: #eef3fb;
+  background: color-mix(in srgb, var(--am-accent) 58%, #0b1017);
 }
 
 /* Карточка, которая никуда не ведёт: это «вы здесь», а не переход. Подсветку даёт капсула на
@@ -1366,6 +1366,51 @@ html.am-lite {
 
 .am-lite .am-shots__more {
   font-size: 12px !important;
+}
+
+/* Закрытие окон: обратный ход открытия. Классы вешает <Transition>; длительность
+   на корне читает Vue — по ней узел держится до конца движения. */
+.am-sheet.am-sheet-leave-active,
+.am-modal.am-modal-leave-active {
+  pointer-events: none;
+  animation-duration: var(--am-mid);
+}
+
+/* Лист, который затемняет сам (правка записи, персонаж, день активности). */
+.am-sheet--veil.am-sheet.am-sheet-leave-active {
+  animation: am-veil-out var(--am-mid) var(--am-ease-soft) both;
+}
+
+.am-sheet.am-sheet-leave-active .am-sheet__veil {
+  animation: am-veil-out var(--am-mid) var(--am-ease) both;
+}
+
+.am-sheet.am-sheet-leave-active .am-sheet__box {
+  animation: am-sheet-out var(--am-mid) var(--am-ease-soft) both;
+}
+
+.am-modal.am-modal-leave-active .am-modal__box {
+  animation: am-modal-out var(--am-mid) var(--am-ease) both;
+}
+
+@keyframes am-veil-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes am-sheet-out {
+  to {
+    opacity: 0;
+    transform: translateY(14px) scale(0.985);
+  }
+}
+
+@keyframes am-modal-out {
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
 }
 
 /* Системная просьба о покое сильнее наших красот: гасим всё движение,

@@ -19,7 +19,7 @@ on:
       tag:
         description: 'Тег выпуска'
         required: true
-        default: 'android-v3.1.1'
+        default: 'android-v3.1.2'
       dry:
         description: 'Пробный прогон: собрать и подписать, но релиз не публиковать'
         type: boolean
@@ -321,7 +321,7 @@ jobs:
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
           # Платформа в названии: три продукта живут в одном репозитории, и без неё
-          # на странице Releases ряды «AniMori 3.1.1» не отличить.
+          # на странице Releases ряды «AniMori 3.1.2» не отличить.
           name: AniMori ${{ steps.ver.outputs.version }} — Android
           body: ${{ steps.notes.outputs.body }}
           draft: false

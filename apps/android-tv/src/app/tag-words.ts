@@ -1,5 +1,5 @@
-// Русские слова для тэгов и разделов AniList. Неизвестный тэг остаётся собой: английское слово
-// в чипе честнее пропуска. Разделы приходят дефисами. Вычитка по канону сообщества.
+// Русские слова для тэгов и разделов AniList. Неизвестный тэг остаётся собой: в чипе честнее
+// английское слово, чем пропуск. Разделы приходят дефисами.
 
 /** Разделы справочника. Ключи — как их отдаёт сервер, без причёсывания. */
 const GROUP_WORDS: Readonly<Record<string, string>> = {
@@ -26,7 +26,10 @@ const GROUP_WORDS: Readonly<Record<string, string>> = {
   'Theme-Other-Vehicle': 'Транспорт',
   'Theme-Romance': 'Романтика',
   'Theme-Sci Fi': 'Фантастика',
+  // Имя сервера сменило пробел на дефис; старое держится ради сохранённых отборов.
+  'Theme-Sci-Fi': 'Фантастика',
   'Theme-Sci Fi-Mecha': 'Меха',
+  'Theme-Sci-Fi-Mecha': 'Меха',
   'Theme-Slice of Life': 'Повседневность',
 }
 
@@ -228,6 +231,7 @@ const TAG_WORDS: Readonly<Record<string, string>> = {
   'LGBTQ+ Themes': 'ЛГБТК+',
   'Long Strip': 'Длинная полоса',
   'Lost Civilization': 'Затерянная цивилизация',
+  'Love Triangle': 'Любовный треугольник',
   Mafia: 'Мафия',
   Magic: 'Магия',
   Mahjong: 'Маджонг',
@@ -246,8 +250,9 @@ const TAG_WORDS: Readonly<Record<string, string>> = {
   Mermaid: 'Русалки',
   Meta: 'Мета',
   'Metal Music': 'Метал',
-  // Ключ приходит со строчной буквой в «east» — так у AniList, не опечатка.
+  // Имя сменило регистр; старое держится ради сохранённых отборов.
   'Middle east': 'Ближний Восток',
+  'Middle East': 'Ближний Восток',
   Military: 'Военное',
   'Mixed Gender Harem': 'Смешанный гарем',
   'Mixed Media': 'Смешанная техника',
@@ -272,6 +277,7 @@ const TAG_WORDS: Readonly<Record<string, string>> = {
   'Office Lady': 'Офис-леди',
   Oiran: 'Ойран',
   'Ojou-sama': 'Одзё-сама',
+  Omegaverse: 'Омегаверс',
   Orphan: 'Сироты',
   'Otaku Culture': 'Культура отаку',
   'Outdoor Activities': 'Активный отдых',
@@ -296,6 +302,7 @@ const TAG_WORDS: Readonly<Record<string, string>> = {
   'Primarily Male Cast': 'В основном парни',
   'Primarily Teen Cast': 'В основном подростки',
   Prison: 'Тюрьма',
+  Prophecy: 'Пророчество',
   'Proxy Battle': 'Битва через посредников',
   Psychosexual: 'Психосексуальное',
   Puppetry: 'Кукольный театр',
@@ -398,8 +405,8 @@ const TAG_WORDS: Readonly<Record<string, string>> = {
   Yuri: 'Юри',
   Zombie: 'Зомби',
 
-  // Взрослое: раздел «Sexual Content» справочника. Слова нужны всегда: тэг может лежать в отборе
-  // с прежних настроек. Регистр ровный: разговорный «тройничок» читался бы чужой строкой.
+  // Взрослое: раздел «Sexual Content», видно только при разрешённом показе, но слова нужны всегда — тэг может
+  // лежать в отборе с прежних настроек. Регистр ровный и клинический, как у соседей по разделу.
   Ahegao: 'Ахегао',
   Amputation: 'Ампутация',
   'Anal Sex': 'Анальный секс',
@@ -485,8 +492,7 @@ export function tagWord(name: string): string {
   return word(TAG_WORDS, name)
 }
 
-/** Русское слово раздела справочника. У незнакомого берётся последняя часть
- *  ключа: сервер складывает вложенность дефисами, хвост осмысленнее целого. */
+/** Русское слово раздела. У незнакомого берётся хвост дефисов: он осмысленнее целого ключа. */
 export function tagGroupWord(category: string): string {
   const known = GROUP_WORDS[category]
   if (known !== undefined) return known

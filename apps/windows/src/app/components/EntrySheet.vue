@@ -290,7 +290,7 @@ onBeforeUnmount(() => {
   <Teleport to="body">
     <div
       ref="root"
-      class="am-sheet"
+      class="am-sheet am-sheet--veil"
       role="dialog"
       aria-modal="true"
       aria-label="Правка записи"

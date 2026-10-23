@@ -354,7 +354,7 @@ onBeforeUnmount(() => {
   <Teleport to="body">
     <div
       ref="veil"
-      class="am-sheet"
+      class="am-sheet am-sheet--veil"
       :class="{ 'am-sheet--tv': lite }"
       role="dialog"
       aria-modal="true"
@@ -1056,18 +1056,22 @@ onBeforeUnmount(() => {
     letter-spacing: 0.06em;
   }
 
-  /* Даты парой: начало и конец — соседние колонки, а не два этажа. */
+  /* Даты этажом: в две колонки маска ДД/ММ/ГГГГ не влезала, крайняя цифра срезалась. */
   .am-pair {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    padding-top: 13px;
+    grid-template-columns: 1fr;
+    padding-top: 4px;
     border-top: 1px solid var(--am-line-soft);
   }
 
   .am-pair .am-field {
-    padding: 0;
+    padding: 13px 2px 0;
     border-top: 0;
+  }
+
+  .am-pair .am-field + .am-field {
+    padding-top: 13px;
+    border-top: 1px solid var(--am-line-soft);
   }
 
   /* Закладка — сетка ячеек под палец, а не лента капсул. */

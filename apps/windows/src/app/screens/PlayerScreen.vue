@@ -1261,21 +1261,23 @@ onBeforeUnmount(() => {
                   <!-- Скорость списком, а не ползунком: доли вроде 1,15×
                        на ползунке ловятся только случайно. -->
                   <div class="am-play__pick">
-                    <ul v-if="menu === 'rate'" class="am-play__menu">
-                      <li v-for="value in RATES" :key="value">
-                        <button
-                          class="am-play__opt"
-                          :class="{ 'am-play__opt--on': value === rate }"
-                          type="button"
-                          @click="takeRate(value)"
-                        >
-                          <span class="am-play__opt-tick">
-                            <Icon v-if="value === rate" :line="LINE.tick" />
-                          </span>
-                          <span>{{ value === NORMAL_RATE ? 'Обычная' : rateLabel(value) }}</span>
-                        </button>
-                      </li>
-                    </ul>
+                    <Transition name="am-play-menu">
+                      <ul v-if="menu === 'rate'" class="am-play__menu">
+                        <li v-for="value in RATES" :key="value">
+                          <button
+                            class="am-play__opt"
+                            :class="{ 'am-play__opt--on': value === rate }"
+                            type="button"
+                            @click="takeRate(value)"
+                          >
+                            <span class="am-play__opt-tick">
+                              <Icon v-if="value === rate" :line="LINE.tick" />
+                            </span>
+                            <span>{{ value === NORMAL_RATE ? 'Обычная' : rateLabel(value) }}</span>
+                          </button>
+                        </li>
+                      </ul>
+                    </Transition>
 
                     <button
                       class="am-play__key am-play__key--word"
@@ -1290,21 +1292,23 @@ onBeforeUnmount(() => {
                   </div>
 
                   <div v-if="qualities.length > 0" class="am-play__pick">
-                    <ul v-if="menu === 'quality'" class="am-play__menu">
-                      <li v-for="quality in qualities" :key="quality.height">
-                        <button
-                          class="am-play__opt"
-                          :class="{ 'am-play__opt--on': quality.on }"
-                          type="button"
-                          @click="takeHeight(quality.height)"
-                        >
-                          <span class="am-play__opt-tick">
-                            <Icon v-if="quality.on" :line="LINE.tick" />
-                          </span>
-                          <span>{{ quality.label }}</span>
-                        </button>
-                      </li>
-                    </ul>
+                    <Transition name="am-play-menu">
+                      <ul v-if="menu === 'quality'" class="am-play__menu">
+                        <li v-for="quality in qualities" :key="quality.height">
+                          <button
+                            class="am-play__opt"
+                            :class="{ 'am-play__opt--on': quality.on }"
+                            type="button"
+                            @click="takeHeight(quality.height)"
+                          >
+                            <span class="am-play__opt-tick">
+                              <Icon v-if="quality.on" :line="LINE.tick" />
+                            </span>
+                            <span>{{ quality.label }}</span>
+                          </button>
+                        </li>
+                      </ul>
+                    </Transition>
 
                     <button
                       class="am-play__key am-play__key--word"

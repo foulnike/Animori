@@ -168,8 +168,6 @@ const {
   shown: calendarDay,
   span: calendarSpan,
   scope: calendarScope,
-  hidden: calendarHidden,
-  hiddenDays: calendarHiddenDays,
   pick: pickDay,
   setScope: setCalendarScope,
   load: loadCalendar,
@@ -969,19 +967,10 @@ watch(
         />
       </ul>
 
-      <!-- Пустой день — тоже пустое состояние, и знак у него тот же, что у крупных: лист календаря.
-     День, где всё спрятал отбор, пустым не объявляется: «выходов нет» было бы неправдой. -->
-      <p v-else-if="calendarHiddenDays.has(calendarDay?.key ?? 0)" class="am-cal__note">
-        В этот день выходы скрыты меткой 18+.
-      </p>
-
+      <!-- Пустой день — тоже пустое состояние, и знак у него тот же, что у крупных: лист календаря. -->
       <p v-else class="am-cal__note am-cal__note--none">
         <span class="am-cal__mark"><EmptyMark name="calendar" /></span>
         <span>В этот день выходов нет.</span>
-      </p>
-
-      <p v-if="calendarHidden > 0" class="am-cal__note">
-        Скрыто с меткой 18+: {{ calendarHidden }} · показ взрослого включается в настройках
       </p>
     </section>
 

@@ -500,58 +500,62 @@ onBeforeUnmount(() => {
       Закрывается крестиком, щелчком мимо и клавишей Escape.
     -->
     <Teleport to="body">
-      <div
-        v-if="picked > 0"
-        ref="dayRoot"
-        class="am-sheet"
-        role="dialog"
-        aria-modal="true"
-        aria-label="День активности"
-        @click.self="closeDay"
-      >
-        <div class="am-sheet__box">
-          <header class="am-sheet__top">
-            <div class="am-sheet__text">
-              <span class="am-sheet__kicker">{{ activityFacts(openedCell?.count ?? 0) }}</span>
-              <h3 class="am-sheet__name">
-                {{ openedCell === undefined ? '' : dayText(openedCell.day) }}
-              </h3>
-            </div>
+      <Transition name="am-sheet">
+        <div
+          v-if="picked > 0"
+          ref="dayRoot"
+          class="am-sheet am-sheet--veil"
+          role="dialog"
+          aria-modal="true"
+          aria-label="День активности"
+          @click.self="closeDay"
+        >
+          <div class="am-sheet__box">
+            <header class="am-sheet__top">
+              <div class="am-sheet__text">
+                <span class="am-sheet__kicker">{{ activityFacts(openedCell?.count ?? 0) }}</span>
+                <h3 class="am-sheet__name">
+                  {{ openedCell === undefined ? '' : dayText(openedCell.day) }}
+                </h3>
+              </div>
 
-            <button
-              class="am-sheet__close"
-              type="button"
-              aria-label="Закрыть день"
-              @click="closeDay"
-            >
-              <SakuraBloom />
-              <span aria-hidden="true">×</span>
-            </button>
-          </header>
+              <button
+                class="am-sheet__close"
+                type="button"
+                aria-label="Закрыть день"
+                @click="closeDay"
+              >
+                <SakuraBloom />
+                <span aria-hidden="true">×</span>
+              </button>
+            </header>
 
-          <div class="am-sheet__body">
-            <!-- Один тайтл — один блок: закладка, серия, оценка и заметка одной истории стоят
+            <div class="am-sheet__body">
+              <!-- Один тайтл — один блок: закладка, серия, оценка и заметка одной истории стоят
                  вместе, сколько бы часов между ними ни прошло. -->
-            <article v-for="group in groups" :key="group.mediaId" class="am-day__title">
-              <header class="am-day__head">
-                <button class="am-day__name" type="button" @click="openMedia(group.mediaId)">
-                  {{ titleOf(group) }}
-                </button>
-                <span class="am-day__count">{{ activityFacts(group.acts.length) }}</span>
-              </header>
+              <article v-for="group in groups" :key="group.mediaId" class="am-day__title">
+                <header class="am-day__head">
+                  <button class="am-day__name" type="button" @click="openMedia(group.mediaId)">
+                    {{ titleOf(group) }}
+                  </button>
+                  <span class="am-day__count">{{ activityFacts(group.acts.length) }}</span>
+                </header>
 
-              <ol class="am-day__acts">
-                <li v-for="act in group.acts" :key="act.key" class="am-day__act">
-                  <span class="am-day__time">{{ hourText(act.at) }}</span>
-                  <span class="am-day__words">{{ actWords(act, group) }}</span>
-                </li>
-              </ol>
-            </article>
+                <ol class="am-day__acts">
+                  <li v-for="act in group.acts" :key="act.key" class="am-day__act">
+                    <span class="am-day__time">{{ hourText(act.at) }}</span>
+                    <span class="am-day__words">{{ actWords(act, group) }}</span>
+                  </li>
+                </ol>
+              </article>
 
-            <p v-if="groups.length === 0" class="am-day__empty">В этот день ничего не записано.</p>
+              <p v-if="groups.length === 0" class="am-day__empty">
+                В этот день ничего не записано.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      </Transition>
     </Teleport>
   </section>
 </template>
@@ -603,6 +607,8 @@ onBeforeUnmount(() => {
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;
+  /* Низ сетки срезался границей лунки: доска заканчивается ниже последнего ряда. */
+  padding-bottom: 4px;
 }
 
 .am-act__head,

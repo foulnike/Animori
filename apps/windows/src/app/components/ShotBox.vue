@@ -326,47 +326,49 @@ watch(reel, (open) => track(open, reelRoot.value, reelHold), { flush: 'post' })
 
   <!-- ГАЛЕРЕЯ. Все кадры сеткой в отдельном окне; кадры уменьшенные и грузятся лениво. -->
   <Teleport to="body">
-    <div v-if="gal" ref="galRoot" class="am-sheet am-shots__gal">
-      <button class="am-sheet__veil" type="button" aria-label="Закрыть" @click="gal = false" />
+    <Transition name="am-sheet">
+      <div v-if="gal" ref="galRoot" class="am-sheet am-shots__gal">
+        <button class="am-sheet__veil" type="button" aria-label="Закрыть" @click="gal = false" />
 
-      <div
-        class="am-sheet__box"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Кадры тайтла"
-        tabindex="-1"
-      >
-        <header class="am-sheet__top">
-          <h3 class="am-h3">Кадры</h3>
-          <span class="am-shots__count">{{ shots.length }}</span>
-          <span class="am-bar__gap" />
-          <button class="am-btn am-btn--ghost" type="button" @click="gal = false">Закрыть</button>
-        </header>
+        <div
+          class="am-sheet__box"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Кадры тайтла"
+          tabindex="-1"
+        >
+          <header class="am-sheet__top">
+            <h3 class="am-h3">Кадры</h3>
+            <span class="am-shots__count">{{ shots.length }}</span>
+            <span class="am-bar__gap" />
+            <button class="am-btn am-btn--ghost" type="button" @click="gal = false">Закрыть</button>
+          </header>
 
-        <div class="am-sheet__body">
-          <div class="am-shots__wall">
-            <button
-              v-for="(shot, at) in shots"
-              :key="shot.preview"
-              class="am-shots__cell"
-              :class="{ 'am-skeleton': pending(shot.preview) }"
-              type="button"
-              @click="openLook(at)"
-            >
-              <img
-                class="am-shots__art"
-                :src="shot.preview"
-                alt=""
-                loading="lazy"
-                decoding="async"
-                @load="markReady(shot.preview)"
-                @error="markReady(shot.preview)"
-              />
-            </button>
+          <div class="am-sheet__body">
+            <div class="am-shots__wall">
+              <button
+                v-for="(shot, at) in shots"
+                :key="shot.preview"
+                class="am-shots__cell"
+                :class="{ 'am-skeleton': pending(shot.preview) }"
+                type="button"
+                @click="openLook(at)"
+              >
+                <img
+                  class="am-shots__art"
+                  :src="shot.preview"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  @load="markReady(shot.preview)"
+                  @error="markReady(shot.preview)"
+                />
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 
   <!-- ПРОСМОТР КАДРА. Один кадр во весь экран, шаг по стрелкам и счёт.

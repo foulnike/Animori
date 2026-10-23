@@ -429,28 +429,30 @@ watch(card, (now) => {
 
         <!-- Признак онгоинга окну нужен для автозакладки: у идущего сезона потолок счёта — последняя
      вышедшая серия, и дошёдший до края счёт ещё не значит «просмотрено». -->
-        <EntrySheet
-          v-if="sheetOpen"
-          :title="mainTitle"
-          :status="status"
-          :score10="score10"
-          :progress="progress"
-          :parts-total="partsTotal"
-          :ongoing="card.airingEpisode !== null"
-          :repeat="repeat"
-          :started-at="startedAt"
-          :completed-at="completedAt"
-          :notes="notes"
-          @close="sheetOpen = false"
-          @status="onPickStatus"
-          @score="onPickScore"
-          @progress="onPickProgress"
-          @repeat="onPickRepeat"
-          @started-at="onPickStarted"
-          @completed-at="onPickCompleted"
-          @notes="onPickNotes"
-          @remove="onPickRemove"
-        />
+        <Transition name="am-sheet">
+          <EntrySheet
+            v-if="sheetOpen"
+            :title="mainTitle"
+            :status="status"
+            :score10="score10"
+            :progress="progress"
+            :parts-total="partsTotal"
+            :ongoing="card.airingEpisode !== null"
+            :repeat="repeat"
+            :started-at="startedAt"
+            :completed-at="completedAt"
+            :notes="notes"
+            @close="sheetOpen = false"
+            @status="onPickStatus"
+            @score="onPickScore"
+            @progress="onPickProgress"
+            @repeat="onPickRepeat"
+            @started-at="onPickStarted"
+            @completed-at="onPickCompleted"
+            @notes="onPickNotes"
+            @remove="onPickRemove"
+          />
+        </Transition>
       </template>
     </template>
   </section>

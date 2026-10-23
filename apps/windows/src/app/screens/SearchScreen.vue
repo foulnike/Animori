@@ -12,6 +12,7 @@ import { onPlayableChange, peekPlayable, primePlayable, requestPlayable } from '
 import { Logger } from '@/utils/logger'
 
 import EmptyMark from '../components/EmptyMark.vue'
+import { searchWord } from '../search-keep'
 import MediaTile from '../components/MediaTile.vue'
 import { navigate } from '../router'
 import { toPlayAsk, toTileRow, type TileRow } from '../tile-row'
@@ -31,7 +32,8 @@ const SEEN_PAUSE_MS = 200
 /** Сколько плиток-заглушек показать, пока идёт первый ответ. */
 const HOLD_COUNT = 12
 
-const word = ref('')
+// Слово переживает показ экрана: возврат с карточки не откатывает запрос.
+const word = searchWord
 const rows = ref<TileRow[]>([])
 const busy = ref(false)
 const trouble = ref('')
@@ -290,6 +292,8 @@ onMounted(() => {
     try {
       await initCollection()
       redraw()
+      // Возврат со слова в строке: выдача собирается заново по нему же.
+      if (asked.value !== '') void search()
     } catch (e) {
       Logger('WARN', 'Поиск: свой список поднять не вышло', e)
     }
@@ -320,7 +324,7 @@ onBeforeUnmount(() => {
         v-model="word"
         class="am-hunt__field"
         type="search"
-        placeholder="Название на любом языке"
+        placeholder="Русский, Английский или Ромадзи"
         @input="onType"
         @keyup.enter="onEnter"
       />
@@ -341,13 +345,12 @@ onBeforeUnmount(() => {
     <div v-else-if="asked === ''" class="am-empty">
       <span class="am-empty__mark"><EmptyMark name="magnifier" /></span>
       <span>Начните вводить название.</span>
-      <span>Можно по-русски, по-английски или на латинице.</span>
     </div>
 
     <div v-else-if="short" class="am-empty">
       <span class="am-empty__mark"><EmptyMark name="keyboard" /></span>
       <span>Слишком короткое слово.</span>
-      <span>Наберите {{ MIN_WORD_LEN }} знака — или нажмите Enter, чтобы искать как есть.</span>
+      <span>Наберите {{ MIN_WORD_LEN }} знака или нажмите Enter.</span>
     </div>
 
     <div v-else-if="rows.length === 0 && !busy" class="am-empty">
@@ -370,12 +373,11 @@ onBeforeUnmount(() => {
         :score="row.score"
         :mark="row.mark"
         :own="row.own"
-        :repeat="row.repeat"
-        :note="row.note"
         :done="row.done"
         :soon="row.soon"
         :play="row.play"
         :adult="row.adult"
+        stack-tags
         @open="open(row.mediaId)"
       />
     </ul>

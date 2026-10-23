@@ -115,7 +115,7 @@ function onLeave(): void {
   hide()
 }
 
-/** Подпись к любому узлу: v-tip="'Повторных проходов: 3'". Пустая строка и null — «подписи нет». */
+/** Подпись к любому узлу: v-tip="'Повторных просмотров: 3'". Пустая строка и null — «подписи нет». */
 export const tip: Directive<HTMLElement, string | null | undefined> = {
   mounted(el, binding) {
     words.set(el, textOf(binding.value))

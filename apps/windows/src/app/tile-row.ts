@@ -115,7 +115,6 @@ export function toPlayAsk(brief: MediaBrief): PlayAsk {
 
 /** Выписка сервера в плитку показа. */
 export function toTileRow(brief: MediaBrief): TileRow {
-  // Повторы и комментарий бывают только своими: у ответа каталога их нет.
   const mine = getEntry(brief.mediaId)
 
   return {

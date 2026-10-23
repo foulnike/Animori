@@ -1,5 +1,5 @@
-// Обёртка над hls.js: WebView2 не умеет HLS, а где умеет — библиотека мешала бы. Смена качества — другой
-// манифест, поэтому open() принимает секунду продолжения. Вид отказа уходит наверх, решение за экраном.
+// Обёртка над hls.js: движок Windows HLS не умеет, источники отдают именно его; где есть родной
+// путь — библиотека мешала бы. Смена качества — другой манифест: open() принимает секунду продолжения.
 import Hls from 'hls.js'
 
 import { Logger } from '@/utils/logger'
@@ -8,21 +8,20 @@ import { Logger } from '@/utils/logger'
  * `net` — связь или движок: новый адрес не поможет. */
 export type DeadKind = 'link' | 'net'
 
-/** Что экран умеет с воспроизведением. */
 export interface Playback {
-  /** Открывает манифест на startAt секунд; `andPlay` = false — продолжать за человека нельзя. */
+  /** Открывает манифест и садится на `startAt` секунд. `andPlay` = false — для молчаливой замены
+   *  адреса на паузе: продолжать за человека нельзя. */
   open: (url: string, startAt: number, andPlay?: boolean) => void
   /** Гасит воспроизведение и освобождает память под буферы. */
   close: () => void
 }
 
-/** Обратные вызовы экрана. */
 export interface PlaybackHooks {
-  /** Непоправимая ошибка: вид отказа — чтобы экран сначала попробовал вылечить сам. */
+  /** Непоправимая ошибка: ссылка мертва или поток не читается; вид отказа — чтобы экран лечил сам. */
   onFatal: (text: string, kind: DeadKind) => void
 }
 
-/** Числа с рабочего плеера Kodik: заводские вдвое скромнее, фрагменты не успевают на тонком канале. */
+/** Числа с рабочего плеера Kodik: заводские вдвое скромнее — фрагменты не успевают приехать до своей секунды. */
 const TUNE = {
   maxBufferSize: 7e7,
   maxBufferLength: 30,
@@ -37,7 +36,7 @@ const TUNE = {
 /** Сколько раз поднимать загрузку после срыва сети, прежде чем сдаться. */
 const NET_TRIES = 2
 
-/** Чем площадка отвечает на мёртвую подпись; текст не разбираем: слова у каждой площадки свои. */
+/** Чем площадка отвечает на мёртвую подпись: 403 обычен, 401 и 410 — с проб. Текст не разбираем. */
 const GONE = [401, 403, 410]
 
 /** Коды тега <video>: сетевой отказ и непонятный источник. */
@@ -57,7 +56,8 @@ function codeOf(data: unknown): number {
   return typeof code === 'number' ? code : 0
 }
 
-/** Одна обёртка на тег на всю жизнь экрана: пересоздание hls.js на серию оставляло бы чужие буферы. */
+/** Одна обёртка на тег на всю жизнь экрана: пересоздание hls.js на серию оставляло бы видеть
+ *  чужие буферы по семьдесят мегабайт. */
 export function attachPlayback(video: HTMLVideoElement, hooks: PlaybackHooks): Playback {
   let hls: Hls | null = null
   let tries = 0
@@ -93,7 +93,7 @@ export function attachPlayback(video: HTMLVideoElement, hooks: PlaybackHooks): P
     const code = video.error?.code ?? 0
 
     // Мёртвая подпись у родного пути выглядит сетевым отказом или испорченным
-    // источником: и то и другое лечится новым адресом, а не жалобой.
+    // источником: и то и другое лечится новым адресом.
     if (code === ERR_NET || code === ERR_SRC) {
       Logger('WARN', `Плеер: тег не принял поток (код ${code}), похоже на мёртвую ссылку`)
       hooks.onFatal('Ссылка на поток больше не действует.', 'link')
@@ -108,8 +108,7 @@ export function attachPlayback(video: HTMLVideoElement, hooks: PlaybackHooks): P
   function onError(details: string, kind: string, code: number): void {
     if (hls === null) return
 
-    // Срок подписи вышел. Повторять загрузку бессмысленно: тот же адрес
-    // площадка не отдаст ни с какой попытки.
+    // Срок подписи вышел: повторный заход тот же адрес не отдаст.
     if (GONE.includes(code)) {
       Logger('WARN', `Плеер: площадка не отдаёт поток (${details}, код ${code})`)
       drop()
@@ -133,7 +132,7 @@ export function attachPlayback(video: HTMLVideoElement, hooks: PlaybackHooks): P
     Logger('ERROR', `Плеер: воспроизведение остановлено (${details})`)
     drop()
 
-    // Сеть отработала выше; всё прочее пробуем вылечить новым адресом — самая частая причина.
+    // Сеть своё отработала выше; остальное лечим новым адресом — самая частая причина.
     if (kind === Hls.ErrorTypes.NETWORK_ERROR) {
       hooks.onFatal('Поток оборвался. Проверьте сеть и нажмите «Переспросить».', 'net')
       return
@@ -154,8 +153,7 @@ export function attachPlayback(video: HTMLVideoElement, hooks: PlaybackHooks): P
         return
       }
 
-      // Слушатель один на все открытия: иначе на смене качества их копилось
-      // бы по числу серий, и один отказ докладывался бы многократно.
+      // Слушатель один на все открытия: иначе на смене качества их копилось бы по числу серий.
       video.removeEventListener('error', onNativeError)
       video.addEventListener('error', onNativeError)
 

@@ -415,12 +415,11 @@ watch(studioId, () => {
           :score="row.score"
           :mark="row.mark"
           :own="row.own"
-          :repeat="row.repeat"
-          :note="row.note"
           :done="row.done"
           :soon="row.soon"
           :play="row.play"
           :adult="row.adult"
+          stack-tags
           @open="open(row.mediaId)"
         />
       </ul>

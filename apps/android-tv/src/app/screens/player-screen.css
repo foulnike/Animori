@@ -1117,6 +1117,24 @@
   }
 }
 
+/* Закрытие меню — обратный ход am-play-pop; класс вешает <Transition>. */
+.am-play-menu-leave-active {
+  pointer-events: none;
+  animation: am-play-pop-back var(--am-fast) var(--am-ease) both;
+}
+
+@keyframes am-play-pop-back {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
 @keyframes am-play-slide {
   from {
     opacity: 0;

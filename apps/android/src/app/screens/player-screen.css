@@ -152,6 +152,56 @@
   cursor: pointer;
 }
 
+/* Плашка двойного тапа: сторона кадра, накопленные секунды и наполнение. Гаснет сама. */
+.am-play__dbl {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 46px;
+  padding-bottom: 4px;
+  overflow: hidden;
+  color: var(--am-on-art);
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--am-scrim) 70%, transparent);
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: var(--am-r-cap);
+  backdrop-filter: blur(10px);
+  transform: translateY(-50%);
+  animation: am-play-pop var(--am-fast) var(--am-ease) both;
+  pointer-events: none;
+}
+
+/* Слово поверх полосы наполнения: та рисуется собственным слоем. */
+.am-play__word {
+  position: relative;
+  z-index: 1;
+}
+
+/* Наполнение: сколько секунд накоплено от потолка. */
+.am-play__dbl-fill {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--am-accent), var(--am-accent-2));
+  border-radius: var(--am-r-cap);
+  transition: width var(--am-mid) var(--am-ease);
+}
+
+.am-play__dbl--back {
+  left: 44px;
+}
+
+.am-play__dbl--ahead {
+  right: 44px;
+}
+
 .am-play--wide.am-play--calm .am-play__tap {
   cursor: none;
 }
@@ -362,6 +412,7 @@
 .am-play--pip .am-play__deck,
 .am-play--pip .am-play__mid,
 .am-play--pip .am-play__tap,
+.am-play--pip .am-play__dbl,
 .am-play--pip .am-play__veil,
 .am-play--pip .am-play__resume,
 .am-play--pip .am-play__skip,
@@ -1214,6 +1265,24 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Закрытие меню — обратный ход am-play-pop; класс вешает <Transition>. */
+.am-play-menu-leave-active {
+  pointer-events: none;
+  animation: am-play-pop-back var(--am-fast) var(--am-ease) both;
+}
+
+@keyframes am-play-pop-back {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(6px);
   }
 }
 

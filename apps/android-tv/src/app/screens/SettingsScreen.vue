@@ -330,7 +330,7 @@ function onDropList(): void {
       note.value = ''
       await forgetCollection()
       await readState()
-      note.value = 'Список удалён. На AniList ваши записи остались нетронутыми.'
+      note.value = 'Список удалён.'
     },
     // Кнопки вопроса к этому моменту нет, а своей «Удалить» тоже не будет — список пуст. Фокус остаётся в панели: на «Очистить память», единственной живой рядом.
     () => clearBtn.value,

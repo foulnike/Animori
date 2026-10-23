@@ -1,8 +1,7 @@
-// Просмотр между запусками: место остановки, выбор, история — одним ключом через мост (не настройка: метка пишется сама). Громкость и скорость сюда не попадают: вернувшаяся через неделю читается поломкой.
+// Просмотр между запусками: где остановились, что выбрали, что смотрели — одной записью через мост.
 import { Bridge } from '@/bridge'
 import { Logger } from '@/utils/logger'
 
-/** Ключ хранилища. Всё просмотренное лежит в нём одним объектом. */
 const STORE_KEY = 'am_watch_marks'
 
 /** Сколько ждать перед записью: серия идёт долго, спешить некуда. */
@@ -11,7 +10,8 @@ const WRITE_DELAY_MS = 4000
 /** Сколько серий помним. Дальше вытесняются самые давние. */
 const MARK_LIMIT = 600
 
-/** Сколько записей истории помним; потолок выше меток: записей меньше, а потерять их жальче. */
+/** Сколько записей истории помним. Потолок выше, чем у меток: историю не восстанавливают —
+ *  метку восстанавливают просмотром. */
 const HISTORY_LIMIT = 500
 
 /** Сколько тайтлов помнят выбор озвучки и серии. */
@@ -33,7 +33,6 @@ export interface WatchMark {
   when: number
 }
 
-/** Что человек выбрал у тайтла в прошлый раз. */
 export interface WatchPick {
   voiceKey: string
   episode: number
@@ -232,7 +231,7 @@ export function spotKey(mediaId: number, voiceKey: string, episode: number): str
   return `${mediaId}|${voiceKey}|${episode}`
 }
 
-/** Разбирает ключ: аниме — до первого разделителя, серия — после последнего, середина целиком — озвучке. */
+/** Разбирает ключ: аниме — до первого разделителя, серия — после последнего, середина — озвучке. */
 export function splitSpot(key: string): SpotParts | null {
   const head = key.indexOf('|')
   const tail = key.lastIndexOf('|')
@@ -262,7 +261,7 @@ export function peekShare(key: string): number {
   return Math.min(1, Math.max(0, mark.at / mark.full))
 }
 
-/** Ключ истории: аниме и серия. Озвучка в него не входит — см. шапку файла. */
+/** Ключ истории: аниме и серия, без озвучки. */
 function historyKey(mediaId: number, episode: number): string {
   return `${mediaId}|${episode}`
 }

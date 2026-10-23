@@ -1,8 +1,8 @@
 {
   "name": "animori",
   "private": true,
-  "version": "3.1.1",
-  "description": "AniMori: общее ядро и два приложения — настольное и приставка",
+  "version": "3.1.2",
+  "description": "AniMori: общее ядро и три приложения — настольное, приставка и телефон",
   "workspaces": [
     "apps/windows",
     "apps/android-tv",

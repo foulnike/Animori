@@ -8,7 +8,7 @@ import { Logger } from '@/utils/logger'
 /** Запас по вертикали: пока человек долистывает, ответ уже едет, и метка не выскакивает поверх постера. */
 const LOOK_AHEAD_PX = 300
 
-/** Что делать, когда узел показался. Слабые ссылки: снятая плитка уводит свою запись сама. */
+/** Что делать, когда узел показался. Слабые ссылки: снятая с экрана плитка уводит запись сама. */
 const calls = new WeakMap<Element, () => void>()
 
 let eye: IntersectionObserver | null = null
@@ -52,7 +52,7 @@ function eyeNode(): IntersectionObserver | null {
   return eye
 }
 
-/** Одноразовая отметка о показе. Не функция — узел не берётся вовсе: условие в разметке не нужно. */
+/** Одноразовая отметка о показе: v-seen="() => onSeen(row.mediaId)". Не функция — узел не берётся вовсе. */
 export const seen: Directive<HTMLElement, (() => void) | null | undefined> = {
   mounted(el, binding) {
     const call = binding.value
@@ -60,8 +60,8 @@ export const seen: Directive<HTMLElement, (() => void) | null | undefined> = {
 
     const watcher = eyeNode()
     if (watcher === null) {
-      // Движок без наблюдателя пересечений: считаем плитку показанной сразу.
-      // Лишние вопросы лучше сетки, где меток нет вовсе.
+      // Движок без наблюдателя пересечений: плитка считается показанной сразу — лишние вопросы
+      // лучше сетки, где меток нет вовсе.
       run(call)
       return
     }

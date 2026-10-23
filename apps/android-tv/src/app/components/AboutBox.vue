@@ -87,22 +87,26 @@ onBeforeUnmount(() => {
 
 <template>
   <Teleport to="body">
-    <div v-if="open" class="am-modal" role="dialog" aria-modal="true" aria-label="Описание">
-      <!-- Клик мимо закрывает: это описание, и держать его силой незачем. -->
-      <div class="am-modal__veil" @click="onClose" />
+    <Transition name="am-modal">
+      <div v-if="open" class="am-modal" role="dialog" aria-modal="true" aria-label="Описание">
+        <!-- Клик мимо закрывает: это описание, и держать его силой незачем. -->
+        <div class="am-modal__veil" @click="onClose" />
 
-      <div class="am-modal__box">
-        <div class="am-modal__head">
-          <h3 class="am-modal__title">Описание</h3>
-          <button class="am-modal__x" type="button" aria-label="Закрыть" @click="onClose">✕</button>
-        </div>
+        <div class="am-modal__box">
+          <div class="am-modal__head">
+            <h3 class="am-modal__title">Описание</h3>
+            <button class="am-modal__x" type="button" aria-label="Закрыть" @click="onClose">
+              ✕
+            </button>
+          </div>
 
-        <!-- tabindex у тела: с фокусом на нём пульт видит, что находится внутри окна, и не считает окно пустым. -->
-        <div ref="body" class="am-modal__body" tabindex="0" data-am-seed>
-          <RichText class="am-about--zoom" :text="text" plain />
+          <!-- tabindex у тела: с фокусом на нём пульт видит, что находится внутри окна, и не считает окно пустым. -->
+          <div ref="body" class="am-modal__body" tabindex="0" data-am-seed>
+            <RichText class="am-about--zoom" :text="text" plain />
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 </template>
 

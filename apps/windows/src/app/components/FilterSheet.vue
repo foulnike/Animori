@@ -369,211 +369,179 @@ onBeforeUnmount(() => {
 
 <template>
   <Teleport to="body">
-    <div v-if="open" ref="root" class="am-sheet">
-      <button class="am-sheet__veil" type="button" aria-label="Закрыть" @click="onClose" />
+    <Transition name="am-sheet">
+      <div v-if="open" ref="root" class="am-sheet">
+        <button class="am-sheet__veil" type="button" aria-label="Закрыть" @click="onClose" />
 
-      <div class="am-sheet__box" role="dialog" aria-modal="true" aria-label="Настройка подбора">
-        <header class="am-sheet__top">
-          <h2 class="am-h2">Подбор</h2>
-          <span v-if="count > 0" v-tip="'Условий в отборе'" class="am-sheet__num">{{ count }}</span>
-          <span class="am-bar__gap" />
+        <div class="am-sheet__box" role="dialog" aria-modal="true" aria-label="Настройка подбора">
+          <header class="am-sheet__top">
+            <h2 class="am-h2">Подбор</h2>
+            <span v-if="count > 0" v-tip="'Условий в отборе'" class="am-sheet__num">{{
+              count
+            }}</span>
+            <span class="am-bar__gap" />
 
-          <!-- Закрытие знаком: слово рядом с «Готово» читалось бы вторым действием.
+            <!-- Закрытие знаком: слово рядом с «Готово» читалось бы вторым действием.
                Имя даёт aria-label: знак спрятан от чтецов, подсказка живёт слоем в body. -->
-          <button
-            v-tip="'Закрыть'"
-            class="am-sheet__close"
-            type="button"
-            aria-label="Закрыть"
-            @click="onClose"
-          >
-            <SakuraBloom />
-            <span aria-hidden="true">×</span>
-          </button>
-        </header>
+            <button
+              v-tip="'Закрыть'"
+              class="am-sheet__close"
+              type="button"
+              aria-label="Закрыть"
+              @click="onClose"
+            >
+              <SakuraBloom />
+              <span aria-hidden="true">×</span>
+            </button>
+          </header>
 
-        <div class="am-sheet__body">
-          <section class="am-part">
-            <h3 class="am-h3">Жанры</h3>
-            <div class="am-wrap">
-              <button
-                v-for="genre in genreList"
-                :key="genre"
-                class="am-chip"
-                :class="{ 'am-chip--on': draft.genres.includes(genre) }"
-                type="button"
-                @click="toggleGenre(genre)"
-              >
-                {{ genreWord(genre) ?? genre }}
-              </button>
-            </div>
-          </section>
+          <div class="am-sheet__body">
+            <section class="am-part">
+              <h3 class="am-h3">Жанры</h3>
+              <div class="am-wrap">
+                <button
+                  v-for="genre in genreList"
+                  :key="genre"
+                  class="am-chip"
+                  :class="{ 'am-chip--on': draft.genres.includes(genre) }"
+                  type="button"
+                  @click="toggleGenre(genre)"
+                >
+                  {{ genreWord(genre) ?? genre }}
+                </button>
+              </div>
+            </section>
 
-          <section class="am-part">
-            <h3 class="am-h3">Годы</h3>
+            <section class="am-part">
+              <h3 class="am-h3">Годы</h3>
 
-            <div class="am-wrap">
-              <button
-                v-for="span in spans"
-                :key="span.key"
-                class="am-chip"
-                :class="{ 'am-chip--on': spanOn(span) }"
-                type="button"
-                @click="useSpan(span)"
-              >
-                {{ span.title }}
-              </button>
-            </div>
+              <div class="am-wrap">
+                <button
+                  v-for="span in spans"
+                  :key="span.key"
+                  class="am-chip"
+                  :class="{ 'am-chip--on': spanOn(span) }"
+                  type="button"
+                  @click="useSpan(span)"
+                >
+                  {{ span.title }}
+                </button>
+              </div>
 
-            <div class="am-years">
-              <div v-for="field in YEAR_FIELDS" :key="field.side" class="am-years__one">
-                <span class="am-meta">{{ field.title }}</span>
+              <div class="am-years">
+                <div v-for="field in YEAR_FIELDS" :key="field.side" class="am-years__one">
+                  <span class="am-meta">{{ field.title }}</span>
 
-                <div class="am-year">
-                  <input
-                    class="am-input am-year__field"
-                    type="text"
-                    inputmode="numeric"
-                    maxlength="4"
-                    autocomplete="off"
-                    :aria-label="field.title"
-                    :placeholder="field.hint"
-                    :value="yearText(field.side)"
-                    @input="onYearInput(field.side, $event)"
-                    @keydown.up.prevent="stepYear(field.side, 1)"
-                    @keydown.down.prevent="stepYear(field.side, -1)"
-                  />
+                  <div class="am-year">
+                    <input
+                      class="am-input am-year__field"
+                      type="text"
+                      inputmode="numeric"
+                      maxlength="4"
+                      autocomplete="off"
+                      :aria-label="field.title"
+                      :placeholder="field.hint"
+                      :value="yearText(field.side)"
+                      @input="onYearInput(field.side, $event)"
+                      @keydown.up.prevent="stepYear(field.side, 1)"
+                      @keydown.down.prevent="stepYear(field.side, -1)"
+                    />
 
-                  <span class="am-year__steps">
-                    <button
-                      class="am-year__step"
-                      type="button"
-                      tabindex="-1"
-                      :disabled="stepOff(field.side, 1)"
-                      :aria-label="`${field.title}: больше`"
-                      @click="stepYear(field.side, 1)"
-                    >
-                      <svg class="am-year__arrow" viewBox="0 0 12 8" aria-hidden="true">
-                        <path d="M1.7 5.8 6 1.9 10.3 5.8" />
-                      </svg>
-                    </button>
+                    <span class="am-year__steps">
+                      <button
+                        class="am-year__step"
+                        type="button"
+                        tabindex="-1"
+                        :disabled="stepOff(field.side, 1)"
+                        :aria-label="`${field.title}: больше`"
+                        @click="stepYear(field.side, 1)"
+                      >
+                        <svg class="am-year__arrow" viewBox="0 0 12 8" aria-hidden="true">
+                          <path d="M1.7 5.8 6 1.9 10.3 5.8" />
+                        </svg>
+                      </button>
 
-                    <button
-                      class="am-year__step"
-                      type="button"
-                      tabindex="-1"
-                      :disabled="stepOff(field.side, -1)"
-                      :aria-label="`${field.title}: меньше`"
-                      @click="stepYear(field.side, -1)"
-                    >
-                      <svg class="am-year__arrow" viewBox="0 0 12 8" aria-hidden="true">
-                        <path d="M1.7 2.2 6 6.1 10.3 2.2" />
-                      </svg>
-                    </button>
-                  </span>
+                      <button
+                        class="am-year__step"
+                        type="button"
+                        tabindex="-1"
+                        :disabled="stepOff(field.side, -1)"
+                        :aria-label="`${field.title}: меньше`"
+                        @click="stepYear(field.side, -1)"
+                      >
+                        <svg class="am-year__arrow" viewBox="0 0 12 8" aria-hidden="true">
+                          <path d="M1.7 2.2 6 6.1 10.3 2.2" />
+                        </svg>
+                      </button>
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
 
-          <section class="am-part">
-            <h3 class="am-h3">Формат выхода</h3>
-            <div class="am-wrap">
-              <button
-                v-for="format in FORMAT_CHOICES"
-                :key="format"
-                class="am-chip"
-                :class="{ 'am-chip--on': draft.formats.includes(format) }"
-                type="button"
-                @click="toggleFormat(format)"
-              >
-                {{ formatWord(format) ?? format }}
-              </button>
-            </div>
-          </section>
-
-          <section class="am-part">
-            <h3 class="am-h3">Порядок</h3>
-            <div class="am-seg">
-              <button
-                v-for="item in SORT_CHOICES"
-                :key="item.key"
-                class="am-seg__btn"
-                :class="{ 'am-seg__btn--on': draft.sort === item.key }"
-                type="button"
-                @click="setSort(item.key)"
-              >
-                {{ item.title }}
-              </button>
-            </div>
-          </section>
-
-          <section class="am-part">
-            <h3 class="am-h3">Тэги</h3>
-
-            <div v-if="chosenTags.length > 0" class="am-wrap am-part__chosen">
-              <button
-                v-for="name in chosenTags"
-                :key="name"
-                class="am-chip am-chip--on"
-                type="button"
-                @click="toggleTag(name)"
-              >
-                {{ tagWord(name) }}
-                <span class="am-chip__off" aria-hidden="true">×</span>
-              </button>
-            </div>
-
-            <label class="am-search am-part__hunt">
-              <span class="am-search__mark" aria-hidden="true">⌕</span>
-              <input v-model="hunt" class="am-input" type="search" placeholder="Найти тэг" />
-            </label>
-
-            <p v-if="tagsBusy" class="am-dim">Поднимаем справочник тэгов…</p>
-
-            <p v-else-if="pool.length === 0" class="am-dim">
-              Справочник тэгов не доехал. Жанры, годы и форматы работают.
-            </p>
-
-            <template v-else-if="hunt.trim() !== ''">
-              <div v-if="found.length > 0" class="am-wrap">
+            <section class="am-part">
+              <h3 class="am-h3">Формат выхода</h3>
+              <div class="am-wrap">
                 <button
-                  v-for="tag in found"
-                  :key="tag.name"
+                  v-for="format in FORMAT_CHOICES"
+                  :key="format"
                   class="am-chip"
-                  :class="{ 'am-chip--on': draft.tags.includes(tag.name) }"
+                  :class="{ 'am-chip--on': draft.formats.includes(format) }"
                   type="button"
-                  @click="toggleTag(tag.name)"
+                  @click="toggleFormat(format)"
                 >
-                  {{ tagWord(tag.name) }}
+                  {{ formatWord(format) ?? format }}
                 </button>
               </div>
-              <p v-else class="am-dim">Такого тэга нет.</p>
-            </template>
+            </section>
 
-            <ul v-else class="am-folds">
-              <li v-for="group in groups" :key="group.key" class="am-fold">
-                <button class="am-fold__hit" type="button" @click="toggleGroup(group.key)">
-                  <span class="am-fold__name">{{ group.title }}</span>
-                  <span v-if="groupCount(group) > 0" class="am-fold__num">
-                    {{ groupCount(group) }}
-                  </span>
-
-                  <!-- Знак раскрытия нарисован, а не символом: шрифтовой ⌈ читался буквой «Г». -->
-                  <span
-                    class="am-fold__arrow"
-                    :class="{ 'am-fold__arrow--on': openGroup === group.key }"
-                    aria-hidden="true"
-                  >
-                    <svg class="am-fold__chev" viewBox="0 0 12 8">
-                      <path d="M1.7 2.2 6 6.1 10.3 2.2" />
-                    </svg>
-                  </span>
+            <section class="am-part">
+              <h3 class="am-h3">Порядок</h3>
+              <div class="am-seg">
+                <button
+                  v-for="item in SORT_CHOICES"
+                  :key="item.key"
+                  class="am-seg__btn"
+                  :class="{ 'am-seg__btn--on': draft.sort === item.key }"
+                  type="button"
+                  @click="setSort(item.key)"
+                >
+                  {{ item.title }}
                 </button>
+              </div>
+            </section>
 
-                <div v-if="openGroup === group.key" class="am-wrap am-fold__body">
+            <section class="am-part">
+              <h3 class="am-h3">Тэги</h3>
+
+              <div v-if="chosenTags.length > 0" class="am-wrap am-part__chosen">
+                <button
+                  v-for="name in chosenTags"
+                  :key="name"
+                  class="am-chip am-chip--on"
+                  type="button"
+                  @click="toggleTag(name)"
+                >
+                  {{ tagWord(name) }}
+                  <span class="am-chip__off" aria-hidden="true">×</span>
+                </button>
+              </div>
+
+              <label class="am-search am-part__hunt">
+                <span class="am-search__mark" aria-hidden="true">⌕</span>
+                <input v-model="hunt" class="am-input" type="search" placeholder="Найти тэг" />
+              </label>
+
+              <p v-if="tagsBusy" class="am-dim">Поднимаем справочник тэгов…</p>
+
+              <p v-else-if="pool.length === 0" class="am-dim">
+                Справочник тэгов не доехал. Жанры, годы и форматы работают.
+              </p>
+
+              <template v-else-if="hunt.trim() !== ''">
+                <div v-if="found.length > 0" class="am-wrap">
                   <button
-                    v-for="tag in group.items"
+                    v-for="tag in found"
                     :key="tag.name"
                     class="am-chip"
                     :class="{ 'am-chip--on': draft.tags.includes(tag.name) }"
@@ -583,25 +551,61 @@ onBeforeUnmount(() => {
                     {{ tagWord(tag.name) }}
                   </button>
                 </div>
-              </li>
-            </ul>
-          </section>
-        </div>
+                <p v-else class="am-dim">Такого тэга нет.</p>
+              </template>
 
-        <footer class="am-sheet__foot">
-          <button
-            class="am-btn am-btn--ghost"
-            type="button"
-            :disabled="count === 0"
-            @click="onReset"
-          >
-            Сбросить
-          </button>
-          <span class="am-bar__gap" />
-          <button class="am-btn am-btn--soft" type="button" @click="onApply">Готово</button>
-        </footer>
+              <ul v-else class="am-folds">
+                <li v-for="group in groups" :key="group.key" class="am-fold">
+                  <button class="am-fold__hit" type="button" @click="toggleGroup(group.key)">
+                    <span class="am-fold__name">{{ group.title }}</span>
+                    <span v-if="groupCount(group) > 0" class="am-fold__num">
+                      {{ groupCount(group) }}
+                    </span>
+
+                    <!-- Знак раскрытия нарисован, а не символом: шрифтовой ⌈ читался буквой «Г». -->
+                    <span
+                      class="am-fold__arrow"
+                      :class="{ 'am-fold__arrow--on': openGroup === group.key }"
+                      aria-hidden="true"
+                    >
+                      <svg class="am-fold__chev" viewBox="0 0 12 8">
+                        <path d="M1.7 2.2 6 6.1 10.3 2.2" />
+                      </svg>
+                    </span>
+                  </button>
+
+                  <div v-if="openGroup === group.key" class="am-wrap am-fold__body">
+                    <button
+                      v-for="tag in group.items"
+                      :key="tag.name"
+                      class="am-chip"
+                      :class="{ 'am-chip--on': draft.tags.includes(tag.name) }"
+                      type="button"
+                      @click="toggleTag(tag.name)"
+                    >
+                      {{ tagWord(tag.name) }}
+                    </button>
+                  </div>
+                </li>
+              </ul>
+            </section>
+          </div>
+
+          <footer class="am-sheet__foot">
+            <button
+              class="am-btn am-btn--ghost"
+              type="button"
+              :disabled="count === 0"
+              @click="onReset"
+            >
+              Сбросить
+            </button>
+            <span class="am-bar__gap" />
+            <button class="am-btn am-btn--soft" type="button" @click="onApply">Готово</button>
+          </footer>
+        </div>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 </template>
 

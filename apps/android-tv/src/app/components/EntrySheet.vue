@@ -329,7 +329,7 @@ onBeforeUnmount(() => {
   <Teleport to="body">
     <div
       ref="veil"
-      class="am-sheet"
+      class="am-sheet am-sheet--veil"
       :class="{ 'am-sheet--tv': lite }"
       role="dialog"
       aria-modal="true"

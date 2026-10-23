@@ -170,8 +170,6 @@ const {
   shown: calendarDay,
   span: calendarSpan,
   scope: calendarScope,
-  hidden: calendarHidden,
-  hiddenDays: calendarHiddenDays,
   pick: pickDay,
   setScope: setCalendarScope,
   load: loadCalendar,
@@ -1092,19 +1090,10 @@ watch(
         />
       </ul>
 
-      <!-- Пустой день — тоже пустое состояние, и знак у него тот же, что у крупных: лист календаря.
-     День, где всё спрятал отбор, пустым не объявляется: «выходов нет» было бы неправдой. -->
-      <p v-else-if="calendarHiddenDays.has(calendarDay?.key ?? 0)" class="am-cal__note">
-        В этот день выходы скрыты меткой 18+.
-      </p>
-
+      <!-- Пустой день — тоже пустое состояние, и знак у него тот же, что у крупных: лист календаря. -->
       <p v-else class="am-cal__note am-cal__note--none">
         <span class="am-cal__mark"><EmptyMark name="calendar" /></span>
         <span>В этот день выходов нет.</span>
-      </p>
-
-      <p v-if="calendarHidden > 0" class="am-cal__note">
-        Скрыто с меткой 18+: {{ calendarHidden }} · показ взрослого включается в настройках
       </p>
     </section>
 
@@ -1315,37 +1304,41 @@ watch(
     </template>
 
     <!-- Меню зажатия: скрытие прячет тайтл с витрины и ленты, правка открывает тот же лист, что на карточке. -->
-    <PressMenu
-      v-if="press !== null"
-      :title="press.title"
-      :hide="press.canHide"
-      @edit="pressEdit"
-      @hide="pressHide"
-      @close="press = null"
-    />
+    <Transition name="am-tap">
+      <PressMenu
+        v-if="press !== null"
+        :title="press.title"
+        :hide="press.canHide"
+        @edit="pressEdit"
+        @hide="pressHide"
+        @close="press = null"
+      />
+    </Transition>
 
-    <EntrySheet
-      v-if="edit !== null && editSnap !== null"
-      :title="edit.title"
-      :status="editSnap.status"
-      :score10="editSnap.score10"
-      :progress="editSnap.progress"
-      :parts-total="null"
-      :ongoing="false"
-      :repeat="editSnap.repeat"
-      :started-at="editSnap.startedAt"
-      :completed-at="editSnap.completedAt"
-      :notes="editSnap.notes"
-      @close="edit = null"
-      @status="editSend('status', $event)"
-      @score="editSend('score', $event)"
-      @progress="editSend('progress', $event)"
-      @repeat="editSend('repeat', $event)"
-      @started-at="editSend('startedAt', $event)"
-      @completed-at="editSend('completedAt', $event)"
-      @notes="editSend('notes', $event)"
-      @remove="onEditRemove"
-    />
+    <Transition name="am-sheet">
+      <EntrySheet
+        v-if="edit !== null && editSnap !== null"
+        :title="edit.title"
+        :status="editSnap.status"
+        :score10="editSnap.score10"
+        :progress="editSnap.progress"
+        :parts-total="null"
+        :ongoing="false"
+        :repeat="editSnap.repeat"
+        :started-at="editSnap.startedAt"
+        :completed-at="editSnap.completedAt"
+        :notes="editSnap.notes"
+        @close="edit = null"
+        @status="editSend('status', $event)"
+        @score="editSend('score', $event)"
+        @progress="editSend('progress', $event)"
+        @repeat="editSend('repeat', $event)"
+        @started-at="editSend('startedAt', $event)"
+        @completed-at="editSend('completedAt', $event)"
+        @notes="editSend('notes', $event)"
+        @remove="onEditRemove"
+      />
+    </Transition>
 
     <FilterSheet :open="sheetOpen" :pick="homePick" @close="sheetOpen = false" @apply="onApply" />
   </section>

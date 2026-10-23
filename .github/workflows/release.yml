@@ -17,7 +17,7 @@ on:
       tag:
         description: 'Тег выпуска'
         required: true
-        default: 'windows-v3.1.1'
+        default: 'windows-v3.1.2'
       dry:
         description: 'Пробный прогон: собрать и подписать, но релиз не публиковать'
         type: boolean
@@ -159,7 +159,7 @@ jobs:
           # tauri-action выпустил бы релиз с тегом `main`.
           tagName: ${{ inputs.tag || github.ref_name }}
           # Платформа в названии: оба продукта живут в одном репозитории, и без неё
-          # на странице Releases две строки «AniMori 3.1.1» не отличить. Название
+          # на странице Releases две строки «AniMori 3.1.2» не отличить. Название
           # ничего не ломает — апдейтеры смотрят на тег, а не на него.
           releaseName: AniMori ${{ steps.ver.outputs.version }} — Windows
           releaseBody: ${{ steps.notes.outputs.body }}

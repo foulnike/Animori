@@ -115,6 +115,30 @@ onBeforeUnmount(() => {
   }
 }
 
+.am-tap-leave-active {
+  pointer-events: none;
+  animation: am-tap-veil-out var(--am-mid) var(--am-ease-soft) both;
+}
+
+.am-tap-leave-active .am-tap__box {
+  animation: am-tap-down var(--am-mid) var(--am-ease) both;
+}
+
+@keyframes am-tap-veil-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes am-tap-down {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateY(20px);
+  }
+}
+
 .am-tap__name {
   overflow: hidden;
   margin: 0 0 4px;
@@ -158,7 +182,9 @@ onBeforeUnmount(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .am-tap,
-  .am-tap__box {
+  .am-tap__box,
+  .am-tap-leave-active,
+  .am-tap-leave-active .am-tap__box {
     animation: none;
   }
 }

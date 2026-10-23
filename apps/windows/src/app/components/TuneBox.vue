@@ -706,306 +706,310 @@ onBeforeUnmount(() => {
   <!-- Окно тем: пульт целиком и полный список. Уезжает в body — окно поверх
        всего, и с полосой по разметке оно не соседствует. -->
   <Teleport to="body">
-    <div v-if="sheet && rows.length > 0" ref="sheetRoot" class="am-sheet am-tune__sheet">
-      <button class="am-sheet__veil" type="button" aria-label="Закрыть" @click="sheet = false" />
+    <Transition name="am-sheet">
+      <div v-if="sheet && rows.length > 0" ref="sheetRoot" class="am-sheet am-tune__sheet">
+        <button class="am-sheet__veil" type="button" aria-label="Закрыть" @click="sheet = false" />
 
-      <div
-        class="am-sheet__box"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Музыка тайтла"
-        @keydown="onKey"
-      >
-        <header class="am-sheet__top">
-          <h3 class="am-h3">Музыка</h3>
-          <span class="am-tune__count">{{ rows.length }}</span>
-          <span class="am-bar__gap" />
-          <button class="am-btn am-btn--ghost" type="button" @click="sheet = false">Закрыть</button>
-        </header>
+        <div
+          class="am-sheet__box"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Музыка тайтла"
+          @keydown="onKey"
+        >
+          <header class="am-sheet__top">
+            <h3 class="am-h3">Музыка</h3>
+            <span class="am-tune__count">{{ rows.length }}</span>
+            <span class="am-bar__gap" />
+            <button class="am-btn am-btn--ghost" type="button" @click="sheet = false">
+              Закрыть
+            </button>
+          </header>
 
-        <div class="am-sheet__body">
-          <div class="am-tune__deck">
-            <div class="am-tune__organs">
-              <!-- Порядок звучания: перемешивание и повтор; иначе правая колонка выходит на
+          <div class="am-sheet__body">
+            <div class="am-tune__deck">
+              <div class="am-tune__organs">
+                <!-- Порядок звучания: перемешивание и повтор; иначе правая колонка выходит на
                      40 пикселей шире левой и первой вылезает за панель при узком окне. -->
-              <div class="am-tune__tools am-tune__tools--left">
-                <button
-                  v-tip="shuffle ? 'Перемешивание включено' : 'Перемешать темы'"
-                  class="am-tune__tool"
-                  :class="{ 'am-tune__tool--on': shuffle }"
-                  type="button"
-                  aria-label="Перемешать темы"
-                  :aria-pressed="shuffle"
-                  @click="onShuffle"
-                >
-                  <svg class="am-tune__glyph" viewBox="0 0 16 16">
-                    <path d="M2.6 4.4h2.2l6 7.2h2.4" />
-                    <path d="M2.6 11.6h2.2l2.1-2.6" />
-                    <path d="M9.5 6.3l1.3-1.9h2.4" />
-                    <path d="M11.3 2.6l2 1.8-2 1.8" />
-                    <path d="M11.3 9.8l2 1.8-2 1.8" />
-                  </svg>
-                </button>
+                <div class="am-tune__tools am-tune__tools--left">
+                  <button
+                    v-tip="shuffle ? 'Перемешивание включено' : 'Перемешать темы'"
+                    class="am-tune__tool"
+                    :class="{ 'am-tune__tool--on': shuffle }"
+                    type="button"
+                    aria-label="Перемешать темы"
+                    :aria-pressed="shuffle"
+                    @click="onShuffle"
+                  >
+                    <svg class="am-tune__glyph" viewBox="0 0 16 16">
+                      <path d="M2.6 4.4h2.2l6 7.2h2.4" />
+                      <path d="M2.6 11.6h2.2l2.1-2.6" />
+                      <path d="M9.5 6.3l1.3-1.9h2.4" />
+                      <path d="M11.3 2.6l2 1.8-2 1.8" />
+                      <path d="M11.3 9.8l2 1.8-2 1.8" />
+                    </svg>
+                  </button>
 
-                <button
-                  v-tip="loop ? 'Повтор включён' : 'Повторять тему'"
-                  class="am-tune__tool"
-                  :class="{ 'am-tune__tool--on': loop }"
-                  type="button"
-                  aria-label="Повторять тему"
-                  :aria-pressed="loop"
-                  @click="onLoop"
-                >
-                  <svg class="am-tune__glyph" viewBox="0 0 16 16">
-                    <path d="M4.4 5.2h5.2a2.8 2.8 0 0 1 2.8 2.8v.4" />
-                    <path d="M11.6 10.8H6.4a2.8 2.8 0 0 1-2.8-2.8V7.6" />
-                    <path d="M6.2 3.2 4.1 5.2l2.1 2" />
-                    <path d="M9.8 12.8l2.1-2-2.1-2" />
-                  </svg>
-                </button>
-              </div>
+                  <button
+                    v-tip="loop ? 'Повтор включён' : 'Повторять тему'"
+                    class="am-tune__tool"
+                    :class="{ 'am-tune__tool--on': loop }"
+                    type="button"
+                    aria-label="Повторять тему"
+                    :aria-pressed="loop"
+                    @click="onLoop"
+                  >
+                    <svg class="am-tune__glyph" viewBox="0 0 16 16">
+                      <path d="M4.4 5.2h5.2a2.8 2.8 0 0 1 2.8 2.8v.4" />
+                      <path d="M11.6 10.8H6.4a2.8 2.8 0 0 1-2.8-2.8V7.6" />
+                      <path d="M6.2 3.2 4.1 5.2l2.1 2" />
+                      <path d="M9.8 12.8l2.1-2-2.1-2" />
+                    </svg>
+                  </button>
+                </div>
 
-              <div class="am-tune__mid">
-                <!-- Шаг стоит рядом с пуском: это один орган — перевод звучащего. Пуск крупнее
+                <div class="am-tune__mid">
+                  <!-- Шаг стоит рядом с пуском: это один орган — перевод звучащего. Пуск крупнее
                        не от важности, а потому что его рисует сакура, и у неё свой слой. -->
-                <button
-                  v-tip="'Предыдущая тема'"
-                  class="am-tune__tool"
-                  type="button"
-                  aria-label="Предыдущая тема"
-                  :disabled="!canStep"
-                  @click="onPrev"
-                >
-                  <svg
-                    class="am-tune__glyph am-tune__glyph--fill"
-                    viewBox="0 0 16 16"
-                    aria-hidden="true"
+                  <button
+                    v-tip="'Предыдущая тема'"
+                    class="am-tune__tool"
+                    type="button"
+                    aria-label="Предыдущая тема"
+                    :disabled="!canStep"
+                    @click="onPrev"
                   >
-                    <path d="M11.9 3.5 6.2 8l5.7 4.5z" />
-                    <rect x="4" y="3.9" width="1.3" height="8.2" rx="0.65" />
-                  </svg>
-                </button>
-
-                <button
-                  v-tip="playHint"
-                  class="am-tune__hit"
-                  :class="{ 'am-tune__hit--live': playing }"
-                  type="button"
-                  :aria-label="playHint"
-                  @click="onPlay"
-                >
-                  <SakuraBloom />
-                  <span class="am-tune__mark" aria-hidden="true">
-                    <svg v-if="playing" class="am-tune__sign" viewBox="0 0 16 16">
-                      <rect x="4" y="3.2" width="2.9" height="9.6" rx="1.2" />
-                      <rect x="9.1" y="3.2" width="2.9" height="9.6" rx="1.2" />
+                    <svg
+                      class="am-tune__glyph am-tune__glyph--fill"
+                      viewBox="0 0 16 16"
+                      aria-hidden="true"
+                    >
+                      <path d="M11.9 3.5 6.2 8l5.7 4.5z" />
+                      <rect x="4" y="3.9" width="1.3" height="8.2" rx="0.65" />
                     </svg>
-                    <svg v-else class="am-tune__sign" viewBox="0 0 16 16">
-                      <path d="M5.2 3.4 12.4 8l-7.2 4.6z" />
-                    </svg>
-                  </span>
-                </button>
+                  </button>
 
-                <button
-                  v-tip="'Следующая тема'"
-                  class="am-tune__tool"
-                  type="button"
-                  aria-label="Следующая тема"
-                  :disabled="!canStep"
-                  @click="onNext"
-                >
-                  <svg
-                    class="am-tune__glyph am-tune__glyph--fill"
-                    viewBox="0 0 16 16"
-                    aria-hidden="true"
+                  <button
+                    v-tip="playHint"
+                    class="am-tune__hit"
+                    :class="{ 'am-tune__hit--live': playing }"
+                    type="button"
+                    :aria-label="playHint"
+                    @click="onPlay"
                   >
-                    <path d="M4.1 3.5 9.8 8l-5.7 4.5z" />
-                    <rect x="10.7" y="3.9" width="1.3" height="8.2" rx="0.65" />
-                  </svg>
-                </button>
-              </div>
+                    <SakuraBloom />
+                    <span class="am-tune__mark" aria-hidden="true">
+                      <svg v-if="playing" class="am-tune__sign" viewBox="0 0 16 16">
+                        <rect x="4" y="3.2" width="2.9" height="9.6" rx="1.2" />
+                        <rect x="9.1" y="3.2" width="2.9" height="9.6" rx="1.2" />
+                      </svg>
+                      <svg v-else class="am-tune__sign" viewBox="0 0 16 16">
+                        <path d="M5.2 3.4 12.4 8l-7.2 4.6z" />
+                      </svg>
+                    </span>
+                  </button>
 
-              <!-- Правая сторона: громкость. -->
-              <div class="am-tune__tools am-tune__tools--right">
-                <button
-                  v-tip="mute ? 'Включить звук' : 'Без звука'"
-                  class="am-tune__tool"
-                  type="button"
-                  aria-label="Громкость"
-                  @click="onMute"
-                >
-                  <svg class="am-tune__glyph" viewBox="0 0 16 16">
-                    <path d="M3 6.2h2.1L8.4 3.4v9.2L5.1 9.8H3z" />
-                    <template v-if="!mute">
-                      <path d="M10.6 6.1a2.6 2.6 0 0 1 0 3.8" />
-                      <path d="M12.4 4.4a5 5 0 0 1 0 7.2" />
-                    </template>
-                    <template v-else>
-                      <path d="M10.8 6.4l3.2 3.2" />
-                      <path d="M14 6.4l-3.2 3.2" />
-                    </template>
-                  </svg>
-                </button>
+                  <button
+                    v-tip="'Следующая тема'"
+                    class="am-tune__tool"
+                    type="button"
+                    aria-label="Следующая тема"
+                    :disabled="!canStep"
+                    @click="onNext"
+                  >
+                    <svg
+                      class="am-tune__glyph am-tune__glyph--fill"
+                      viewBox="0 0 16 16"
+                      aria-hidden="true"
+                    >
+                      <path d="M4.1 3.5 9.8 8l-5.7 4.5z" />
+                      <rect x="10.7" y="3.9" width="1.3" height="8.2" rx="0.65" />
+                    </svg>
+                  </button>
+                </div>
 
-                <!-- Громкость тем же органом, что таймлайн, только короче: две разные
+                <!-- Правая сторона: громкость. -->
+                <div class="am-tune__tools am-tune__tools--right">
+                  <button
+                    v-tip="mute ? 'Включить звук' : 'Без звука'"
+                    class="am-tune__tool"
+                    type="button"
+                    aria-label="Громкость"
+                    @click="onMute"
+                  >
+                    <svg class="am-tune__glyph" viewBox="0 0 16 16">
+                      <path d="M3 6.2h2.1L8.4 3.4v9.2L5.1 9.8H3z" />
+                      <template v-if="!mute">
+                        <path d="M10.6 6.1a2.6 2.6 0 0 1 0 3.8" />
+                        <path d="M12.4 4.4a5 5 0 0 1 0 7.2" />
+                      </template>
+                      <template v-else>
+                        <path d="M10.8 6.4l3.2 3.2" />
+                        <path d="M14 6.4l-3.2 3.2" />
+                      </template>
+                    </svg>
+                  </button>
+
+                  <!-- Громкость тем же органом, что таймлайн, только короче: две разные
                        полосы в одном пульте читались бы деталями от разных приборов. -->
-                <div
-                  class="am-tune__vol"
-                  role="slider"
-                  aria-label="Уровень громкости"
-                  :aria-valuetext="volPart"
-                  @pointerdown="onVolDown"
-                  @pointermove="onVolMove"
-                >
-                  <span class="am-tune__track">
-                    <span class="am-tune__done" :style="{ width: volPart }" />
-                  </span>
-                  <span class="am-tune__knob" :style="{ left: volPart }" />
+                  <div
+                    class="am-tune__vol"
+                    role="slider"
+                    aria-label="Уровень громкости"
+                    :aria-valuetext="volPart"
+                    @pointerdown="onVolDown"
+                    @pointermove="onVolMove"
+                  >
+                    <span class="am-tune__track">
+                      <span class="am-tune__done" :style="{ width: volPart }" />
+                    </span>
+                    <span class="am-tune__knob" :style="{ left: volPart }" />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <!-- Полоса своя: у родного ползунка ни формы темы, ни нужной толщины.
+              <!-- Полоса своя: у родного ползунка ни формы темы, ни нужной толщины.
                    Захват указателя нужен, чтобы тяга не срывалась за краем полосы. -->
-            <div class="am-tune__wave">
-              <span class="am-tune__clock">{{ atText }}</span>
-              <div
-                class="am-tune__seek"
-                :class="{ 'am-tune__seek--hold': drag }"
-                role="slider"
-                aria-label="Перемотка"
-                :aria-valuetext="`${atText} из ${lenText}`"
-                @pointerdown="onSeekDown"
-                @pointermove="onSeekMove"
-                @pointerup="onSeekUp"
-                @pointercancel="onSeekUp"
-              >
-                <span class="am-tune__track">
-                  <span class="am-tune__done" :style="{ width: donePart }" />
-                </span>
-                <span class="am-tune__knob" :style="{ left: donePart }" />
-              </div>
-              <span class="am-tune__clock">{{ lenText }}</span>
-            </div>
-
-            <div class="am-tune__now">
-              <span v-if="nowRow" class="am-tune__nowtag">{{ nowRow.tag }}</span>
-              <span class="am-tune__nowname">{{ nowRow ? nowRow.title : 'Выберите тему' }}</span>
-              <span v-if="nowRow && nowRow.artist" class="am-tune__nowartist">{{
-                nowRow.artist
-              }}</span>
-            </div>
-          </div>
-
-          <!-- Окно в четыре строки: остальные темы достаются прокруткой, и рост блока от их числа
-                 не зависит. -->
-          <ul ref="listBox" class="am-tune__list">
-            <!-- Пункт списка и есть строка: одежда, подсветка и рамка выбора на нём, а кнопка
-                   выбора со спутниками — соседи внутри. -->
-            <li
-              v-for="row in rows"
-              :key="row.key"
-              :data-key="row.key"
-              class="am-tune__item"
-              :class="{ 'am-tune__item--on': row.key === pick }"
-            >
-              <button
-                v-tip="row.audio === null ? 'Записи нет' : `Слушать ${row.tag}`"
-                class="am-tune__row"
-                :class="{ 'am-tune__row--mute': row.audio === null }"
-                type="button"
-                :disabled="row.audio === null"
-                @click="onRow(row)"
-              >
-                <!-- Три палочки у звучащей строки: место под знак занято всегда,
-                       иначе пуск сдвигал бы названия соседних строк. -->
-                <span class="am-tune__beat" aria-hidden="true">
-                  <span v-if="row.key === pick && playing" class="am-tune__beats">
-                    <i /><i /><i />
+              <div class="am-tune__wave">
+                <span class="am-tune__clock">{{ atText }}</span>
+                <div
+                  class="am-tune__seek"
+                  :class="{ 'am-tune__seek--hold': drag }"
+                  role="slider"
+                  aria-label="Перемотка"
+                  :aria-valuetext="`${atText} из ${lenText}`"
+                  @pointerdown="onSeekDown"
+                  @pointermove="onSeekMove"
+                  @pointerup="onSeekUp"
+                  @pointercancel="onSeekUp"
+                >
+                  <span class="am-tune__track">
+                    <span class="am-tune__done" :style="{ width: donePart }" />
                   </span>
-                  <span v-else class="am-tune__dot" />
+                  <span class="am-tune__knob" :style="{ left: donePart }" />
+                </div>
+                <span class="am-tune__clock">{{ lenText }}</span>
+              </div>
+
+              <div class="am-tune__now">
+                <span v-if="nowRow" class="am-tune__nowtag">{{ nowRow.tag }}</span>
+                <span class="am-tune__nowname">{{ nowRow ? nowRow.title : 'Выберите тему' }}</span>
+                <span v-if="nowRow && nowRow.artist" class="am-tune__nowartist">{{
+                  nowRow.artist
+                }}</span>
+              </div>
+            </div>
+
+            <!-- Окно в четыре строки: остальные темы достаются прокруткой, и рост блока от их числа
+                 не зависит. -->
+            <ul ref="listBox" class="am-tune__list">
+              <!-- Пункт списка и есть строка: одежда, подсветка и рамка выбора на нём, а кнопка
+                   выбора со спутниками — соседи внутри. -->
+              <li
+                v-for="row in rows"
+                :key="row.key"
+                :data-key="row.key"
+                class="am-tune__item"
+                :class="{ 'am-tune__item--on': row.key === pick }"
+              >
+                <button
+                  v-tip="row.audio === null ? 'Записи нет' : `Слушать ${row.tag}`"
+                  class="am-tune__row"
+                  :class="{ 'am-tune__row--mute': row.audio === null }"
+                  type="button"
+                  :disabled="row.audio === null"
+                  @click="onRow(row)"
+                >
+                  <!-- Три палочки у звучащей строки: место под знак занято всегда,
+                       иначе пуск сдвигал бы названия соседних строк. -->
+                  <span class="am-tune__beat" aria-hidden="true">
+                    <span v-if="row.key === pick && playing" class="am-tune__beats">
+                      <i /><i /><i />
+                    </span>
+                    <span v-else class="am-tune__dot" />
+                  </span>
+
+                  <span class="am-tune__tag">{{ row.tag }}</span>
+
+                  <span class="am-tune__text">
+                    <span class="am-tune__name">{{ row.title }}</span>
+                    <span v-if="row.artist" class="am-tune__artist">{{ row.artist }}</span>
+                  </span>
+                </button>
+
+                <!-- Три стриминга круглыми знаками, как ярлычки под постером. -->
+                <span class="am-tune__tunes">
+                  <button
+                    v-for="place in streamsFor(row)"
+                    :key="place.brand"
+                    v-tip="place.hint"
+                    class="am-tune__jump"
+                    type="button"
+                    :aria-label="place.hint"
+                    @click="openLink(place.url)"
+                  >
+                    <BrandMark class="am-tune__brand" :name="place.brand" />
+                  </button>
                 </span>
 
-                <span class="am-tune__tag">{{ row.tag }}</span>
+                <span class="am-tune__acts">
+                  <button
+                    v-tip="copied === row.key ? 'Скопировано' : 'Скопировать название и автора'"
+                    class="am-tune__act"
+                    :class="{ 'am-tune__act--done': copied === row.key }"
+                    type="button"
+                    aria-label="Скопировать название и автора"
+                    @click="onCopy(row)"
+                  >
+                    <svg v-if="copied === row.key" class="am-tune__glyph" viewBox="0 0 16 16">
+                      <path d="M3.6 8.4 6.4 11.2 12.4 5" />
+                    </svg>
+                    <svg v-else class="am-tune__glyph" viewBox="0 0 16 16">
+                      <rect x="5.6" y="2.6" width="7.8" height="9.4" rx="1.6" />
+                      <path d="M10.4 13.4H4.2a1.6 1.6 0 0 1-1.6-1.6V5.2" />
+                    </svg>
+                  </button>
 
-                <span class="am-tune__text">
-                  <span class="am-tune__name">{{ row.title }}</span>
-                  <span v-if="row.artist" class="am-tune__artist">{{ row.artist }}</span>
+                  <!-- Без звуковой записи скачивать нечего: у темы есть только подпись. -->
+                  <button
+                    v-tip="
+                      row.audio === null
+                        ? 'Записи нет'
+                        : saving === row.key
+                          ? 'Скачивается…'
+                          : saved === row.key
+                            ? 'Сохранено'
+                            : 'Скачать трек'
+                    "
+                    class="am-tune__act"
+                    :class="{
+                      'am-tune__act--done': saved === row.key,
+                      'am-tune__act--wait': saving === row.key,
+                    }"
+                    type="button"
+                    :disabled="row.audio === null || saving !== null"
+                    aria-label="Скачать трек"
+                    @click="onSave(row)"
+                  >
+                    <svg v-if="saving === row.key" class="am-tune__glyph" viewBox="0 0 16 16">
+                      <path d="M8 2.2a5.8 5.8 0 1 1-5.8 5.8" />
+                    </svg>
+                    <svg v-else-if="saved === row.key" class="am-tune__glyph" viewBox="0 0 16 16">
+                      <path d="M3.6 8.4 6.4 11.2 12.4 5" />
+                    </svg>
+                    <svg v-else class="am-tune__glyph" viewBox="0 0 16 16">
+                      <path d="M8 2.8v6.8" />
+                      <path d="M5.2 7.2 8 10l2.8-2.8" />
+                      <path d="M3.2 12.4h9.6" />
+                    </svg>
+                  </button>
                 </span>
-              </button>
-
-              <!-- Три стриминга круглыми знаками, как ярлычки под постером. -->
-              <span class="am-tune__tunes">
-                <button
-                  v-for="place in streamsFor(row)"
-                  :key="place.brand"
-                  v-tip="place.hint"
-                  class="am-tune__jump"
-                  type="button"
-                  :aria-label="place.hint"
-                  @click="openLink(place.url)"
-                >
-                  <BrandMark class="am-tune__brand" :name="place.brand" />
-                </button>
-              </span>
-
-              <span class="am-tune__acts">
-                <button
-                  v-tip="copied === row.key ? 'Скопировано' : 'Скопировать название и автора'"
-                  class="am-tune__act"
-                  :class="{ 'am-tune__act--done': copied === row.key }"
-                  type="button"
-                  aria-label="Скопировать название и автора"
-                  @click="onCopy(row)"
-                >
-                  <svg v-if="copied === row.key" class="am-tune__glyph" viewBox="0 0 16 16">
-                    <path d="M3.6 8.4 6.4 11.2 12.4 5" />
-                  </svg>
-                  <svg v-else class="am-tune__glyph" viewBox="0 0 16 16">
-                    <rect x="5.6" y="2.6" width="7.8" height="9.4" rx="1.6" />
-                    <path d="M10.4 13.4H4.2a1.6 1.6 0 0 1-1.6-1.6V5.2" />
-                  </svg>
-                </button>
-
-                <!-- Без звуковой записи скачивать нечего: у темы есть только подпись. -->
-                <button
-                  v-tip="
-                    row.audio === null
-                      ? 'Записи нет'
-                      : saving === row.key
-                        ? 'Скачивается…'
-                        : saved === row.key
-                          ? 'Сохранено'
-                          : 'Скачать трек'
-                  "
-                  class="am-tune__act"
-                  :class="{
-                    'am-tune__act--done': saved === row.key,
-                    'am-tune__act--wait': saving === row.key,
-                  }"
-                  type="button"
-                  :disabled="row.audio === null || saving !== null"
-                  aria-label="Скачать трек"
-                  @click="onSave(row)"
-                >
-                  <svg v-if="saving === row.key" class="am-tune__glyph" viewBox="0 0 16 16">
-                    <path d="M8 2.2a5.8 5.8 0 1 1-5.8 5.8" />
-                  </svg>
-                  <svg v-else-if="saved === row.key" class="am-tune__glyph" viewBox="0 0 16 16">
-                    <path d="M3.6 8.4 6.4 11.2 12.4 5" />
-                  </svg>
-                  <svg v-else class="am-tune__glyph" viewBox="0 0 16 16">
-                    <path d="M8 2.8v6.8" />
-                    <path d="M5.2 7.2 8 10l2.8-2.8" />
-                    <path d="M3.2 12.4h9.6" />
-                  </svg>
-                </button>
-              </span>
-            </li>
-          </ul>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 </template>
 

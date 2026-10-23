@@ -621,8 +621,8 @@
   font-size: 11px;
   font-weight: 600;
   line-height: 1.2;
-  color: var(--am-accent);
-  background: rgb(var(--am-accent-rgb) / 0.16);
+  color: #eef3fb;
+  background: color-mix(in srgb, var(--am-accent) 58%, #0b1017);
   border-radius: var(--am-r-cap);
 }
 

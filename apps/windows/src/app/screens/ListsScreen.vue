@@ -373,6 +373,8 @@ onMounted(() => {
       // Только снимок с диска: в сеть за списком экран сам не ходит. Перенос человек заводит сам в настройках, и там же выбирает способ.
       await initCollection()
       refill()
+      // Возврат с прежним словом: поиск по своему списку запускается заново.
+      if (searching.value) void runSearch()
     } catch (e) {
       trouble.value = describe(e)
     } finally {
@@ -423,7 +425,7 @@ onBeforeUnmount(() => {
         class="am-sort"
         :model-value="sortKey"
         :items="SORT_TABS"
-        mark="⇅"
+        icon="sort"
         label="Порядок показа"
         @update:model-value="pickSort"
       />
@@ -587,28 +589,30 @@ onBeforeUnmount(() => {
 
     <!-- То же окно, что на карточке; потолок счёта из склада обликов: без облика потолка нет — это
          штатно и честнее выдуманного итога. -->
-    <EntrySheet
-      v-if="editRow"
-      :title="editName"
-      :status="editStatus"
-      :score10="editRow.score10"
-      :progress="editRow.progress"
-      :parts-total="editParts"
-      :ongoing="editOngoing"
-      :repeat="editRow.repeat"
-      :started-at="editRow.startedAt"
-      :completed-at="editRow.completedAt"
-      :notes="editRow.notes"
-      @close="closeEdit"
-      @status="onEditStatus"
-      @remove="onEditRemove"
-      @score="onEditScore"
-      @progress="onEditProgress"
-      @repeat="onEditRepeat"
-      @started-at="onEditStarted"
-      @completed-at="onEditCompleted"
-      @notes="onEditNotes"
-    />
+    <Transition name="am-sheet">
+      <EntrySheet
+        v-if="editRow"
+        :title="editName"
+        :status="editStatus"
+        :score10="editRow.score10"
+        :progress="editRow.progress"
+        :parts-total="editParts"
+        :ongoing="editOngoing"
+        :repeat="editRow.repeat"
+        :started-at="editRow.startedAt"
+        :completed-at="editRow.completedAt"
+        :notes="editRow.notes"
+        @close="closeEdit"
+        @status="onEditStatus"
+        @remove="onEditRemove"
+        @score="onEditScore"
+        @progress="onEditProgress"
+        @repeat="onEditRepeat"
+        @started-at="onEditStarted"
+        @completed-at="onEditCompleted"
+        @notes="onEditNotes"
+      />
+    </Transition>
   </section>
 </template>
 
