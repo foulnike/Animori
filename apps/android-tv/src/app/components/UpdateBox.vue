@@ -314,6 +314,34 @@ onBeforeUnmount(() => {
   flex: 1 1 auto;
 }
 
+/* Телефон: центр экрана и границы как у прочих оверлеев — токены держат системные полосы;
+   флекс вместо сетки: авто-трек grid рос по содержимому и уводил коробку за край. */
+@media (max-width: 640px) {
+  .am-modal {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-block: var(--am-modal-top) var(--am-modal-bottom);
+    padding-inline: 12px;
+  }
+
+  .am-modal__box {
+    width: 100%;
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .am-modal__title {
+    font-size: 17px;
+  }
+
+  .am-modal__x {
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .am-modal__box {
     animation: none;
