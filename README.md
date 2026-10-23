@@ -83,7 +83,7 @@
   </tr>
   <tr>
     <td width="50%"><img src="apps/android-tv/screens/preview-lists.png" alt="Мои списки"><br><sub><b>Списки.</b> Статусы, оценки и поиск по своему списку.</sub></td>
-    <td width="50%"><img src="apps/android-tv/screens/preview-card.png" alt="Карточка тайтла"><br><sub><b>Карточка.</b> Русское описание, кадры, персонажи, музыка.</sub></td>
+    <td width="50%"><img src="apps/android-tv/screens/preview-card.png" alt="Карточка тайтла"><br><sub><b>Карточка.</b> Русское описание, кадры, персонажи.</sub></td>
   </tr>
 </table>
 
@@ -98,11 +98,9 @@ APK в [выпусках](https://github.com/foulnike/Animori/releases):
 
 <table>
   <tr>
-    <td width="50%"><img src="apps/android/screens/phone-home.jpg" alt="Главная: календарь выхода, продолжение просмотра, полки"><br><sub><b>Главная.</b> Календарь выхода, продолжение просмотра, полки.</sub></td>
-    <td width="50%"><img src="apps/android/screens/phone-lists.jpg" alt="Моё: списки по статусам"><br><sub><b>Списки.</b> Статусы, оценки и поиск по своему списку.</sub></td>
-  </tr>
-  <tr>
-    <td width="50%"><img src="apps/android/screens/phone-card.jpg" alt="Карточка тайтла"><br><sub><b>Карточка.</b> Русское описание, кадры, персонажи, музыка.</sub></td>
+    <td width="33%"><img src="apps/android/screens/phone-home.jpg" alt="Главная: календарь выхода, продолжение просмотра, полки"><br><sub><b>Главная.</b> Календарь выхода, продолжение просмотра, полки.</sub></td>
+    <td width="33%"><img src="apps/android/screens/phone-lists.jpg" alt="Моё: списки по статусам"><br><sub><b>Списки.</b> Статусы, оценки и поиск по своему списку.</sub></td>
+    <td width="33%"><img src="apps/android/screens/phone-card.jpg" alt="Карточка тайтла"><br><sub><b>Карточка.</b> Русское описание, кадры, персонажи, музыка.</sub></td>
   </tr>
 </table>
 
