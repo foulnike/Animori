@@ -8,7 +8,7 @@
 
 Неофициальный клиент AniList для Windows, Android TV и телефона. Перевод контента — Shikimori.
 
-[![Лицензия](https://img.shields.io/badge/лицензия-MIT-02A9FF?style=flat-square&labelColor=0B1622)](LICENSE)
+[![Лицензия](https://img.shields.io/badge/Лицензия-MIT-02A9FF?style=flat-square&labelColor=0B1622)](LICENSE)
 [![Windows](https://img.shields.io/badge/Windows%2010%2F11-0078D4?style=flat-square&logo=windows&logoColor=white)](apps/windows)
 [![Android TV](https://img.shields.io/badge/Android%20TV%207.0%2B-3DDC84?style=flat-square&logo=androidtv&logoColor=black)](apps/android-tv)
 [![Android](https://img.shields.io/badge/Android%207.0%2B-3DDC84?style=flat-square&logo=android&logoColor=black)](apps/android)
@@ -32,7 +32,7 @@
 
 | Приложение | Версия | Скачать |
 | :--- | :--- | :--- |
-| **Windows** 10/11 | 3.1.2 | [установщик, MSI, портативный архив](https://github.com/foulnike/Animori/releases/latest) |
+| **Windows** 10/11 | 3.1.2 | [MSI, NSIS и Portable (x64)](https://github.com/foulnike/Animori/releases/latest) |
 | **Android TV** 7.0+ | 3.1.2 | [APK arm64 и armv7](https://github.com/foulnike/Animori/releases/tag/android-tv-v3.1.2) |
 | **Телефон** (Android 7.0+) | 3.1.2 | [APK arm64 и armv7](https://github.com/foulnike/Animori/releases/tag/android-v3.1.2) |
 
