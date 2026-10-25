@@ -19,6 +19,7 @@
 ![Tauri 2](https://img.shields.io/badge/Tauri%202-FFC131?style=flat-square&logo=tauri&logoColor=black)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white)
+![Claude](https://img.shields.io/badge/Claude-D97757?style=flat-square&logo=claude&logoColor=white)
 
 **[Скачать для Windows](https://github.com/foulnike/Animori/releases/latest)** ·
 **[Скачать APK для Android TV](https://github.com/foulnike/Animori/releases/tag/android-tv-v3.1.2)** ·
@@ -58,7 +59,7 @@
 
 <table>
   <tr>
-    <td width="50%"><img src="apps/windows/assets/screenshots/lists.jpg" alt="Моё: списки по статусам"><br><sub><b>Список.</b> Живёт на устройстве, открывается без сети.</sub></td>
+    <td width="50%"><img src="apps/windows/assets/screenshots/lists.jpg" alt="Моё: списки по статусам"><br><sub><b>Список.</b> Хранится на устройстве, открывается без сети.</sub></td>
     <td width="50%"><img src="apps/windows/assets/screenshots/media.jpg" alt="Карточка тайтла"><br><sub><b>Тайтл.</b> Русское описание, кадры, трейлер, персонажи, опенинги.</sub></td>
   </tr>
   <tr>
@@ -100,7 +101,7 @@ APK в [выпусках](https://github.com/foulnike/Animori/releases):
   <tr>
     <td width="33%"><img src="apps/android/screens/phone-home.jpg" alt="Главная: календарь выхода, продолжение просмотра, полки"><br><sub><b>Главная.</b> Календарь выхода, продолжение просмотра, полки.</sub></td>
     <td width="33%"><img src="apps/android/screens/phone-lists.jpg" alt="Моё: списки по статусам"><br><sub><b>Списки.</b> Статусы, оценки и поиск по своему списку.</sub></td>
-    <td width="33%"><img src="apps/android/screens/phone-card.jpg" alt="Карточка тайтла"><br><sub><b>Карточка.</b> Русское описание, кадры, персонажи, музыка.</sub></td>
+    <td width="33%"><img src="apps/android/screens/phone-card.jpg" alt="Карточка тайтла"><br><sub><b>Карточка.</b> Русское описание, кадры, персонажи.</sub></td>
   </tr>
 </table>
 
@@ -147,6 +148,9 @@ cd apps/android   && npm run tauri -- android dev   # туннель adb: см. 
 описания приходят из [Shikimori](https://shikimori.one);
 датасет собирается в [animori-data](https://github.com/foulnike/animori-data). Проект
 неофициальный и с командой AniList не связан.
+
+> [!WARNING]
+> В разработке приложения принимали участие нейросети.
 
 ## Правовые документы
 
