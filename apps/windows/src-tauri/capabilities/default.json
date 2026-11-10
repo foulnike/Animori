@@ -28,31 +28,17 @@
     "allow-animori-track-write",
     "allow-animori-proxy-status",
     "allow-animori-proxy-probe",
-    {
-      "identifier": "http:default",
-      "allow": [
-        { "url": "https://graphql.anilist.co/*" },
-        { "url": "https://shikimori.io/*" },
-        { "url": "https://shikimori.rip/*" },
-        { "url": "https://api.animethemes.moe/*" },
-        { "url": "https://*.animethemes.moe/*" },
-        { "url": "https://raw.githubusercontent.com/*" },
-        { "url": "https://github.com/foulnike/animori-data/*" },
-        { "url": "https://objects.githubusercontent.com/*" },
-        { "url": "https://s4.anilist.co/*" },
-        { "url": "https://github.com/foulnike/Animori/*" },
-        { "url": "https://kodik-api.com/*" },
-        { "url": "https://kodikplayer.com/*" },
-        { "url": "https://*.solodcdn.com/*" },
-        { "url": "https://*.kodik-cdn.com/*" },
-        { "url": "https://i.kodikres.com/*" },
-        { "url": "https://anilibria.top/*" },
-        { "url": "https://cloud-api.yandex.net/*" },
-        { "url": "https://*.disk.yandex.net/*" },
-        { "url": "https://*.dst.yandex.net/*" },
-        { "url": "https://*.dst.yandex.ru/*" },
-        { "url": "https://*.disk.yandex.ru/*" }
-      ]
-    }
+    "allow-animori-proxy-password-status",
+    "allow-animori-proxy-password-set",
+    "allow-animori-http-request",
+    "allow-animori-cloud-status",
+    "allow-animori-cloud-connect",
+    "allow-animori-cloud-delete",
+    "allow-animori-cloud-check",
+    "allow-animori-cloud-stat",
+    "allow-animori-cloud-save",
+    "allow-animori-cloud-restore",
+    "allow-animori-cloud-share",
+    "allow-animori-cloud-unshare"
   ]
 }

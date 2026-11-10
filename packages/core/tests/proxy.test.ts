@@ -15,9 +15,11 @@ import {
   type ProxyConfig,
 } from '../src/core/proxy'
 import {
+  proxyPasswordSet,
   proxyRestartNeeded,
   readProxyConfig,
   saveProxyField,
+  saveProxyPassword,
 } from '../src/core/proxy-settings'
 
 /** Настройка со всеми полями на месте: тест меняет только то, что проверяет. */
@@ -28,7 +30,6 @@ function config(over: Partial<ProxyConfig> = {}): ProxyConfig {
     host: '127.0.0.1',
     port: 8080,
     login: '',
-    password: '',
     bypass: '',
     ...over,
   }
@@ -101,9 +102,8 @@ describe('адрес прокси', () => {
   })
 
   it('учётные данные в адрес не попадают', () => {
-    // Пароль с собакой и двоеточием склейку user:pass@host разломал бы,
-    // поэтому логин и пароль уходят отдельно, через basicAuth.
-    expect(proxyUrl(config({ login: 'u', password: 'p@ss:word' }))).toBe('http://127.0.0.1:8080')
+    // Учётные данные в адрес не склеиваются: логин и пароль подставляет оболочка отдельно.
+    expect(proxyUrl(config({ login: 'u' }))).toBe('http://127.0.0.1:8080')
   })
 })
 
@@ -217,16 +217,47 @@ describe('чтение и запись настроек', () => {
     expect((await readProxyConfig()).enabled).toBe(false)
   })
 
-  it('пробелы обрезаются у адреса и логина, но не у пароля', async () => {
+  it('пробелы обрезаются у адреса и логина', async () => {
     await mock.bridge.storage.set('set_proxy_host', ' 127.0.0.1 ')
     await mock.bridge.storage.set('set_proxy_login', ' user ')
-    await mock.bridge.storage.set('set_proxy_pass', ' pass ')
 
     const read = await readProxyConfig()
 
     expect(read.host).toBe('127.0.0.1')
     expect(read.login).toBe('user')
-    expect(read.password).toBe(' pass ')
+  })
+
+  it('пароль в настройку окна не попадает, даже если лежит в хранилище', async () => {
+    // Старый файл настроек: пароль открытым текстом. Окно не должно ни читать, ни видеть его.
+    await mock.bridge.storage.set('set_proxy_pass', ' pass ')
+
+    const read = await readProxyConfig()
+
+    expect('password' in read).toBe(false)
+    expect(JSON.stringify(read)).not.toContain('pass ')
+    expect(mock.calls.storageGet).not.toContain('set_proxy_pass')
+  })
+
+  it('пароль уходит в оболочку, а не в хранилище окна, и не обрезается', async () => {
+    expect(await proxyPasswordSet()).toBe(false)
+
+    expect(await saveProxyPassword(' p@ss word ')).toBe(true)
+    expect(mock.bridge.proxyDiagnostics.setPassword).toHaveBeenCalledWith(' p@ss word ')
+    expect(mock.calls.storageSet.map((c) => c.key)).not.toContain('set_proxy_pass')
+    expect(await proxyPasswordSet()).toBe(true)
+
+    expect(await saveProxyPassword('')).toBe(false)
+    expect(await proxyPasswordSet()).toBe(false)
+  })
+
+  it('отказ оболочки при записи пароля даёт null и запись в журнал без пароля', async () => {
+    mock.bridge.proxyDiagnostics.setPassword = vi.fn(async () => {
+      throw new Error('секреты: шифр системы недоступен')
+    })
+
+    expect(await saveProxyPassword('hunter2-secret')).toBeNull()
+    const logged = JSON.stringify(vi.mocked(console.error).mock.calls)
+    expect(logged).not.toContain('hunter2-secret')
   })
 
   it('порт читается из строки', async () => {

@@ -1,40 +1,23 @@
 // Настройки окна: прямого доступа к файлу у разметки нет, всё идёт этими двумя командами.
+// Секреты (пропуски и пароль прокси) окну не выдаются и не принимаются: их читают и пишут
+// только команды Rust через secrets.rs.
 
 use std::collections::HashMap;
 
 use tauri::AppHandle;
 use tauri_plugin_store::StoreExt;
 
-use crate::secrets;
+use crate::secrets::{self, Secret};
 
-/// Тот же файл, что у auth.rs и proxy.rs: второе хранилище разошлось бы с первым.
-const STORE_FILE: &str = "animori-settings.json";
+/// Тот же файл, что у secrets.rs, auth.rs и proxy.rs: второе хранилище разошлось бы с первым.
+const STORE_FILE: &str = secrets::STORE_FILE;
 
-/// Пропуск и срок его жизни: читает и пишет их только Rust.
-const CLOSED_KEYS: &[&str] = &["auth_token", "auth_expires_at"];
+/// Служебные ключи, закрытые от окна помимо секретов: срок пропуска пишет только вход.
+const CLOSED_KEYS: &[&str] = &["auth_expires_at"];
 
-/// Ключ облака: шифруется через DPAPI, читается обратно прозрачно.
-const CLOUD_KEY: &str = "am_cloud_token";
-
-/// Расшифровывает значение для окна; секрет остаётся на диске шифром.
-/// Не расшифровалось (чужая машина, битый файл) — отдаём пусто, а не роняем весь снимок настроек.
-fn read_for_window(key: &str, value: serde_json::Value) -> serde_json::Value {
-    if key == CLOUD_KEY {
-        if let Some(stored) = value.as_str() {
-            if let Some(res) = secrets::unprotect(stored) {
-                return match res {
-                    Ok(text) => serde_json::Value::String(text),
-                    Err(e) => {
-                        log::warn!(
-                            "Пропуск облака не расшифрован ({e}) — потребуется повторный вход."
-                        );
-                        serde_json::Value::String(String::new())
-                    }
-                };
-            }
-        }
-    }
-    value
+/// Закрыт ли ключ для окна: секрет или служебный.
+fn closed(key: &str) -> bool {
+    Secret::is_secret_key(key) || CLOSED_KEYS.contains(&key)
 }
 
 /// Снимок файла настроек без закрытых ключей одним вызовом.
@@ -44,35 +27,56 @@ pub fn animori_storage_read(app: AppHandle) -> Result<HashMap<String, serde_json
 
     let mut out = HashMap::new();
     for (key, value) in store.entries() {
-        if CLOSED_KEYS.contains(&key.as_str()) {
+        if closed(&key) {
             continue;
         }
-        out.insert(key.clone(), read_for_window(&key, value));
+        out.insert(key, value);
     }
     Ok(out)
 }
 
-/// Пишет значение и сразу выгружает файл на диск.
+/// Пишет значение и сразу выгружает файл на диск. Закрытый ключ — отказ без записи:
+/// значение в текст ошибки не попадает, только имя ключа.
 #[tauri::command]
 pub fn animori_storage_write(
     app: AppHandle,
     key: String,
     value: serde_json::Value,
 ) -> Result<(), String> {
-    if CLOSED_KEYS.contains(&key.as_str()) {
+    if closed(&key) {
         return Err(format!("Ключ закрыт для окна: {key}"));
     }
-
-    let value = if key == CLOUD_KEY {
-        match value.as_str() {
-            Some(s) if !s.is_empty() => serde_json::Value::String(secrets::protect(s)?),
-            _ => value,
-        }
-    } else {
-        value
-    };
 
     let store = app.store(STORE_FILE).map_err(|e| e.to_string())?;
     store.set(key, value);
     store.save().map_err(|e| e.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::closed;
+
+    #[test]
+    fn secrets_and_service_keys_are_closed() {
+        for key in [
+            "auth_token",
+            "auth_expires_at",
+            "am_cloud_token",
+            "set_proxy_pass",
+        ] {
+            assert!(closed(key), "{key} должен быть закрыт");
+        }
+    }
+
+    #[test]
+    fn ordinary_keys_are_open() {
+        for key in [
+            "set_proxy_login",
+            "set_proxy_host",
+            "am_cloud_place",
+            "set_logger",
+        ] {
+            assert!(!closed(key), "{key} должен быть открыт");
+        }
+    }
 }

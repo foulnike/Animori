@@ -5,14 +5,19 @@
     <!-- Обновление ставит само приложение: иначе APK привезти нечем. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
-    <!-- Бэкапы выключены: animori-settings.json держит пропуск AniList и пропуск
-         Яндекс Диска, а на десктопе он шифруется DPAPI, здесь — нет. Пути к
-         секретам не должно быть ни у облака Google, ни у переноса при смене телефона. -->
+    <!-- Бэкапы выключены: animori-settings.json держит пропуск AniList, пропуск
+         Яндекс Диска и пароль прокси шифром Android Keystore (SecretPlugin.kt). Ключ
+         из Keystore не уходит, так что восстановленный шифртекст всё равно не
+         открылся бы; копировать его незачем ни облаку Google, ни переносу на
+         новое устройство. dataExtractionRules — для Android 12+, где allowBackup
+         перенос между устройствами не закрывает. -->
     <application
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/Theme.animori"
         android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:usesCleartextTraffic="${usesCleartextTraffic}">
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"

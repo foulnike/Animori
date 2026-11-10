@@ -2,7 +2,8 @@
 
 import {
   checkAccess as diskCheck,
-  DISK_APP_ROOT,
+  connect as diskConnect,
+  disconnect as diskDisconnect,
   downloadPublic,
   downloadText as diskDownload,
   publicInfo,
@@ -25,9 +26,6 @@ import {
 } from './collection'
 import { saveSetting, settings, type CloudPlace } from './settings'
 import { saveSnapshotNow, SNAPSHOT_VERSION } from './snapshot'
-
-/** Путь файла копии для API Диска: приставка app: и есть папка приложения. */
-const FILE_PATH = `${DISK_APP_ROOT}/${CLOUD_FILE}`
 
 /** Путь копии для человека. Имя папки Диск берёт из OAuth-названия — совпадение с CLOUD_DIR не гарантия. */
 export const CLOUD_PATH = `Приложения/${CLOUD_DIR}/${CLOUD_FILE}`
@@ -96,13 +94,12 @@ interface AppliedCopy {
   count: number
 }
 
-/** Пропуск сейчас или отказ словами. Синхронно: пропуск вставляют руками, живёт он месяцами. */
-function pass(): CloudDone<string> {
+/** Можно ли идти в облако, или отказ словами. Сам пропуск лежит в оболочке, сюда не попадает. */
+function pass(): CloudDone<true> {
   if (settings.cloudPlace === 'yandex') {
-    const token = settings.cloudToken.trim()
-    if (token === '') return { ok: false, problem: 'Пропуск Яндекс Диска не введён' }
+    if (!settings.cloudConnected) return { ok: false, problem: 'Пропуск Яндекс Диска не введён' }
 
-    return { ok: true, value: token }
+    return { ok: true, value: true }
   }
 
   if (settings.cloudPlace === 'google') {
@@ -119,14 +116,27 @@ function pass(): CloudDone<string> {
 
 /** Есть ли чем ходить в облако: мгновенно и без сети; годность пропуска знает только checkChosenPlace(). */
 export function cloudReady(): boolean {
-  return settings.cloudPlace === 'yandex' && settings.cloudToken.trim() !== ''
+  return settings.cloudPlace === 'yandex' && settings.cloudConnected
 }
 
-/** Проверяет вставленный пропуск, не сохраняя: «не годится» лучше сказать сразу. */
-export async function checkPlace(token: string): Promise<CloudDone<true>> {
-  const done = await diskCheck(token)
+/**
+ * Проверяет вставленный пропуск и, если Диск его принял, оставляет в оболочке шифром.
+ * Негодный пропуск не сохраняется: молча запомнить его — соврать, что облако подключено.
+ */
+export async function connectPlace(token: string): Promise<CloudDone<true>> {
+  const done = await diskConnect(token)
   if (!done.ok) return done
 
+  settings.cloudConnected = true
+  return { ok: true, value: true }
+}
+
+/** Забывает пропуск. Файл копии на Диске остаётся: стирать чужое хранилище программа не вправе. */
+export async function disconnectPlace(): Promise<CloudDone<true>> {
+  const done = await diskDisconnect()
+  if (!done.ok) return done
+
+  settings.cloudConnected = false
   return { ok: true, value: true }
 }
 
@@ -135,7 +145,7 @@ export async function checkChosenPlace(): Promise<CloudDone<true>> {
   const token = pass()
   if (!token.ok) return token
 
-  const done = await diskCheck(token.value)
+  const done = await diskCheck()
   if (!done.ok) return { ok: false, problem: done.problem }
 
   return { ok: true, value: true }
@@ -160,8 +170,8 @@ export function cloudPathText(): string {
 
 /**
  * Запоминает время правки по словам облака после своего касания; неудача пишет пустоту («не знаем»). */
-async function rememberSeen(token: string): Promise<void> {
-  const seen = await diskStat(token, FILE_PATH)
+async function rememberSeen(): Promise<void> {
+  const seen = await diskStat()
   const mark = seen.ok && seen.value !== null ? (seen.value.modified ?? '') : ''
   await saveSetting('cloudSeenModified', 'am_cloud_seen_modified', mark)
 }
@@ -193,7 +203,7 @@ export async function saveCopy(device: string, force = false): Promise<CloudSave
 
   // Сторож перед записью — см. шапку: один дешёвый запрос перед заливкой в сотни килобайт.
   if (!force) {
-    const there = await diskStat(token.value, FILE_PATH)
+    const there = await diskStat()
     if (!there.ok) return there
 
     const found = there.value
@@ -208,13 +218,13 @@ export async function saveCopy(device: string, force = false): Promise<CloudSave
     }
   }
 
-  const sent = await diskUpload(token.value, FILE_PATH, built.text)
+  const sent = await diskUpload(built.text)
   if (!sent.ok) return sent
 
   // Отметка о копии пишется ПОСЛЕ успеха: обещание несуществующей копии хуже её отсутствия.
   await saveSetting('cloudSavedAt', 'am_cloud_saved_at', built.file.savedAt)
   await saveSetting('cloudSavedCount', 'am_cloud_saved_count', built.file.count)
-  await rememberSeen(token.value)
+  await rememberSeen()
 
   Logger('DB', `Облако: копия сохранена, записей ${built.file.count}, байт ${built.bytes}`)
 
@@ -229,7 +239,7 @@ export async function copyInfo(): Promise<CloudDone<CloudInfo>> {
   const token = pass()
   if (!token.ok) return token
 
-  const found = await diskStat(token.value, FILE_PATH)
+  const found = await diskStat()
   if (!found.ok) return found
 
   if (found.value === null) {
@@ -252,7 +262,7 @@ export async function shareCopy(): Promise<CloudDone<string>> {
   const token = pass()
   if (!token.ok) return token
 
-  return shareFile(token.value, FILE_PATH)
+  return shareFile()
 }
 
 /** Закрывает ссылку. Сам файл копии остаётся на месте и в работе. */
@@ -260,7 +270,7 @@ export async function unshareCopy(): Promise<CloudDone<true>> {
   const token = pass()
   if (!token.ok) return token
 
-  const done = await unshareFile(token.value, FILE_PATH)
+  const done = await unshareFile()
   if (!done.ok) return done
 
   return { ok: true, value: true }
@@ -408,7 +418,7 @@ export async function pullCopy(mode: PullMode): Promise<CloudDone<CloudApplied>>
 
   await initCollection()
 
-  const got = await diskDownload(token.value, FILE_PATH)
+  const got = await diskDownload()
   if (!got.ok) return got
 
   const done = await applyText(got.value, mode)
@@ -417,7 +427,7 @@ export async function pullCopy(mode: PullMode): Promise<CloudDone<CloudApplied>>
   // Прочитанная копия с этого момента знакомая: сохранение поверх неё спрашивать не должно.
   await saveSetting('cloudSavedAt', 'am_cloud_saved_at', done.value.savedAt)
   await saveSetting('cloudSavedCount', 'am_cloud_saved_count', done.value.count)
-  await rememberSeen(token.value)
+  await rememberSeen()
 
   return { ok: true, value: done.value.applied }
 }

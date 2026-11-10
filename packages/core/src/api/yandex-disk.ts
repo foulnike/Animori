@@ -1,11 +1,9 @@
 // Клиент Яндекс Диска: сеть и разбор ответов; что и когда уезжает, решают core/cloud-file.ts.
 // Два шага (адрес живёт полчаса, ведёт на другой хост), копия — в app:, ссылка вместо входа.
 
-import { Bridge } from '@/bridge'
+import { Bridge, BridgeHttpError, type CloudStep } from '@/bridge'
 import { Logger } from '../utils/logger'
-
-/** Ресурсы Диска: и метаданные, и одноразовые адреса тел живут здесь. */
-const API = 'https://cloud-api.yandex.net/v1/disk/resources'
+import { redactUrl } from '../utils/redact'
 
 /** Опубликованные ресурсы. Пропуск этим адресам не нужен и не передаётся. */
 const PUBLIC_API = 'https://cloud-api.yandex.net/v1/disk/public/resources'
@@ -47,20 +45,6 @@ export interface DiskFileInfo {
 
 /** Исход обращения к Диску: отказ не исключение — экрану нужна фраза для человека, а не стек. */
 export type DiskResult<T> = { ok: true; value: T } | { ok: false; problem: string }
-
-/** Заголовки к API. Пропуск ходит только так: в адресе ему не место. */
-function headers(token: string): Record<string, string> {
-  return { Authorization: `OAuth ${token}`, Accept: 'application/json' }
-}
-
-/**
- * Путь Диска в виде значения параметра: приставку app: трогать нельзя — косая черта превратила бы её в папку
- * с двоеточием в имени. Для остальных путей вид с косой чертой равносилен «disk:/x» и короче при кодировании.
- */
-function diskPath(path: string): string {
-  if (path.startsWith(`${DISK_APP_ROOT}/`)) return encodeURIComponent(path)
-  return encodeURIComponent(path.startsWith('/') ? path : `/${path}`)
-}
 
 /** Что сказал Диск словами: ключ ошибки в теле справочник обещает, но какой именно — нет. */
 function said(text: string): string {
@@ -175,216 +159,175 @@ function fileOf(item: Record<string, unknown>): DiskFileInfo {
 }
 
 /**
- * Одноразовый адрес для тела файла: Диск отвечает объектом Link, разбирает его hrefOf — тот же разбор у публичного
- * чтения.
+ * Отказ облачной команды в фразу. Транспорт — «проверьте сеть» или «не ответил вовремя»;
+ * прочее (пропуск не введён, адрес вне списка) оболочка уже сказала словами.
  */
-async function linkFor(
-  token: string,
-  kind: 'upload' | 'download',
-  path: string,
-  extra: string,
-  what: string,
-): Promise<DiskResult<string>> {
-  const url = `${API}/${kind}?path=${diskPath(path)}${extra}`
-
-  try {
-    const res = await Bridge.http.request({
-      url,
-      headers: headers(token),
-      timeoutMs: LINK_TIMEOUT_MS,
-      credentials: 'omit',
-    })
-
-    if (!res.ok) return { ok: false, problem: problem(res.status, res.text, what) }
-
-    return hrefOf(res.text, what)
-  } catch (e) {
-    Logger('WARN', `Яндекс Диск: адрес для ${kind} не получен`, e)
-    return { ok: false, problem: offline(e, what) }
-  }
+function failed(e: unknown, what: string): string {
+  if (e instanceof BridgeHttpError) return offline(e, what)
+  const words = e instanceof Error ? e.message : String(e)
+  return words === '' ? `${what}: не получилось` : words
 }
 
 /**
- * Проверка пропуска: спрашивается папка приложения — самый дешёвый запрос, отвечающий на нужный вопрос.
- * Отсутствие папки тоже «годен»: её заведёт Диск сам, иначе честный пропуск выглядел бы негодным.
+ * Шаг, где нужен был одноразовый адрес тела: link — Диск адрес не выдал или выдал не тот,
+ * body — ответ самого тела. Разбор отказа на link тот же, что у hrefOf.
  */
-export async function checkAccess(token: string): Promise<DiskResult<true>> {
-  const what = 'Проверка пропуска'
+function linkProblem(step: CloudStep, what: string): string {
+  if (step.status < 200 || step.status >= 300) return problem(step.status, step.text, what)
+  const href = hrefOf(step.text, what)
+  return href.ok ? `${what}: Диск прислал адрес, который программа не принимает` : href.problem
+}
 
+const okStatus = (status: number): boolean => status >= 200 && status < 300
+
+/**
+ * Проверяет пропуск у Диска и, если он годен, оставляет его в оболочке шифром. Сам пропуск
+ * отсюда больше никуда не уходит. Отсутствие папки — тоже «годен»: её заведёт Диск сам.
+ */
+export async function connect(token: string): Promise<DiskResult<true>> {
+  const what = 'Проверка пропуска'
   if (token.trim() === '') return { ok: false, problem: 'Пропуск Яндекс Диска не введён' }
 
   try {
-    const res = await Bridge.http.request({
-      url: `${API}?path=${diskPath(`${DISK_APP_ROOT}/`)}&fields=name`,
-      headers: headers(token),
-      timeoutMs: LINK_TIMEOUT_MS,
-      credentials: 'omit',
-    })
+    const step = await Bridge.cloud.connect(token)
+    if (step.status === 404 || okStatus(step.status)) {
+      Logger('API', 'Яндекс Диск: пропуск принят')
+      return { ok: true, value: true }
+    }
+    return { ok: false, problem: problem(step.status, step.text, what) }
+  } catch (e) {
+    Logger('WARN', 'Яндекс Диск: проверка пропуска не удалась', e)
+    return { ok: false, problem: failed(e, what) }
+  }
+}
 
-    if (res.status === 404) {
+/** Забывает пропуск в оболочке. Файл копии на Диске не трогается. */
+export async function disconnect(): Promise<DiskResult<true>> {
+  try {
+    await Bridge.cloud.forget()
+    return { ok: true, value: true }
+  } catch (e) {
+    Logger('WARN', 'Яндекс Диск: пропуск не стёрт', e)
+    return { ok: false, problem: failed(e, 'Отключение облака') }
+  }
+}
+
+/** Проверка сохранённого пропуска: спрашивается папка приложения — самый дешёвый запрос. */
+export async function checkAccess(): Promise<DiskResult<true>> {
+  const what = 'Проверка пропуска'
+
+  try {
+    const step = await Bridge.cloud.check()
+    if (step.status === 404) {
       Logger('API', 'Яндекс Диск: пропуск принят, папки приложения ещё нет')
       return { ok: true, value: true }
     }
-
-    if (!res.ok) return { ok: false, problem: problem(res.status, res.text, what) }
+    if (!okStatus(step.status)) return { ok: false, problem: problem(step.status, step.text, what) }
 
     Logger('API', 'Яндекс Диск: пропуск принят')
     return { ok: true, value: true }
   } catch (e) {
     Logger('WARN', 'Яндекс Диск: проверка пропуска не удалась', e)
-    return { ok: false, problem: offline(e, what) }
+    return { ok: false, problem: failed(e, what) }
   }
 }
 
-/**
- * Сведения о файле или null, если файла нет: отсутствие копии — законный ответ, а не отказ.
- */
-export async function statFile(
-  token: string,
-  path: string,
-): Promise<DiskResult<DiskFileInfo | null>> {
+/** Сведения о файле копии или null, если файла нет: отсутствие копии — законный ответ. */
+export async function statFile(): Promise<DiskResult<DiskFileInfo | null>> {
   const what = 'Сведения о копии'
 
   try {
-    const res = await Bridge.http.request({
-      url: `${API}?path=${diskPath(path)}&fields=${FILE_FIELDS}`,
-      headers: headers(token),
-      timeoutMs: LINK_TIMEOUT_MS,
-      credentials: 'omit',
-    })
+    const step = await Bridge.cloud.stat()
+    if (step.status === 404) return { ok: true, value: null }
+    if (!okStatus(step.status)) return { ok: false, problem: problem(step.status, step.text, what) }
 
-    if (res.status === 404) return { ok: true, value: null }
-    if (!res.ok) return { ok: false, problem: problem(res.status, res.text, what) }
-
-    const body = bodyOf(res.text, what)
+    const body = bodyOf(step.text, what)
     if (!body.ok) return body
 
     return { ok: true, value: fileOf(body.value) }
   } catch (e) {
     Logger('WARN', 'Яндекс Диск: сведения о файле не получены', e)
-    return { ok: false, problem: offline(e, what) }
+    return { ok: false, problem: failed(e, what) }
   }
 }
 
-/**
- * Кладёт текст файлом, всегда с перезаписью: копия одна, иначе два файла не различить.
- * Тело уходит по одноразовому адресу, пропуск для этого шага не нужен — он зашит в самом адресе.
- */
-export async function uploadText(
-  token: string,
-  path: string,
-  text: string,
-): Promise<DiskResult<true>> {
+/** Кладёт текст копии, всегда с перезаписью: копия одна, иначе два файла не различить. */
+export async function uploadText(text: string): Promise<DiskResult<true>> {
   const what = 'Сохранение копии'
 
-  const link = await linkFor(token, 'upload', path, '&overwrite=true', what)
-  if (!link.ok) return link
-
   try {
-    const res = await Bridge.http.request({
-      method: 'PUT',
-      url: link.value,
-      headers: { 'Content-Type': 'application/json; charset=utf-8' },
-      body: text,
-      timeoutMs: BODY_TIMEOUT_MS,
-      credentials: 'omit',
-    })
+    const step = await Bridge.cloud.save(text)
+    if (step.stage !== 'body') return { ok: false, problem: linkProblem(step, what) }
 
-    // 201 — файл на месте, 202 — принят и вот-вот ляжет. Второе для нас
-    // такой же успех: копия у Диска, а не у нас в памяти.
-    if (res.status === 201 || res.status === 202) {
+    // 201 — файл на месте, 202 — принят и вот-вот ляжет: копия у Диска, а не у нас в памяти.
+    if (step.status === 201 || step.status === 202) {
       Logger('API', `Яндекс Диск: копия сохранена (${text.length} знаков)`)
       return { ok: true, value: true }
     }
-
-    return { ok: false, problem: problem(res.status, res.text, what) }
+    return { ok: false, problem: problem(step.status, step.text, what) }
   } catch (e) {
     Logger('WARN', 'Яндекс Диск: тело копии не ушло', e)
-    return { ok: false, problem: offline(e, what) }
+    return { ok: false, problem: failed(e, what) }
   }
 }
 
-/**
- * Забирает текст файла: пропуск на втором шаге обязателен — в отличие от записи, адрес на чтение доступа сам
- * по себе не даёт (так велит справочник).
- */
-export async function downloadText(token: string, path: string): Promise<DiskResult<string>> {
+/** Забирает текст копии. */
+export async function downloadText(): Promise<DiskResult<string>> {
   const what = 'Чтение копии'
 
-  const link = await linkFor(token, 'download', path, '', what)
-  if (!link.ok) return link
-
   try {
-    const res = await Bridge.http.request({
-      url: link.value,
-      headers: headers(token),
-      timeoutMs: BODY_TIMEOUT_MS,
-      credentials: 'omit',
-    })
+    const step = await Bridge.cloud.restore()
+    if (step.stage !== 'body') return { ok: false, problem: linkProblem(step, what) }
+    if (!okStatus(step.status)) return { ok: false, problem: problem(step.status, step.text, what) }
 
-    if (!res.ok) return { ok: false, problem: problem(res.status, res.text, what) }
-
-    Logger('API', `Яндекс Диск: копия прочитана (${res.text.length} знаков)`)
-    return { ok: true, value: res.text }
+    Logger('API', `Яндекс Диск: копия прочитана (${step.text.length} знаков)`)
+    return { ok: true, value: step.text }
   } catch (e) {
     Logger('WARN', 'Яндекс Диск: тело копии не пришло', e)
-    return { ok: false, problem: offline(e, what) }
+    return { ok: false, problem: failed(e, what) }
   }
 }
 
 /**
- * Публикует копию и возвращает ссылку: publish отвечает адресом ресурса, public_url появляется в метаданных — за ними
- * второй запрос. Повторная публикация возвращает ту же ссылку, на этом держится кнопка «Показать ссылку».
+ * Публикует копию и возвращает ссылку: public_url появляется в метаданных — за ними второй запрос.
+ * Повторная публикация возвращает ту же ссылку, на этом держится кнопка «Показать ссылку».
  */
-export async function shareFile(token: string, path: string): Promise<DiskResult<string>> {
+export async function shareFile(): Promise<DiskResult<string>> {
   const what = 'Публикация копии'
 
   try {
-    const res = await Bridge.http.request({
-      method: 'PUT',
-      url: `${API}/publish?path=${diskPath(path)}`,
-      headers: headers(token),
-      timeoutMs: LINK_TIMEOUT_MS,
-      credentials: 'omit',
-    })
-
-    if (!res.ok) return { ok: false, problem: problem(res.status, res.text, what) }
+    const step = await Bridge.cloud.share()
+    if (!okStatus(step.status)) return { ok: false, problem: problem(step.status, step.text, what) }
   } catch (e) {
     Logger('WARN', 'Яндекс Диск: публикация не удалась', e)
-    return { ok: false, problem: offline(e, what) }
+    return { ok: false, problem: failed(e, what) }
   }
 
-  const info = await statFile(token, path)
+  const info = await statFile()
   if (!info.ok) return info
   if (info.value === null) return { ok: false, problem: `${what}: копии на Диске нет` }
   if (info.value.share === null) {
     return { ok: false, problem: `${what}: Диск не прислал ссылку на файл` }
   }
 
-  Logger('API', `Яндекс Диск: копия опубликована (${info.value.share})`)
+  // Ссылка публичная по замыслу, но в журнал идёт без хвоста: по нему копию читает любой.
+  Logger('API', `Яндекс Диск: копия опубликована (${redactUrl(info.value.share)})`)
   return { ok: true, value: info.value.share }
 }
 
-/** Снимает публикацию: сам файл остаётся, закрывается доступ по ссылке — старая не работает даже у знавших её. */
-export async function unshareFile(token: string, path: string): Promise<DiskResult<true>> {
+/** Снимает публикацию: файл остаётся, старая ссылка перестаёт работать даже у знавших её. */
+export async function unshareFile(): Promise<DiskResult<true>> {
   const what = 'Закрытие ссылки'
 
   try {
-    const res = await Bridge.http.request({
-      method: 'PUT',
-      url: `${API}/unpublish?path=${diskPath(path)}`,
-      headers: headers(token),
-      timeoutMs: LINK_TIMEOUT_MS,
-      credentials: 'omit',
-    })
-
-    if (!res.ok) return { ok: false, problem: problem(res.status, res.text, what) }
+    const step = await Bridge.cloud.unshare()
+    if (!okStatus(step.status)) return { ok: false, problem: problem(step.status, step.text, what) }
 
     Logger('API', 'Яндекс Диск: копия снята с публикации')
     return { ok: true, value: true }
   } catch (e) {
     Logger('WARN', 'Яндекс Диск: снять публикацию не удалось', e)
-    return { ok: false, problem: offline(e, what) }
+    return { ok: false, problem: failed(e, what) }
   }
 }
 

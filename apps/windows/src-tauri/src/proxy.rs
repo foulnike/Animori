@@ -8,8 +8,11 @@ use serde::Serialize;
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_store::StoreExt;
 
+use crate::secrets::{self, Secret};
+
 /// То же имя, что у storage.rs и auth.rs: файл один на все стороны.
-const STORE_FILE: &str = "animori-settings.json";
+/// Пароль лежит там же, но читается и пишется только через secrets.rs — шифром.
+const STORE_FILE: &str = secrets::STORE_FILE;
 
 /// Проверка идёт в setup() и задерживает появление окна; местному прокси хватает.
 const PROBE_TIMEOUT_MS: u64 = 500;
@@ -27,7 +30,6 @@ const KEY_KIND: &str = "set_proxy_kind";
 const KEY_HOST: &str = "set_proxy_host";
 const KEY_PORT: &str = "set_proxy_port";
 const KEY_LOGIN: &str = "set_proxy_login";
-const KEY_PASSWORD: &str = "set_proxy_pass";
 const KEY_BYPASS: &str = "set_proxy_bypass";
 
 /// Совпадает с DEFAULT_PROXY.bypass в packages/core/src/core/proxy.ts и подставляется только при
@@ -137,13 +139,16 @@ fn read_string(value: Option<serde_json::Value>) -> String {
     }
 }
 
-/// Пароль без обрезки пробелов, как и в карточке настроек: пробел по краям
-/// законен, а тихая правка дала бы отказ авторизации.
-fn read_password(value: Option<serde_json::Value>) -> String {
-    match value {
-        Some(serde_json::Value::String(s)) => s,
-        Some(serde_json::Value::Number(n)) => n.to_string(),
-        _ => String::new(),
+/// Пароль из хранилища секретов, без обрезки пробелов: пробел по краям законен,
+/// а тихая правка дала бы отказ авторизации. Не расшифровался — окно идёт без него.
+fn read_secret_password(app: &AppHandle) -> String {
+    match secrets::read(app, Secret::ProxyPassword) {
+        Ok(Some(password)) => password,
+        Ok(None) => String::new(),
+        Err(e) => {
+            log::warn!("Прокси: пароль не прочитан ({e}) — окно останется без авторизации");
+            String::new()
+        }
     }
 }
 
@@ -265,7 +270,7 @@ fn read_config(app: &AppHandle) -> Config {
         port,
         bypass,
         has_credentials: !login.is_empty(),
-        password: read_password(store.get(KEY_PASSWORD)),
+        password: read_secret_password(app),
         login,
     }))
 }
@@ -478,9 +483,24 @@ pub async fn animori_proxy_probe(app: AppHandle) -> Result<ProxyProbe, String> {
     .map_err(|e| format!("Проверка прокси не завершилась: {e}"))
 }
 
+/// Задан ли пароль прокси. Самого пароля окно не получает никогда: поле в карточке
+/// только для записи и показывает лишь «задан».
+#[tauri::command]
+pub fn animori_proxy_password_status(app: AppHandle) -> bool {
+    secrets::exists(&app, Secret::ProxyPassword)
+}
+
+/// Задаёт пароль прокси; пустая строка стирает его. Пароль не обрезается: пробел по краям законен.
+/// Ответ — задан ли пароль после записи; текст отказа пароля не содержит.
+#[tauri::command]
+pub async fn animori_proxy_password_set(app: AppHandle, password: String) -> Result<bool, String> {
+    secrets::write(&app, Secret::ProxyPassword, &password)?;
+    Ok(secrets::exists(&app, Secret::ProxyPassword))
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{normalize_bypass, read_password, read_port, read_string, DEFAULT_BYPASS};
+    use super::{normalize_bypass, read_port, read_string, DEFAULT_BYPASS};
 
     fn str_value(raw: &str) -> Option<serde_json::Value> {
         Some(serde_json::Value::String(raw.to_string()))
@@ -492,14 +512,6 @@ mod tests {
         assert_eq!(read_string(Some(serde_json::json!(8080))), "8080");
         assert_eq!(read_string(Some(serde_json::Value::Bool(true))), "");
         assert_eq!(read_string(None), "");
-    }
-
-    #[test]
-    fn password_keeps_edge_spaces() {
-        // Пробел по краям законен — карточка настроек его не обрезает.
-        assert_eq!(read_password(str_value("  p@ss word  ")), "  p@ss word  ");
-        assert_eq!(read_password(Some(serde_json::json!(42))), "42");
-        assert_eq!(read_password(None), "");
     }
 
     #[test]

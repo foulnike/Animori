@@ -1,17 +1,13 @@
 # Исключения gitleaks под репо детекта. Детекторы — встроенный набор.
-# Скан идёт по всей истории, поэтому allowlist привязан к пути, а не к коммиту.
+# Скан идёт по всей истории, поэтому allowlist не привязан к отдельному коммиту.
 title = "AniMori: исключения gitleaks"
 
 [extend]
 useDefault = true
 
-# Ключ Kodik личный, ротации нет; глушим по файлам, где он жил в истории (скан идёт по всей истории).
+# Kodik client key foulnike. Исключаем только точное значение.
 [allowlist]
-description = "Ключ Kodik в открытом виде — ротации не подлежит"
-paths = [
-  '''(^|/)kodik\.ts$''',
-  '''(^|/)net-check\.ts$''',
-  '''(^|/)player\.ts$''',
-  '''(^|/)animori\.user\.js$''',
+description = "Kodik client key foulnike"
+regexes = [
+  '''16f20d024a6fa20700b389c44d9ab159''',
 ]
-

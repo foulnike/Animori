@@ -18,8 +18,8 @@ import type {
 } from '../core/video'
 import { kodikLimiter } from './rate-limit'
 
-/** Ключ поиска: он же лежит в открытых плеерах на сайтах-партнёрах. */
-const TOKEN = '16f20d024a6fa20700b389c44d9ab159'
+/** Kodik client key foulnike. */
+const KODIK_PUBLIC_CLIENT_KEY = '16f20d024a6fa20700b389c44d9ab159'
 
 const SEARCH_BASE = 'https://kodik-api.com'
 const PLAYER_BASE = 'https://kodikplayer.com'
@@ -615,7 +615,7 @@ async function loadFoundUncached(shikimoriId: number): Promise<KodikFound> {
   Logger('API', `Запрос Kodik для Shikimori ID: ${shikimoriId}`)
 
   const query = [
-    'token=' + TOKEN,
+    'token=' + KODIK_PUBLIC_CLIENT_KEY,
     'shikimori_id=' + String(shikimoriId),
     'with_seasons=true',
     'with_episodes=true',
@@ -665,7 +665,7 @@ async function loadVoices(shikimoriId: number): Promise<KodikVoiceRow[]> {
 async function askOne(id: number): Promise<KodikSeen | null> {
   let found = false
   const query = [
-    'token=' + TOKEN,
+    'token=' + KODIK_PUBLIC_CLIENT_KEY,
     'shikimori_id=' + String(id),
     'limit=' + String(PRESENCE_LIMIT),
   ].join('&')

@@ -8,8 +8,10 @@ use serde::Serialize;
 use tauri::{AppHandle, Manager, State};
 use tauri_plugin_store::StoreExt;
 
+use crate::secrets::{self, Secret};
+
 /// То же имя, что у storage.rs и auth.rs: файл один на все стороны.
-const STORE_FILE: &str = "animori-settings.json";
+const STORE_FILE: &str = secrets::STORE_FILE;
 
 /// Проверка идёт в setup() и задерживает появление окна; местному прокси хватает.
 const PROBE_TIMEOUT_MS: u64 = 500;
@@ -302,6 +304,21 @@ pub async fn animori_proxy_probe(app: AppHandle) -> Result<ProxyProbe, String> {
     })
     .await
     .map_err(|e| format!("Проверка прокси не завершилась: {e}"))
+}
+
+/// Задан ли пароль прокси. Сам пароль окно не получает никогда: поле в карточке
+/// только для записи и показывает лишь «задан».
+#[tauri::command]
+pub fn animori_proxy_password_status(app: AppHandle) -> bool {
+    secrets::exists(&app, Secret::ProxyPassword)
+}
+
+/// Задаёт пароль прокси; пустая строка стирает его. async обязателен: шифр Keystore
+/// зовёт главный поток и ждёт его. Текст отказа пароля не содержит.
+#[tauri::command]
+pub async fn animori_proxy_password_set(app: AppHandle, password: String) -> Result<bool, String> {
+    secrets::write(&app, Secret::ProxyPassword, &password)?;
+    Ok(secrets::exists(&app, Secret::ProxyPassword))
 }
 
 #[cfg(test)]

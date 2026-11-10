@@ -9,13 +9,13 @@ use tauri::AppHandle;
 use tauri_plugin_http::reqwest;
 use tauri_plugin_store::StoreExt;
 
+use crate::secrets::{self, Secret};
+
 const GRAPHQL_URL: &str = "https://graphql.anilist.co";
 
 /// Тот же файл, что у входа и прокси: второе хранилище разошлось бы с первым.
-const STORE_FILE: &str = "animori-settings.json";
-
-/// Ключ повторяет KEY_TOKEN из auth.rs: пропуск пишет вход, читаем его мы.
-const KEY_TOKEN: &str = "auth_token";
+/// Пропуск и пароль прокси лежат там же, но читаются только через secrets.rs.
+const STORE_FILE: &str = secrets::STORE_FILE;
 
 // Ключи прокси повторяют proxy.rs. Общего разбора нет намеренно: тот файл у потолка размера, и переезд разбора отложен до его следующей правки.
 const KEY_PROXY_ENABLED: &str = "set_proxy_on";
@@ -23,7 +23,6 @@ const KEY_PROXY_KIND: &str = "set_proxy_kind";
 const KEY_PROXY_HOST: &str = "set_proxy_host";
 const KEY_PROXY_PORT: &str = "set_proxy_port";
 const KEY_PROXY_LOGIN: &str = "set_proxy_login";
-const KEY_PROXY_PASSWORD: &str = "set_proxy_pass";
 
 /// Потолок ожидания ответа. AniList отвечает за секунды, всё дольше — авария.
 const TIMEOUT_SECS: u64 = 30;
@@ -64,15 +63,6 @@ fn read_string(value: Option<serde_json::Value>) -> String {
     }
 }
 
-/// Пароль без обрезки краёв: пробел в нём законен, а тихая правка даст отказ.
-fn read_password(value: Option<serde_json::Value>) -> String {
-    match value {
-        Some(serde_json::Value::String(s)) => s,
-        Some(serde_json::Value::Number(n)) => n.to_string(),
-        _ => String::new(),
-    }
-}
-
 /// Ноль значит «значения нет», как в normalizeProxyPort() и в proxy.rs.
 fn read_port(value: Option<serde_json::Value>) -> u16 {
     let parsed = match value {
@@ -88,15 +78,29 @@ fn read_port(value: Option<serde_json::Value>) -> u16 {
     }
 }
 
-/// Пропуск из файла настроек. None — вход не выполнен либо пропуск стёрт. Срок здесь не проверяется: об истёкшем пропуске скажет сам AniList отказом.
+/// Пропуск из хранилища секретов. None — вход не выполнен, пропуск стёрт или не расшифровался.
+/// Срок здесь не проверяется: об истёкшем пропуске скажет сам AniList отказом.
 fn read_token(app: &AppHandle) -> Option<String> {
-    let store = app.store(STORE_FILE).ok()?;
-    let token = read_string(store.get(KEY_TOKEN));
+    match secrets::read(app, Secret::AniListToken) {
+        Ok(Some(token)) if !token.trim().is_empty() => Some(token.trim().to_string()),
+        Ok(_) => None,
+        Err(e) => {
+            // Текст ошибки статичный: секрета в нём нет.
+            log::warn!("Пропуск AniList не прочитан ({e}) — запрос уходит без входа");
+            None
+        }
+    }
+}
 
-    if token.is_empty() {
-        None
-    } else {
-        Some(token)
+/// Пароль прокси из хранилища секретов, без обрезки краёв: пробел в нём законен.
+fn read_proxy_password(app: &AppHandle) -> String {
+    match secrets::read(app, Secret::ProxyPassword) {
+        Ok(Some(password)) => password,
+        Ok(None) => String::new(),
+        Err(e) => {
+            log::warn!("Пароль прокси не прочитан ({e}) — запрос уходит без авторизации у прокси");
+            String::new()
+        }
     }
 }
 
@@ -130,7 +134,7 @@ fn read_proxy(app: &AppHandle) -> Option<(String, String, String)> {
     Some((
         format!("{scheme}://{host}:{port}"),
         read_string(store.get(KEY_PROXY_LOGIN)),
-        read_password(store.get(KEY_PROXY_PASSWORD)),
+        read_proxy_password(app),
     ))
 }
 

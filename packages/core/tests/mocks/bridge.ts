@@ -1,8 +1,19 @@
 import { vi } from 'vitest'
-import { BridgeHttpError, type HttpErrorKind, type IBridge } from '../../src/bridge/IBridge'
+import {
+  BridgeHttpError,
+  type CloudStep,
+  type HttpErrorKind,
+  type IBridge,
+} from '../../src/bridge/IBridge'
 
 export interface MockBridgeHandle {
   bridge: IBridge
+  /** Ответ облачного шага по имени метода моста: connect, check, stat, save, restore, share, unshare. */
+  setCloudStep(name: string, step: CloudStep): void
+  /** Пропуск, будто уже сохранённый в оболочке. */
+  setCloudToken(token: string): void
+  /** Что сейчас «лежит в оболочке» — для проверки, что connect сохранил пропуск. */
+  getCloudToken(): string
   setFile(name: string, text: string | null): void
   getFile(name: string): string | null
   setHttpResponse(url: string, response: unknown): void
@@ -79,8 +90,18 @@ export function createMockBridge(options: { filesAvailable?: boolean } = {}): Mo
   const httpErrors = new Map<string, HttpErrorKind>()
   const byteResponses = new Map<string, Uint8Array>()
   const storage = new Map<string, unknown>()
+  const cloudSteps = new Map<string, CloudStep>()
+  let cloudToken = ''
+  let proxyPassword = ''
 
   const handle: MockBridgeHandle = {
+    setCloudStep: (name, step) => {
+      cloudSteps.set(name, step)
+    },
+    setCloudToken: (token) => {
+      cloudToken = token
+    },
+    getCloudToken: () => cloudToken,
     calls: {
       http: [],
       httpBytes: [],
@@ -187,8 +208,36 @@ export function createMockBridge(options: { filesAvailable?: boolean } = {}): Mo
       proxyDiagnostics: {
         status: vi.fn(),
         probe: vi.fn(),
+        passwordSet: vi.fn(async () => proxyPassword !== ''),
+        setPassword: vi.fn(async (password: string) => {
+          proxyPassword = password
+          return password !== ''
+        }),
+      },
+      // Облако: пропуск живёт в заглушке, как в оболочке, — окну он не возвращается.
+      // Ответы шагов задаются через setCloudStep; по умолчанию 200 с пустым объектом.
+      cloud: {
+        status: vi.fn(async () => cloudToken !== ''),
+        connect: vi.fn(async (token: string) => {
+          const reply = cloudReply('connect')
+          if (reply.status < 300 || reply.status === 404) cloudToken = token.trim()
+          return reply
+        }),
+        forget: vi.fn(async () => {
+          cloudToken = ''
+        }),
+        check: vi.fn(async () => cloudReply('check')),
+        stat: vi.fn(async () => cloudReply('stat')),
+        save: vi.fn(async () => cloudReply('save')),
+        restore: vi.fn(async () => cloudReply('restore')),
+        share: vi.fn(async () => cloudReply('share')),
+        unshare: vi.fn(async () => cloudReply('unshare')),
       },
     },
+  }
+
+  function cloudReply(name: string): CloudStep {
+    return cloudSteps.get(name) ?? { stage: 'api', status: 200, text: '{}' }
   }
 
   return handle

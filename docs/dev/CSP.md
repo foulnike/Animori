@@ -22,12 +22,12 @@
 ## Почему остальное широкое
 
 Приложение не ходит в сеть из webview: `fetch`, `XMLHttpRequest`, `EventSource` и
-`WebSocket` в UI-слое не встречаются, вся сеть идёт через Rust (`tauri-plugin-http`,
-`invoke`). Поэтому сужать `connect-src` бессмысленно, а `img-src` и `media-src` оставлены
+`WebSocket` в UI-слое не встречаются, вся сеть идёт через Rust (команды
+`animori_http_request`, `animori_anilist_query`, `animori_cloud_*` через `invoke`). Поэтому сужать `connect-src` бессмысленно, а `img-src` и `media-src` оставлены
 широкими из-за обилия хостов обложек и зеркал.
 
-Белый список хостов в `capabilities/default.json` (`http:default`), и проверяет его
-Rust. В CSP он намеренно не продублирован: два списка в разных местах разъедутся.
+Белый список хостов в `src-tauri/src/hosts.rs`, и проверяет его Rust (`net.rs`) до
+отправки запроса. В CSP он намеренно не продублирован: два списка в разных местах разъедутся.
 
 ## Проверка после правки
 

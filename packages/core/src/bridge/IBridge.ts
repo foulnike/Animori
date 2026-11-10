@@ -244,10 +244,47 @@ export interface ProxyProbe {
   latencyMs: number
 }
 
+// ==== облако ====
+
+/**
+ * Ответ одного шага облачной команды. stage: `api` — запрос к API Диска; `link` — отказ на
+ * получении одноразового адреса тела; `body` — запрос самого тела. Разбор в слова — в
+ * api/yandex-disk.ts.
+ */
+export interface CloudStep {
+  stage: 'api' | 'link' | 'body'
+  status: number
+  text: string
+}
+
+/**
+ * Облачная копия на Яндекс Диске. Пропуск живёт только в оболочке: окно его отдаёт один раз,
+ * в connect(), и больше не видит — ни ответом, ни текстом ошибки. Файл копии один, путь знает
+ * оболочка. Транспортный сбой — BridgeHttpError, прочие отказы — Error со словами.
+ */
+export interface ICloud {
+  /** Сохранён ли пропуск. Без сети и без расшифровки. */
+  status(): Promise<boolean>
+  /** Проверяет пропуск у Диска и при успехе сохраняет его шифром. */
+  connect(token: string): Promise<CloudStep>
+  /** Стирает пропуск. Файл на Диске не трогается. */
+  forget(): Promise<void>
+  check(): Promise<CloudStep>
+  stat(): Promise<CloudStep>
+  save(text: string): Promise<CloudStep>
+  restore(): Promise<CloudStep>
+  share(): Promise<CloudStep>
+  unshare(): Promise<CloudStep>
+}
+
 /** Состояние прокси. В мосту, а не в карточке настроек: invoke по инварианту 1 допустим
  * только здесь.
  * В браузерной сборке честно отвечает `off`. */
 export interface IProxyDiagnostics {
+  /** Задан ли пароль прокси. Сам пароль окну не отдаётся никогда. */
+  passwordSet(): Promise<boolean>
+  /** Задаёт пароль (пустая строка стирает) и отвечает, задан ли он теперь. */
+  setPassword(password: string): Promise<boolean>
   /** Чем закончилось применение прокси при запуске. Неизменно всё, кроме `auth`: адрес движок
    * читает один раз,
    * авторизация меняется по ходу сеанса. */
@@ -278,4 +315,6 @@ export interface IBridge {
   readonly clipboard: IClipboard
   readonly shell: IShell
   readonly proxyDiagnostics: IProxyDiagnostics
+  /** Облачная копия. Пропуск в разметку не попадает. */
+  readonly cloud: ICloud
 }

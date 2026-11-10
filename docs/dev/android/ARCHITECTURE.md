@@ -23,8 +23,11 @@ Kotlin-активность в `src-tauri/gen/android`. Один webview, кон
 - CSP: `script-src 'self'` без inline и eval, удалённый IPC не разрешён.
 - `opener` и `dialog` не выданы окну: внешний адрес открывается только командой
   с проверкой схемы (http/https).
-- Закрытые ключи настроек (`auth_token`, `auth_expires_at`) команда настроек
-  окну не отдаёт.
+- Закрытые ключи настроек (`auth_token`, `am_cloud_token`, `set_proxy_pass`,
+  `auth_expires_at`) команда настроек окну не отдаёт и записать не даёт.
+  Секреты лежат шифром Android Keystore (`secrets.rs`, `SecretPlugin.kt`).
+- Плагин HTTP окну не выдан: запросы окна идут командой `animori_http_request`
+  (`net.rs`), адрес сверяется со списком `hosts.rs` до сети.
 - `v-html` применяется только к статическим локальным SVG.
 
 ## Picture-in-Picture и кнопки плеера

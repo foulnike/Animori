@@ -3,6 +3,15 @@
 # до корня репозитория (проверено фактом; ci.yml, job rust).
 
 [graph]
+# Только таргеты, которые реально собираются: Windows x64 и четыре ABI Android.
+# Linux-ветки зависимостей (zbus/zvariant у tauri-plugin-opener ради D-Bus) в выпуски не попадают.
+targets = [
+    "x86_64-pc-windows-msvc",
+    "aarch64-linux-android",
+    "armv7-linux-androideabi",
+    "i686-linux-android",
+    "x86_64-linux-android",
+]
 # Флаг в конфиге: граф строится с --all-features и локально, и в CI.
 all-features = true
 

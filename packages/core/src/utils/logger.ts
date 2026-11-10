@@ -1,6 +1,8 @@
 // Ядро журнала: запись, кольцевой буфер в памяти и глобальные перехватчики ошибок. UI сюда не входит,
 // связь через registerLogSink(); буфер один на все виды, ERROR вытесняется последним.
 
+import { redactText, redactValue } from './redact'
+
 export type LogType = 'INFO' | 'WARN' | 'ERROR' | 'DB' | 'API'
 
 export interface LogEntry {
@@ -161,7 +163,7 @@ export function clearLogs(): void {
   }
 }
 
-export function Logger(type: LogType | string, message: string, details: unknown = null): void {
+export function Logger(type: LogType | string, rawMessage: string, details: unknown = null): void {
   if (
     (globalThis as { __ANIMORI_LOGGER_ENABLED__?: boolean }).__ANIMORI_LOGGER_ENABLED__ === false
   ) {
@@ -169,11 +171,10 @@ export function Logger(type: LogType | string, message: string, details: unknown
   }
   if (!enabled) return
 
-  // Ошибка разворачивается в плоский объект: и стек полезен, и в строку он уходит без потерь.
-  const value =
-    details instanceof Error
-      ? { name: details.name, message: details.message, stack: details.stack }
-      : details
+  // Секреты вычёркиваются ДО буфера, sessionStorage и консоли: журнал копируют в чаты поддержки.
+  // redactValue разворачивает и Error в плоский объект со стеком.
+  const message = redactText(rawMessage)
+  const value = redactValue(details)
 
   const d = new Date()
   const time = `${d.toLocaleTimeString('ru-RU', { hour12: false })}.${String(
@@ -209,8 +210,8 @@ export function Logger(type: LogType | string, message: string, details: unknown
     console.error('[AniMori] Читатель журнала упал на записи', e)
   }
 
-  if (type === 'ERROR') console.error(`[AniMori ERROR] ${message}`, details || '')
-  else if (type === 'WARN') console.warn(`[AniMori WARN] ${message}`, details || '')
+  if (type === 'ERROR') console.error(`[AniMori ERROR] ${message}`, entry.details || '')
+  else if (type === 'WARN') console.warn(`[AniMori WARN] ${message}`, entry.details || '')
 }
 
 /** Перехватчики ошибок и восстановление прошлой сессии: ставятся из start(). Вешаются всегда, а не

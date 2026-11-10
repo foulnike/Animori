@@ -3,6 +3,8 @@
 
 export {
   BridgeHttpError,
+  type CloudStep,
+  type ICloud,
   type HttpBytesResponse,
   type HttpErrorKind,
   type HttpMethod,

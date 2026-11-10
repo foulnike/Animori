@@ -30,8 +30,15 @@ mod updater;
 // Прокси для трафика окна. Без cfg сознательно: чтение настроек одинаково везде, разница в применении спрятана внутри модуля.
 mod proxy;
 
-// Секреты в хранилище: шифрация DPAPI для пропуска облака на Windows, прозрачный passthrough на прочих платформах.
+// Хранилище секретов (SecretStore): пропуски и пароль прокси шифром DPAPI. Окно их не видит.
 mod secrets;
+
+// Запросы окна к внешним API (IBridge.http): прокси с паролем собирает Rust, адрес сверяется со списком hosts.rs.
+mod hosts;
+mod net;
+
+// Облачная копия: пропуск Яндекс Диска читается и подставляется только здесь.
+mod cloud;
 
 /// Что запоминается между запусками. Не StateFlags::all(): сохранённый VISIBLE даёт запуск без единого окна, а из FULLSCREEN в окне без меню нечем выйти.
 fn window_state_flags() -> StateFlags {
@@ -156,8 +163,11 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
         .manage(anilist::AniListClientState::default())
+        .manage(net::NetClientState::default())
         .plugin(tauri_plugin_store::Builder::new().build())
-        .plugin(tauri_plugin_http::init())
+        // Шифр секретов. На Windows пустышка (DPAPI зовётся напрямую), на Android — Keystore.
+        .plugin(secrets::plugin("com.foulnike.animori"))
+        // Плагин HTTP окну больше не выдан: запросы окна идут командой net.rs, крейт нужен ради reqwest.
         // Плагин открывает адреса в системных приложениях и нужен только со стороны Rust: opener:allow-open-url, выданный окну, открыл бы что угодно любому коду в нём.
         .plugin(tauri_plugin_opener::init())
         // Память геометрии окон. Регистрация именно в цепочке Builder, а не в setup(): плагины оттуда поднимаются ДО setup, а окно создаётся внутри него.
@@ -182,6 +192,16 @@ pub fn run() {
             auth::animori_auth_status,
             auth::animori_auth_logout,
             anilist::animori_anilist_query,
+            net::animori_http_request,
+            cloud::animori_cloud_status,
+            cloud::animori_cloud_connect,
+            cloud::animori_cloud_delete,
+            cloud::animori_cloud_check,
+            cloud::animori_cloud_stat,
+            cloud::animori_cloud_save,
+            cloud::animori_cloud_restore,
+            cloud::animori_cloud_share,
+            cloud::animori_cloud_unshare,
             files::animori_file_read,
             files::animori_file_write,
             storage::animori_storage_read,
@@ -191,7 +211,9 @@ pub fn run() {
             export::animori_track_pick_dir,
             export::animori_track_write,
             proxy::animori_proxy_status,
-            proxy::animori_proxy_probe
+            proxy::animori_proxy_probe,
+            proxy::animori_proxy_password_status,
+            proxy::animori_proxy_password_set
         ])
         .setup(|app| {
             let log_level = if cfg!(debug_assertions) {
@@ -209,6 +231,9 @@ pub fn run() {
                     .targets([Target::new(TargetKind::LogDir { file_name: None })])
                     .build(),
             )?;
+
+            // Открытые секреты прежних сборок — в шифр сразу, в фоне.
+            secrets::spawn_migration(app.handle().clone());
 
             // движок читает аргументы один раз, на первом окне. Первым идёт свое окно, окно входа открывается позже и пользуется тем же окружением.
             proxy::apply_to_webview(app.handle());

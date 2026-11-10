@@ -24,6 +24,14 @@ export const tauriProxyDiagnostics: IProxyDiagnostics = {
   /**
    * Живая проверка сохранённого адреса: до двух секунд, поэтому только по кнопке.
    */
+  async passwordSet(): Promise<boolean> {
+    return await invoke<boolean>('animori_proxy_password_status')
+  },
+
+  async setPassword(password: string): Promise<boolean> {
+    return await invoke<boolean>('animori_proxy_password_set', { password })
+  },
+
   async probe(): Promise<ProxyProbe> {
     const raw = await invoke<RawProxyProbe>('animori_proxy_probe')
 

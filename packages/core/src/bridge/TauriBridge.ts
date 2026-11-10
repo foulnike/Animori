@@ -2,17 +2,9 @@
 
 import { invoke } from '@tauri-apps/api/core'
 import { writeText } from '@tauri-apps/plugin-clipboard-manager'
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http'
 
-import {
-  DEFAULT_PROXY,
-  PROXY_KEYS,
-  normalizeProxyKind,
-  proxyBypassList,
-  proxyUrl,
-  type ProxyConfig,
-} from '@/core/proxy'
 import { Logger } from '@/utils/logger'
+import { redactUrl } from '@/utils/redact'
 
 import {
   BridgeHttpError,
@@ -28,6 +20,7 @@ import {
   type IStorage,
 } from './IBridge'
 import { tauriAniList } from './TauriAniList'
+import { tauriCloud } from './TauriCloud'
 import { tauriProxyDiagnostics } from './TauriProxyDiagnostics'
 
 // ==== storage ====
@@ -38,8 +31,9 @@ let snapshot: Map<string, unknown> | null = null
 /** Незавершённая загрузка снимка: параллельные чтения не дёргают команду повторно. */
 let snapshotLoading: Promise<Map<string, unknown> | null> | null = null
 
-/** Закрытые ключи оболочки: дубль запрета, основной в команде хранилища. */
-const CLOSED_KEYS = new Set(['auth_token', 'auth_expires_at'])
+/** Закрытые ключи оболочки: дубль запрета, основной в команде хранилища (storage.rs).
+ *  Секреты окну не выдаются вовсе: их читают только команды Rust через secrets.rs. */
+const CLOSED_KEYS = new Set(['auth_token', 'auth_expires_at', 'am_cloud_token', 'set_proxy_pass'])
 
 async function loadSnapshot(): Promise<Map<string, unknown> | null> {
   if (snapshot) return snapshot
@@ -177,186 +171,73 @@ const tauriExport: IExport = {
   },
 }
 
-// ==== прокси ====
-
-/**
- * Прокси нашего канала — запросов из процесса оболочки; страницу в WebView2 настраивает proxy.rs. Запросы к AniList сюда не идут: им прокси собирает anilist.rs из тех же ключей.
- */
-type TauriFetchOptions = NonNullable<Parameters<typeof tauriFetch>[1]>
-type TauriProxyOption = TauriFetchOptions['proxy']
-
-/** Ответ плагина: тип выведен, чтобы не гадать с именем экспорта. */
-type TauriResponse = Awaited<ReturnType<typeof tauriFetch>>
-
-/**
- * Подпись последней настройки, о негодности которой уже сказано в журнал; пароля в ней нет. В памяти до конца сеанса, чтобы не повторять одно и то же на каждый запрос.
- */
-let warnedBadProxy = ''
-
-/** Один раз на настройку: включённый тумблер с пустым адресом — трафик напрямую. */
-function warnBadProxy(config: ProxyConfig): void {
-  const mark = `${config.kind}|${config.host}|${config.port}`
-  if (mark === warnedBadProxy) return
-
-  warnedBadProxy = mark
-  Logger('WARN', 'Прокси включён, но адрес или порт заданы неверно — запросы идут напрямую', {
-    kind: config.kind,
-    host: config.host,
-    port: config.port,
-  })
-}
-
-/**
- * Прокси для одного запроса: читается каждый раз, а не однажды за сеанс — иначе смена адреса не доходила бы до перезапуска. Цены нет: значения берутся из снимка настроек в памяти.
- */
-async function readProxyOption(): Promise<TauriProxyOption> {
-  try {
-    const [enabled, kind, host, port, login, password, bypass] = await Promise.all([
-      storageGet(PROXY_KEYS.enabled, DEFAULT_PROXY.enabled),
-      storageGet(PROXY_KEYS.kind, DEFAULT_PROXY.kind),
-      storageGet(PROXY_KEYS.host, DEFAULT_PROXY.host),
-      storageGet(PROXY_KEYS.port, DEFAULT_PROXY.port),
-      storageGet(PROXY_KEYS.login, DEFAULT_PROXY.login),
-      storageGet(PROXY_KEYS.password, DEFAULT_PROXY.password),
-      storageGet(PROXY_KEYS.bypass, DEFAULT_PROXY.bypass),
-    ])
-
-    const config: ProxyConfig = {
-      // Строго true, как matches!(…, Bool(true)) в proxy.rs: «да» строкой движок за включение не считает, и мост обязан судить так же.
-      enabled: enabled === true,
-      kind: normalizeProxyKind(kind),
-      host: String(host ?? ''),
-      port,
-      login: String(login ?? ''),
-      password: String(password ?? ''),
-      bypass: String(bypass ?? ''),
-    }
-
-    const url = proxyUrl(config)
-
-    if (!url) {
-      // Инвариант 4: иначе включённый тумблер врёт, а трафик идёт напрямую.
-      if (config.enabled) warnBadProxy(config)
-      return undefined
-    }
-
-    const noProxy = proxyBypassList(config).join(',')
-    const trimmedLogin = config.login.trim()
-
-    return {
-      all: {
-        url,
-        // Отдельно от адреса: пароль с ':' или '@' сломал бы склейку user:pass@host.
-        ...(trimmedLogin
-          ? { basicAuth: { username: trimmedLogin, password: config.password } }
-          : {}),
-        ...(noProxy ? { noProxy } : {}),
-      },
-    }
-  } catch (e) {
-    Logger('ERROR', 'Настройки прокси не прочитаны, запрос идёт напрямую', e)
-    return undefined
-  }
-}
-
 // ==== http ====
 
-/** Без своего представления reqwest подписывается собой: 403 у AnimeThemes, 5.3.5. */
-const DEFAULT_USER_AGENT = `AniMori/${__ANIMORI_VERSION__} (+https://github.com/foulnike/Animori)`
+/**
+ * Запросы окна идут через Rust (net.rs): прокси вместе с паролем собирает оболочка, адрес сверяется
+ * со списком hosts.rs до сети. Окно передаёт только адрес, заголовки и тело — пароля прокси оно не
+ * видит. Куки окна не участвуют: их не было и у прежнего плагина HTTP.
+ */
+type RawNetReply = {
+  status: number
+  statusText: string
+  headers: Record<string, string>
+  text: string | null
+  bytesBase64: string | null
+  url: string
+}
 
 /**
- * Общая часть обоих запросов: прокси, таймаут на весь запрос и разбор транспортных сбоев. Коды вне 2xx не трогаем: их разбирает вызывающий.
+ * Отказ команды в вид сбоя моста. Через invoke приходит только строка, её префикс и есть вид сбоя
+ * (classify() в net.rs). Адрес в журнал идёт без запроса: в адресах тел Диска лежит подпись доступа.
  */
-async function sendRequest(options: HttpRequestOptions): Promise<TauriResponse> {
-  const { url, method = 'GET', headers, body, timeoutMs, credentials = 'include' } = options
+function toHttpError(error: unknown, url: string): BridgeHttpError {
+  const text =
+    typeof error === 'string' ? error : error instanceof Error ? error.message : String(error)
 
-  // До таймера: первое чтение идёт в оболочку и съело бы таймаут запроса.
-  const proxy = await readProxyOption()
+  Logger('ERROR', `Запрос не ушёл: ${redactUrl(url)}`, text)
 
-  // connectTimeout покрывает только установку соединения, нужен таймаут на весь запрос.
-  const controller = new AbortController()
-  let timedOut = false
-  let timer: ReturnType<typeof setTimeout> | undefined
+  if (text.startsWith('timeout:')) return new BridgeHttpError('timeout', url)
+  return new BridgeHttpError('network', url)
+}
 
-  if (timeoutMs !== undefined) {
-    timer = setTimeout(() => {
-      timedOut = true
-      controller.abort()
-    }, timeoutMs)
-  }
+/** Общая часть обоих запросов. Коды вне 2xx не трогаем: их разбирает вызывающий. */
+async function sendRequest(options: HttpRequestOptions, bytes: boolean): Promise<RawNetReply> {
+  const { url, method = 'GET', headers, body, timeoutMs } = options
 
   try {
-    return await tauriFetch(url, {
-      method,
-      // Свой заголовок под заголовками вызывающего: клиент вправе его перебить.
-      headers: { 'User-Agent': DEFAULT_USER_AGENT, ...headers },
-      body,
-      credentials,
-      signal: controller.signal,
-      // Ключ только при настроенном прокси: пустой proxy путает разбор сбоев.
-      ...(proxy ? { proxy } : {}),
+    return await invoke<RawNetReply>('animori_http_request', {
+      request: { method, url, headers: headers ?? {}, body, timeoutMs, bytes },
     })
   } catch (e) {
-    // Сюда приходят только транспортные сбои; мёртвый прокси от них неотличим.
-    if (timedOut) throw new BridgeHttpError('timeout', url)
-
-    const name = e instanceof Error ? e.name : ''
-    if (name === 'AbortError') throw new BridgeHttpError('abort', url)
-
-    // BridgeHttpError несёт только вид сбоя — «проверьте сеть»; в журнал и консоль идёт строка с ошибкой: адрес не в capabilities/default.json: «url not allowed on the configured scope».
-    Logger('ERROR', `Запрос не ушёл: ${url}`, e)
-
-    throw new BridgeHttpError('network', url)
-  } finally {
-    if (timer !== undefined) clearTimeout(timer)
+    throw toHttpError(e, url)
   }
-}
-
-/** Заголовки ответа в словарь. Headers сам приводит имена к нижнему регистру. */
-function readHeaders(res: TauriResponse): Record<string, string> {
-  const responseHeaders: Record<string, string> = {}
-  res.headers.forEach((value, name) => {
-    responseHeaders[name.toLowerCase()] = value
-  })
-  return responseHeaders
-}
-
-/** Байты в base64 кусками: одним spread на всём массиве роняется стек. */
-function toBase64(bytes: Uint8Array): string {
-  const CHUNK = 0x8000
-  let out = ''
-  for (let at = 0; at < bytes.length; at += CHUNK) {
-    out += String.fromCharCode(...bytes.subarray(at, at + CHUNK))
-  }
-  return btoa(out)
 }
 
 const tauriHttp: IHttp = {
   async request(options: HttpRequestOptions): Promise<HttpResponse> {
-    const res = await sendRequest(options)
-    const text = await res.text()
+    const raw = await sendRequest(options, false)
 
     return {
-      status: res.status,
-      statusText: res.statusText,
-      ok: res.status >= 200 && res.status < 300,
-      headers: readHeaders(res),
-      text,
-      url: res.url || options.url,
+      status: raw.status,
+      statusText: raw.statusText,
+      ok: raw.status >= 200 && raw.status < 300,
+      headers: raw.headers,
+      text: raw.text ?? '',
+      url: raw.url || options.url,
     }
   },
 
   async requestBytes(options: HttpRequestOptions): Promise<HttpBytesResponse> {
-    const res = await sendRequest(options)
-    const buffer = await res.arrayBuffer()
+    const raw = await sendRequest(options, true)
 
     return {
-      status: res.status,
-      statusText: res.statusText,
-      ok: res.status >= 200 && res.status < 300,
-      headers: readHeaders(res),
-      bytesBase64: toBase64(new Uint8Array(buffer)),
-      url: res.url || options.url,
+      status: raw.status,
+      statusText: raw.statusText,
+      ok: raw.status >= 200 && raw.status < 300,
+      headers: raw.headers,
+      bytesBase64: raw.bytesBase64 ?? '',
+      url: raw.url || options.url,
     }
   },
 }
@@ -440,6 +321,8 @@ export const tauriBridge: IBridge = {
   shell: tauriShell,
   // Реализация в TauriProxyDiagnostics.ts.
   proxyDiagnostics: tauriProxyDiagnostics,
+  // Реализация в TauriCloud.ts: пропуск Диска живёт только в оболочке.
+  cloud: tauriCloud,
 }
 
 // Имя экспорта, которого ждёт '@bridge-impl'. Общее для любой реализации.

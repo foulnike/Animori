@@ -25,6 +25,21 @@ const COMMANDS: &[&str] = &[
     // Диагностика прокси. Обе только читают, и ни одна не принимает адрес параметром — иначе код в окне получил бы сканер портов чужими руками.
     "animori_proxy_status",
     "animori_proxy_probe",
+    // Пароль прокси: только «задан ли» и запись. Прочитать пароль окно не может никакой командой.
+    "animori_proxy_password_status",
+    "animori_proxy_password_set",
+    // Запрос окна к внешнему API. Адрес сверяется со списком hosts.rs до сети; прокси и его пароль подставляет Rust.
+    "animori_http_request",
+    // Облачная копия: один файл в папке приложения, пропуск окну не отдаётся ни одной командой.
+    "animori_cloud_status",
+    "animori_cloud_connect",
+    "animori_cloud_delete",
+    "animori_cloud_check",
+    "animori_cloud_stat",
+    "animori_cloud_save",
+    "animori_cloud_restore",
+    "animori_cloud_share",
+    "animori_cloud_unshare",
 ];
 
 fn main() {

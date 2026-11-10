@@ -30,8 +30,15 @@ mod export;
 // Прокси для трафика окна. Без cfg сознательно: чтение настроек везде одинаково, а разница в применении спрятана в модуле — на Linux будет предупреждение в журнале.
 mod proxy;
 
-// Секреты в хранилище: шифрация DPAPI для пропуска облака на Windows, прозрачный passthrough на прочих платформах.
+// Хранилище секретов (SecretStore): пропуски и пароль прокси шифром Android Keystore. Окно их не видит.
 mod secrets;
+
+// Запросы окна к внешним API (IBridge.http): прокси с паролем собирает Rust, адрес сверяется со списком hosts.rs.
+mod hosts;
+mod net;
+
+// Облачная копия: пропуск Яндекс Диска читается и подставляется только здесь.
+mod cloud;
 
 /// Что запоминается между запусками. Не StateFlags::all(): сохранённый VISIBLE даёт запуск без окна, а из FULLSCREEN нечем выйти. Флаги общие: это один параметр плагина.
 #[cfg(desktop)]
@@ -84,8 +91,11 @@ pub fn run() {
     builder
         .plugin(tauri_plugin_clipboard_manager::init())
         .manage(anilist::AniListClientState::default())
+        .manage(net::NetClientState::default())
         .plugin(tauri_plugin_store::Builder::new().build())
-        .plugin(tauri_plugin_http::init())
+        // Шифр секретов: ключ AES-GCM в Android Keystore (SecretPlugin.kt). Окну прав на плагин нет.
+        .plugin(secrets::plugin("com.foulnike.animori"))
+        // Плагин HTTP окну больше не выдан: запросы окна идут командой net.rs, крейт нужен ради reqwest.
         // Плагин открывает адреса в системных приложениях и нужен только со стороны Rust: opener:allow-open-url, выданный окну, открыл бы что угодно любому коду в нём.
         .plugin(tauri_plugin_opener::init())
         // Родные окна выбора папки для выгрузки и трека (export.rs). Дёргается только из Rust: dialog:default означал бы право открывать окна выбора без нашего ведома.
@@ -107,7 +117,19 @@ pub fn run() {
             export::animori_export_pick_dir,
             export::animori_export_write,
             proxy::animori_proxy_status,
-            proxy::animori_proxy_probe
+            proxy::animori_proxy_probe,
+            proxy::animori_proxy_password_status,
+            proxy::animori_proxy_password_set,
+            net::animori_http_request,
+            cloud::animori_cloud_status,
+            cloud::animori_cloud_connect,
+            cloud::animori_cloud_delete,
+            cloud::animori_cloud_check,
+            cloud::animori_cloud_stat,
+            cloud::animori_cloud_save,
+            cloud::animori_cloud_restore,
+            cloud::animori_cloud_share,
+            cloud::animori_cloud_unshare
         ])
         .setup(|app| {
             let log_level = if cfg!(debug_assertions) {
@@ -139,6 +161,9 @@ pub fn run() {
 
             // Прокси — СТРОГО до первого окна: движок читает аргументы один раз. Здесь же заводится ProxyState, без которого animori_proxy_status не ответит.
             proxy::apply_to_webview(app.handle());
+
+            // Открытые секреты прежних сборок — в шифр сразу, в фоне: шифр ждёт главный поток.
+            secrets::spawn_migration(app.handle().clone());
 
             // WebviewUrl::default() — index.html из frontendDist, наша сборка dist/app. На телевизере окно создаёт активность, метка «main» — её ждут capabilities.
             #[cfg(desktop)]

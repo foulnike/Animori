@@ -21,8 +21,7 @@
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.1",
-    "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
-    "@tauri-apps/plugin-http": "^2.5.9",
+    "@tauri-apps/plugin-clipboard-manager": "^2.5.0",
     "hls.js": "^1.6.0",
     "vue": "^3.5.13"
   },
@@ -30,7 +29,7 @@
     "@tauri-apps/cli": "^2.11.4",
     "@types/node": "^24",
     "@vitejs/plugin-vue": "^6.0.9",
-    "happy-dom": "^20.12.0",
+    "happy-dom": "^21.0.4",
     "typescript": "^5.6.2",
     "vite": "^8.3.2",
     "vitest": "^4.1.11",

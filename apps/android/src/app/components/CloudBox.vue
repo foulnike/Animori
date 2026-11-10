@@ -6,7 +6,8 @@ import { onMounted, ref } from 'vue'
 import { Bridge } from '@/bridge'
 import {
   checkChosenPlace,
-  checkPlace,
+  connectPlace,
+  disconnectPlace,
   choosePlace,
   cloudPathText,
   copyInfo,
@@ -20,7 +21,7 @@ import {
   type CloudStranger,
 } from '@/core/cloud'
 import type { PullMode } from '@/core/collection'
-import { saveSetting, settings } from '@/core/settings'
+import { settings } from '@/core/settings'
 
 import BrandMark from './BrandMark.vue'
 
@@ -38,7 +39,7 @@ const emit = defineEmits<{ changed: [] }>()
 const cloudPlace = ref(settings.cloudPlace)
 
 /** Есть ли сохранённый пропуск. Хранится признак, а не сам пропуск: в разметку ему попадать незачем. */
-const cloudSaved = ref(settings.cloudToken !== '')
+const cloudSaved = ref(settings.cloudConnected)
 
 /** Вставленный, но ещё не проверенный пропуск. Находится только до сохранения. */
 const tokenDraft = ref('')
@@ -197,13 +198,12 @@ function onCloudToken(): void {
     cloudNote.value = ''
 
     const token = tokenDraft.value.trim()
-    const done = await checkPlace(token)
+    const done = await connectPlace(token)
     if (!done.ok) {
       cloudError.value = done.problem
       return
     }
 
-    await saveSetting('cloudToken', 'am_cloud_token', token)
     cloudSaved.value = true
     tokenDraft.value = ''
     tokenOpen.value = false
@@ -438,7 +438,11 @@ function onCloudForget(): void {
   void cloudGuard(async () => {
     cloudNote.value = ''
 
-    await saveSetting('cloudToken', 'am_cloud_token', '')
+    const gone = await disconnectPlace()
+    if (!gone.ok) {
+      cloudError.value = gone.problem
+      return
+    }
     await choosePlace('none')
 
     cloudPlace.value = 'none'

@@ -15,7 +15,11 @@ on:
   pull_request:
   push:
     branches:
-      - main
+      - '**'
+    tags:
+      - 'windows-v*'
+      - 'android-tv-v*'
+      - 'android-v*'
 
 # Проверки только читают: ни ветку, ни выпуск, ни настройки они не трогают.
 # Без блока токен прогона берётся шире нужного, и у задач остаются права на запись
@@ -67,6 +71,10 @@ jobs:
 
       - name: Наборы ядра
         run: npm run test:core
+
+      # npm audit с порогом high: moderate и ниже не валят прогон.
+      - name: Аудит зависимостей npm
+        run: npm audit --audit-level=high
 
   # Настольное приложение: экранные наборы и граница ядра.
   #
@@ -230,10 +238,23 @@ jobs:
 
       - name: Запреты и лицензии
         working-directory: apps/${{ matrix.app }}/src-tauri
-        run: cargo deny check bans licenses sources
+        run: cargo deny check
 
-      # Уязвимости отдельно: свежий advisory виден, но общий прогон не роняет.
-      - name: Уязвимости
-        working-directory: apps/${{ matrix.app }}/src-tauri
-        run: cargo deny check advisories
-        continue-on-error: true
+  # Секреты в истории: CLI gitleaks по всем коммитам, вывод с --redact — найденное значение
+  # в журнал прогона не попадает. Конфиг — .gitleaks.toml в корне.
+  secrets:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Исходный код
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Установка gitleaks
+        uses: taiki-e/install-action@f7e5d7c961414b23f5b25b2da9294395d08513ad # v2.87.26
+        with:
+          tool: gitleaks@8.30.1
+
+      - name: Секреты в коммитах
+        run: gitleaks detect --redact --no-banner

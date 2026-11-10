@@ -49,8 +49,9 @@ export interface AniMoriSettings {
   /** Где держать облачную копию; по умолчанию нигде — облако включает человек, а не установщик. */
   cloudPlace: CloudPlace
   /**
-   * Пропуск Яндекс Диска: лежит открытым текстом в хранилище окна; в копию списка не попадает никогда. */
-  cloudToken: string
+   * Сохранён ли пропуск Яндекс Диска. Сам пропуск лежит в оболочке шифром (secrets.rs) и в разметку
+   * не попадает; признак спрашивается у оболочки при чтении настроек. */
+  cloudConnected: boolean
   /** Когда копия ушла в облако (мс); ноль — «ни разу», экран говорит это словами. */
   cloudSavedAt: number
   /** Сколько записей было в последней копии: ответ нужен до восстановления и без сети. */
@@ -84,7 +85,7 @@ const DEFAULT_SETTINGS: AniMoriSettings = {
   exportDir: '',
   shikiNick: '',
   cloudPlace: 'none',
-  cloudToken: '',
+  cloudConnected: false,
   cloudSavedAt: 0,
   cloudSavedCount: 0,
   cloudSeenModified: '',
@@ -116,7 +117,7 @@ async function readSettings(): Promise<AniMoriSettings> {
     exportDir,
     shikiNick,
     cloudPlace,
-    cloudToken,
+    cloudConnected,
     cloudSavedAt,
     cloudSavedCount,
     cloudSeenModified,
@@ -141,7 +142,8 @@ async function readSettings(): Promise<AniMoriSettings> {
     storage.get('set_export_dir', DEFAULT_SETTINGS.exportDir),
     storage.get('am_shiki_nick', DEFAULT_SETTINGS.shikiNick),
     storage.get<CloudPlace>('am_cloud_place', DEFAULT_SETTINGS.cloudPlace),
-    storage.get('am_cloud_token', DEFAULT_SETTINGS.cloudToken),
+    // Отказ оболочки — «не подключено»: настройки без облака лучше, чем без настроек.
+    Bridge.cloud.status().catch(() => DEFAULT_SETTINGS.cloudConnected),
     storage.get('am_cloud_saved_at', DEFAULT_SETTINGS.cloudSavedAt),
     storage.get('am_cloud_saved_count', DEFAULT_SETTINGS.cloudSavedCount),
     storage.get('am_cloud_seen_modified', DEFAULT_SETTINGS.cloudSeenModified),
@@ -170,7 +172,7 @@ async function readSettings(): Promise<AniMoriSettings> {
     exportDir,
     shikiNick,
     cloudPlace,
-    cloudToken,
+    cloudConnected,
     cloudSavedAt,
     cloudSavedCount,
     cloudSeenModified,

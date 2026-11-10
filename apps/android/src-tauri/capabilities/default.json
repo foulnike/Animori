@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Разрешения окна main: хранилище, буфер обмена, http по списку адресов ниже и свои команды (перезагрузка, перезапуск, внешняя ссылка, вход в AniList, запрос к AniList из оболочки, снимок в приватный каталог, выгрузка списка и трека темы в чужую папку, диагностика прокси). Единственный файл прав: окно входа не имеет их вовсе. Внешние адреса не разрешены — окно грузит только свои файлы. Промах по списку http плагин отклоняет до сети, и в окне это выглядит как обрыв связи, хотя правится список, а не соединение.",
+  "description": "Разрешения окна main: хранилище, буфер обмена, запросы к внешним API командой оболочки (список адресов — src-tauri/src/hosts.rs, проверка до сети) и свои команды (перезагрузка, перезапуск, внешняя ссылка, вход в AniList, запрос к AniList из оболочки, снимок в приватный каталог, выгрузка списка и трека темы в чужую папку, диагностика прокси). Единственный файл прав: окно входа не имеет их вовсе. Внешние адреса не разрешены — окно грузит только свои файлы. Промах по списку http плагин отклоняет до сети, и в окне это выглядит как обрыв связи, хотя правится список, а не соединение.",
   "windows": ["main"],
   "local": true,
   "permissions": [
@@ -23,30 +23,17 @@
     "allow-animori-export-write",
     "allow-animori-proxy-status",
     "allow-animori-proxy-probe",
-    {
-      "identifier": "http:default",
-      "allow": [
-        { "url": "https://graphql.anilist.co/*" },
-        { "url": "https://shikimori.io/*" },
-        { "url": "https://shikimori.rip/*" },
-        { "url": "https://raw.githubusercontent.com/*" },
-        { "url": "https://github.com/foulnike/animori-data/*" },
-        { "url": "https://objects.githubusercontent.com/*" },
-        { "url": "https://s4.anilist.co/*" },
-        { "url": "https://github.com/foulnike/Animori/*" },
-        { "url": "https://api.github.com/repos/foulnike/Animori/*" },
-        { "url": "https://kodik-api.com/*" },
-        { "url": "https://kodikplayer.com/*" },
-        { "url": "https://*.solodcdn.com/*" },
-        { "url": "https://*.kodik-cdn.com/*" },
-        { "url": "https://i.kodikres.com/*" },
-        { "url": "https://anilibria.top/*" },
-        { "url": "https://cloud-api.yandex.net/*" },
-        { "url": "https://*.disk.yandex.net/*" },
-        { "url": "https://*.dst.yandex.net/*" },
-        { "url": "https://*.dst.yandex.ru/*" },
-        { "url": "https://*.disk.yandex.ru/*" }
-      ]
-    }
+    "allow-animori-http-request",
+    "allow-animori-proxy-password-status",
+    "allow-animori-proxy-password-set",
+    "allow-animori-cloud-status",
+    "allow-animori-cloud-connect",
+    "allow-animori-cloud-delete",
+    "allow-animori-cloud-check",
+    "allow-animori-cloud-stat",
+    "allow-animori-cloud-save",
+    "allow-animori-cloud-restore",
+    "allow-animori-cloud-share",
+    "allow-animori-cloud-unshare"
   ]
 }

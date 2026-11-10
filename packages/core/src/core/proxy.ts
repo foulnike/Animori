@@ -1,5 +1,6 @@
 // Прокси для WebView2, только десктоп: чистый модуль — его тянет и приложение, и мост.
 // Ключи нельзя держать в core/settings.ts (импорт '@/bridge' замкнул бы цикл); нужен перезапуск.
+// Пароля здесь нет: он секрет оболочки (set_proxy_pass в secrets.rs), окно знает только «задан ли».
 
 export type ProxyKind = 'http' | 'socks5'
 
@@ -9,10 +10,6 @@ export interface ProxyConfig {
   host: string
   port: number
   login: string
-  /**
-   * Хранится В ОТКРЫТОМ ВИДЕ в animori-settings.json: панель настроек обязана предупредить.
-   */
-  password: string
   /**
    * Адреса в обход прокси; разделитель — запятая, точка с запятой или перевод строки.
    */
@@ -26,7 +23,6 @@ export const PROXY_KEYS = {
   host: 'set_proxy_host',
   port: 'set_proxy_port',
   login: 'set_proxy_login',
-  password: 'set_proxy_pass',
   bypass: 'set_proxy_bypass',
 } as const
 
@@ -39,7 +35,6 @@ export const DEFAULT_PROXY: ProxyConfig = {
   host: '',
   port: 8080,
   login: '',
-  password: '',
   bypass: 'localhost, 127.0.0.1',
 }
 
@@ -65,7 +60,7 @@ export function isProxyUsable(config: ProxyConfig): boolean {
 }
 
 /**
- * Адрес одной строкой, без учётных данных: они уходят через basicAuth в TauriBridge.
+ * Адрес одной строкой, без учётных данных: пароль прокси хранит и подставляет оболочка (secrets.rs, net.rs).
  */
 export function proxyUrl(config: ProxyConfig): string | null {
   if (!isProxyUsable(config)) return null

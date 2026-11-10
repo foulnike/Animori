@@ -13,7 +13,13 @@ import {
   type ProxyConfig,
   type ProxyKind,
 } from '@/core/proxy'
-import { proxyRestartNeeded, readProxyConfig, saveProxyField } from '@/core/proxy-settings'
+import {
+  proxyPasswordSet,
+  proxyRestartNeeded,
+  readProxyConfig,
+  saveProxyField,
+  saveProxyPassword,
+} from '@/core/proxy-settings'
 
 import { restoreFocus } from '../focus-return'
 import { isWeakPlatform } from '../platform'
@@ -36,7 +42,10 @@ const enabled = ref(DEFAULT_PROXY.enabled)
 const kind = ref(DEFAULT_PROXY.kind)
 const host = ref(DEFAULT_PROXY.host)
 const login = ref(DEFAULT_PROXY.login)
-const password = ref(DEFAULT_PROXY.password)
+/** Черновик пароля. Сохранённый пароль окно не получает: поле только для записи. */
+const password = ref('')
+/** Задан ли пароль в оболочке — единственное, что окно о нём знает. */
+const passwordSet = ref(false)
 const bypass = ref(DEFAULT_PROXY.bypass)
 
 /** Порт отдельной строкой, а не числом: поле можно стереть целиком, а normalizeProxyPort
@@ -65,7 +74,6 @@ function currentConfig(): ProxyConfig {
     host: host.value.trim(),
     port: normalizeProxyPort(portDraft.value),
     login: login.value.trim(),
-    password: password.value,
     bypass: bypass.value,
   }
 }
@@ -78,10 +86,6 @@ const needsRestart = computed(
   () =>
     !isWeakPlatform() && status.value !== null && proxyRestartNeeded(status.value, currentConfig()),
 )
-
-/** Пароль лежит в файле настроек открытым текстом — сказать об этом надо до ввода, а не после.
- * Условие «поле не пустое»: предупреждение на пустом поле читают один раз и больше не читают. */
-const hasPassword = computed(() => password.value.length > 0)
 
 /** SOCKS5 с логином: движок окна учётные данные для этого вида не принимает, а запросы
  * программы — принимает. Сказать стоит: иначе решат, что не работает вся настройка. */
@@ -125,8 +129,8 @@ async function loadConfig(): Promise<void> {
     // Ноль значит «значения нет»: показать ноль — соврать про адрес.
     portDraft.value = config.port === 0 ? '' : String(config.port)
     login.value = config.login
-    password.value = config.password
     bypass.value = config.bypass
+    passwordSet.value = await proxyPasswordSet()
   } catch (e) {
     error.value = 'Настройки не прочитаны — поля показывают значения по умолчанию. ' + describe(e)
   }
@@ -188,7 +192,25 @@ function onLogin(): void {
 
 /// Пароль не обрезается: пробел по краям в нём законен, а тихая правка дала бы отказ авторизации без единого слова о причине.
 function onPassword(): void {
-  void saveProxyField('password', password.value)
+  const draft = password.value
+  if (draft === '') return
+
+  void saveProxyPassword(draft).then((set) => {
+    if (set === null) {
+      error.value = 'Пароль прокси не сохранён — подробности в журнале.'
+      return
+    }
+    passwordSet.value = set
+    password.value = ''
+  })
+}
+
+/** Стирает сохранённый пароль: пустое поле само по себе ничего не стирает. */
+function onPasswordClear(): void {
+  password.value = ''
+  void saveProxyPassword('').then((set) => {
+    if (set !== null) passwordSet.value = set
+  })
 }
 
 function onBypass(): void {
@@ -330,7 +352,8 @@ onMounted(() => {
           v-model="password"
           class="am-input"
           type="password"
-          placeholder="Пароль"
+          autocomplete="new-password"
+          :placeholder="passwordSet ? 'Пароль задан — введите новый, чтобы сменить' : 'Пароль'"
           @change="onPassword"
         />
       </label>
@@ -359,9 +382,11 @@ onMounted(() => {
       Прокси включён, но адрес или порт заданы неверно — трафик пойдёт напрямую.
     </p>
 
-    <p v-if="hasPassword" class="am-warn">
-      Пароль лежит в файле настроек открытым текстом: не вводите здесь пароль, который значит что-то
-      ещё. Окно авторизуется у прокси само, второй раз его вводить не придётся.
+    <p v-if="passwordSet" class="am-meta">
+      Пароль задан и хранится зашифрованным: показать его программа не может, новый заменит прежний.
+      <button class="am-btn am-btn--ghost" type="button" @click="onPasswordClear">
+        Стереть пароль
+      </button>
     </p>
 
     <p v-if="socksWithAuth" class="am-warn">

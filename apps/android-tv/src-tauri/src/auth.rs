@@ -13,6 +13,8 @@ use tauri::{AppHandle, Emitter, Manager, Url};
 use tauri::{WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_store::StoreExt;
 
+use crate::secrets::{self, Secret};
+
 /// Порт приёмника. Постоянный, а не свободный из системы: этот же номер записан у клиента AniList в адресе возврата, и случайный пришлось бы согласовывать.
 pub const PORT: u16 = 48513;
 
@@ -37,8 +39,8 @@ const POLL_STEP_MS: u64 = 200;
 const IO_TIMEOUT_MS: u64 = 3000;
 
 /// Тот же файл, что у прокси и остальных настроек: второе хранилище разошлось бы с первым при любой чистке настроек руками.
-const STORE_FILE: &str = "animori-settings.json";
-const KEY_TOKEN: &str = "auth_token";
+/// Сам пропуск лежит там же, но читается и пишется только через secrets.rs — шифром.
+const STORE_FILE: &str = secrets::STORE_FILE;
 const KEY_EXPIRES_AT: &str = "auth_expires_at";
 
 /// Событие для своего окна: пропуск приходит со стороны, из окна входа, и без события настройки узнали бы о входе только опросом в цикле.
@@ -109,12 +111,8 @@ fn check_token(raw: &str) -> Result<String, String> {
 fn read_status(app: &AppHandle) -> Result<AuthStatus, String> {
     let store = app.store(STORE_FILE).map_err(|e| e.to_string())?;
 
-    let has_token = store
-        .get(KEY_TOKEN)
-        .and_then(|v| v.as_str().map(|s| !s.trim().is_empty()))
-        .unwrap_or(false);
-
-    if !has_token {
+    // Наличие без расшифровки: статусу сам пропуск не нужен.
+    if !secrets::exists(app, Secret::AniListToken) {
         return Ok(AuthStatus {
             authorized: false,
             expires_at: None,
@@ -139,9 +137,10 @@ fn alive(expires_at: Option<u64>, now: Option<u64>) -> bool {
 
 /// Запись пропуска и срока. save() явный: плагин не пишет файл сам, и без этого вызова вход жил бы только до закрытия приложения.
 fn write_token(app: &AppHandle, token: &str, expires_in: Option<u64>) -> Result<(), String> {
-    let store = app.store(STORE_FILE).map_err(|e| e.to_string())?;
+    // Пропуск — шифром через secrets.rs, срок — открыто: в нём секрета нет.
+    secrets::write(app, Secret::AniListToken, token)?;
 
-    store.set(KEY_TOKEN, token.to_string());
+    let store = app.store(STORE_FILE).map_err(|e| e.to_string())?;
 
     match (expires_in, now_secs()) {
         (Some(secs), Some(now)) if secs > 0 => store.set(KEY_EXPIRES_AT, now + secs),
@@ -588,8 +587,9 @@ pub async fn animori_auth_start(app: AppHandle) -> Result<LoginStart, String> {
 }
 
 /// Ручная вставка пропуска. Запасной путь на случай, когда возврат не дошёл.
+/// async обязателен: запись шифрует, а шифр Keystore зовёт главный поток и ждёт его.
 #[tauri::command]
-pub fn animori_auth_submit(
+pub async fn animori_auth_submit(
     app: AppHandle,
     token: String,
     expires_in: Option<u64>,
@@ -604,10 +604,12 @@ pub fn animori_auth_status(app: AppHandle) -> Result<AuthStatus, String> {
 }
 
 /// Выход: чистит только свои два ключа. Остальные настройки человек вводил сам, и терять их при выходе из аккаунта незачем.
+/// async по той же причине, что и submit: стирание идёт через хранилище секретов.
 #[tauri::command]
-pub fn animori_auth_logout(app: AppHandle) -> Result<AuthStatus, String> {
+pub async fn animori_auth_logout(app: AppHandle) -> Result<AuthStatus, String> {
+    secrets::delete(&app, Secret::AniListToken)?;
+
     let store = app.store(STORE_FILE).map_err(|e| e.to_string())?;
-    store.delete(KEY_TOKEN);
     store.delete(KEY_EXPIRES_AT);
     store.save().map_err(|e| e.to_string())?;
 

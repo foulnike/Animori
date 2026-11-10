@@ -1,5 +1,5 @@
 # gitleaks: ловит секреты в коммитах. Отдельный workflow, триггеры как ci.yml.
-# Ключ Kodik глушится через .gitleaks.toml (allowlist на kodik.ts), не кодом.
+# Kodik client key foulnike исключён по точному значению, не по файлу.
 # PR-комменты off — нужны pull-requests:write, у нас contents:read.
 # Репо личного аккаунта — лицензия не нужна; в org понадобится GITLEAKS_LICENSE.
 

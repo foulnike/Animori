@@ -60,8 +60,8 @@ strip = "symbols"
 # Доступ к движку окна и к DPAPI из Rust: proxy_auth.rs (COM WebView2) и secrets.rs (шифр пропуска облака).
 # Версии не на глаз: их уже тянет wry (см. Cargo.lock); cfg(windows) обязателен — крейтов нет под другими ОС.
 [target.'cfg(windows)'.dependencies]
-webview2-com = "0.38"
-windows = { version = "0.61", features = [
+webview2-com = "0.39"
+windows = { version = "0.62", features = [
   "Win32_Foundation",
   "Win32_System_Com",
   "Win32_System_WinRT",
