@@ -5,9 +5,10 @@ title = "AniMori: исключения gitleaks"
 [extend]
 useDefault = true
 
-# Kodik client key foulnike. Исключаем только точное значение.
+# Kodik client key foulnike и тестовый JWT из redact.test.ts (заглушка без реального секрета).
 [allowlist]
-description = "Kodik client key foulnike"
+description = "Kodik client key foulnike и тестовый JWT"
 regexes = [
   '''16f20d024a6fa20700b389c44d9ab159''',
+  '''c2lnbmF0dXJlLXZhbHVlLWhlcmU''',
 ]

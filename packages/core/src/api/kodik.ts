@@ -6,6 +6,7 @@ import { LIFE_VOICES_AIRING, LIFE_VOICES_FINISHED, isFresh } from '../core/cache
 import { dbGet, dbSet } from '../core/db'
 import { reportError, reportStatus } from '../core/net-health'
 import { Logger } from '../utils/logger'
+import { validateStreamUrl, streamHost } from '../utils/stream-validation'
 import type { MediaCacheRecord } from '../core/types'
 import type {
   PresenceMap,
@@ -519,6 +520,13 @@ function toTracks(links: Record<string, FtorLink[] | null> | null | undefined): 
     }
 
     const url = absolute(plain)
+    const check = validateStreamUrl(url)
+    if (!check.valid) {
+      Logger('ERROR', `Kodik: адрес ${key}p отклонён: ${check.reason}`, {
+        host: streamHost(url),
+      })
+      continue
+    }
     const known = byUrl.get(url)
     if (known === undefined || height < known) byUrl.set(url, height)
   }

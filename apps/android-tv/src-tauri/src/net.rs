@@ -345,9 +345,87 @@ pub async fn animori_http_request(
     })
 }
 
+/// Список хостов, куда окно может направлять пользователя через `animori_open_external`.
+/// Перечислены все адреса, которые UI реально открывает: репозиторий, документация,
+/// каталоги, облачные сервисы, кредиты. Неизвестный хост — отказ без раскрытия URL.
+const ALLOWED_EXTERNAL: &[&str] = &[
+    "https://github.com/*",
+    "https://anilist.co/*",
+    "https://graphql.anilist.co/*",
+    "https://shikimori.one/*",
+    "https://shikimori.me/*",
+    "https://*.shikimori.org/*",
+    "https://moe.shikimori.one/*",
+    "https://desu.shikimori.one/*",
+    "https://kawai.shikimori.one/*",
+    "https://myanimelist.net/*",
+    "https://cdn.myanimelist.net/*",
+    "https://oauth.yandex.com/*",
+    "https://disk.yandex.ru/*",
+    "https://disk.yandex.com/*",
+    "https://yadi.sk/*",
+    "https://animethemes.moe/*",
+    "https://*.animethemes.moe/*",
+    "https://music.youtube.com/*",
+    "https://www.youtube.com/*",
+    "https://www.dailymotion.com/*",
+    "https://open.spotify.com/*",
+];
+
+/// Максимальная длина URL, открываемого в браузере.
+const MAX_EXTERNAL_URL_LEN: usize = 2048;
+
+/// Проверяет URL перед открытием в браузере пользователя.
+/// Только HTTPS, без учётных данных, без явного нестандартного порта,
+/// длина ограничена, нет управляющих символов, хост в списке ALLOWED_EXTERNAL.
+/// Текст ошибки не раскрывает полный URL — только схему или хост.
+pub fn validate_external_url(raw: &str) -> Result<reqwest::Url, String> {
+    let url = raw.trim();
+
+    // Управляющие символы до разбора
+    if url.contains('\r') || url.contains('\n') {
+        return Err("Управляющие символы в адресе".to_string());
+    }
+
+    // Длина
+    if url.len() > MAX_EXTERNAL_URL_LEN {
+        return Err(format!(
+            "Адрес слишком длинный: {} > {MAX_EXTERNAL_URL_LEN}",
+            url.len()
+        ));
+    }
+
+    let parsed = reqwest::Url::parse(url).map_err(|_| "Адрес не распознан".to_string())?;
+
+    // Только HTTPS
+    if parsed.scheme() != "https" {
+        return Err(format!("Только https разрешён: {}", parsed.scheme()));
+    }
+
+    // Без учётных данных
+    if !parsed.username().is_empty() || parsed.password().is_some() {
+        return Err("Логин/пароль в адресе не разрешены".to_string());
+    }
+
+    // Без нестандартного порта (443 нормализуется и возвращается как None)
+    if parsed.port().is_some() {
+        return Err("Явный порт не разрешён".to_string());
+    }
+
+    // Хост в списке
+    if !allowed(&parsed, ALLOWED_EXTERNAL) {
+        return Err(format!(
+            "Хост не в списке разрешённых: {}",
+            parsed.host_str().unwrap_or("?")
+        ));
+    }
+
+    Ok(parsed)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{allowed, normalize_bypass};
+    use super::{allowed, normalize_bypass, validate_external_url};
     use tauri_plugin_http::reqwest::Url;
 
     const LIST: &[&str] = &[
@@ -406,5 +484,61 @@ mod tests {
             "localhost,127.0.0.1,x"
         );
         assert_eq!(normalize_bypass(""), "");
+    }
+
+    #[test]
+    fn external_https_allowed_host() {
+        assert!(validate_external_url("https://github.com/foulnike/Animori").is_ok());
+        assert!(validate_external_url("https://anilist.co/user/test").is_ok());
+    }
+
+    #[test]
+    fn external_http_rejected() {
+        assert!(validate_external_url("http://github.com").is_err());
+    }
+
+    #[test]
+    fn external_file_rejected() {
+        assert!(validate_external_url("file:///etc/passwd").is_err());
+    }
+
+    #[test]
+    fn external_ms_settings_rejected() {
+        assert!(validate_external_url("ms-settings:privacy").is_err());
+    }
+
+    #[test]
+    fn external_javascript_rejected() {
+        assert!(validate_external_url("javascript:alert(1)").is_err());
+    }
+
+    #[test]
+    fn external_userinfo_rejected() {
+        let err = validate_external_url("https://user:pass@github.com").unwrap_err();
+        assert!(err.contains("Логин/пароль"));
+    }
+
+    #[test]
+    fn external_host_not_in_allowlist() {
+        let err = validate_external_url("https://evil.example/steal").unwrap_err();
+        assert!(err.contains("не в списке"));
+    }
+
+    #[test]
+    fn external_explicit_port_rejected() {
+        assert!(validate_external_url("https://github.com:8443/").is_err());
+    }
+
+    #[test]
+    fn external_too_long_rejected() {
+        let long = format!("https://github.com/{}", "x".repeat(2049));
+        let err = validate_external_url(&long).unwrap_err();
+        assert!(err.contains("слишком длинный"));
+    }
+
+    #[test]
+    fn external_crlf_rejected() {
+        let err = validate_external_url("https://github.com/\r\nX-Header: evil").unwrap_err();
+        assert!(err.contains("Управляющие символы"));
     }
 }

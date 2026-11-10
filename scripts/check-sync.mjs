@@ -246,6 +246,47 @@ function checkLock() {
   return `${APPS.length} областей`
 }
 
+/** CSP: три конфига, frame-src обязан совпадать с TRAILER_SITES. */
+function checkCsp() {
+  const csps = APPS.map((app) => {
+    const conf = JSON.parse(read('apps', app, 'src-tauri', 'tauri.conf.json'))
+    return { app, csp: conf.app?.security?.csp ?? '' }
+  })
+
+  // Windows и TV должны быть идентичны
+  const windows = csps.find((c) => c.app === 'windows')?.csp ?? ''
+  const tv = csps.find((c) => c.app === 'android-tv')?.csp ?? ''
+  if (windows !== tv) push('CSP: windows и android-tv разошлись')
+
+  // Телефон может отличаться только отсутствием http: в connect-src (но сейчас все три одинаковые)
+  const phone = csps.find((c) => c.app === 'android')?.csp ?? ''
+  if (phone !== windows) push('CSP: android и windows разошлись (ожидается идентичность)')
+
+  // frame-src vs TRAILER_SITES
+  const frameMatch = windows.match(/frame-src\s+([^;]+)/)
+  const frameSrc = frameMatch ? frameMatch[1].trim().split(/\s+/) : []
+
+  const mediaTs = read('packages', 'core', 'src', 'api', 'anilist-media.ts')
+  // Находим начало TRAILER_SITES и берём блок до первого закрывающего ']'
+  const tsIdx = mediaTs.indexOf('const TRAILER_SITES')
+  const tsBlock = tsIdx >= 0 ? mediaTs.slice(tsIdx, mediaTs.indexOf('\n]', tsIdx) + 2) : ''
+  const trailerHosts = new Set()
+  for (const match of tsBlock.matchAll(/`(https:\/\/[a-z0-9.-]+)\//g)) {
+    trailerHosts.add(match[1])
+  }
+
+  const frameSrcSet = new Set(frameSrc)
+  for (const host of trailerHosts) {
+    if (!frameSrcSet.has(host)) push(`CSP: frame-src не содержит хост из TRAILER_SITES: ${host}`)
+  }
+  for (const host of frameSrcSet) {
+    if (!trailerHosts.has(host))
+      push(`CSP: frame-src содержит хост, которого нет в TRAILER_SITES: ${host}`)
+  }
+
+  return `${frameSrc.length} хостов в frame-src`
+}
+
 const report = []
 for (const app of APPS) report.push(`${app}: команд ${checkCommands(app)}`)
 for (const app of APPS)
@@ -255,6 +296,7 @@ for (const app of APPS)
   report.push(`корневой vitest.core: ключей ${await checkCoreConfig(windowsTsKeys)}`)
 }
 report.push(`замок: областей ${checkLock()}`)
+report.push(`CSP: ${checkCsp()}`)
 
 if (errors.length) {
   for (const message of errors) console.error(`  ${message}`)

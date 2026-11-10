@@ -3,6 +3,7 @@
 import Hls from 'hls.js'
 
 import { Logger } from '@/utils/logger'
+import { validateStreamUrl, streamHost } from '@/utils/stream-validation'
 
 /** Почему поток не пойдёт: `link` — срок подписи вышел (лечится новой ссылкой),
  * `net` — связь или движок: новый адрес не поможет. */
@@ -142,6 +143,15 @@ export function attachPlayback(video: HTMLVideoElement, hooks: PlaybackHooks): P
   }
 
   function open(url: string, startAt: number, andPlay = true): void {
+    const check = validateStreamUrl(url)
+    if (!check.valid) {
+      Logger('ERROR', `Адрес потока не прошёл проверку: ${check.reason}`, {
+        host: streamHost(url),
+      })
+      hooks.onFatal('Адрес потока не прошёл проверку безопасности.', 'link')
+      return
+    }
+
     want = startAt
     tries = 0
     go = andPlay

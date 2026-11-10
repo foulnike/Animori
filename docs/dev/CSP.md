@@ -1,9 +1,7 @@
 # Content Security Policy
 
 Политика лежит в `app.security.csp` в `tauri.conf.json` трёх приложений:
-`apps/windows`, `apps/android-tv`, `apps/android`. На всех трёх одинаковая,
-кроме `connect-src` телефона: там убран `http:` — весь белый список хостов
-телефона https.
+`apps/windows`, `apps/android-tv`, `apps/android`. На всех трёх одинаковая.
 
 Схема читается в конфиге. Здесь только то, без чего политику сломают при правке: ломается
 тихо, окно открывается, а картинки или звук не грузятся.
@@ -17,17 +15,21 @@
 | `script-src 'self'` | Без `'unsafe-inline'` и `'unsafe-eval'`. Это смысл всей политики |
 | `style-src 'unsafe-inline'` | Компоненты задают цвета через `:style` |
 | `img-src data:` | SVG-заглушки, blob-постеры (локальные обложки из IndexedDB) и data-URI вёрстки. Заставка в `index.html` — обычный `<img src="...png">`, data не обязывает |
+| `img-src https:` | Обложки приходят из API (AniList, Шикимори, MAL). CDN-хосты меняются и их много, поэтому `img-src` остаётся широким. `http:` удалён — обложки по http не загружаются |
 | `frame-src` (youtube, dailymotion) | Трейлеры — iframe только из этого списка. Новая площадка трейлеров требует хост и здесь, и в `TRAILER_SITES` (`packages/core/src/api/anilist-media.ts`): без хоста iframe блокируется молча |
 
-## Почему остальное широкое
+## Почему media-src и connect-src узкие
 
-Приложение не ходит в сеть из webview: `fetch`, `XMLHttpRequest`, `EventSource` и
-`WebSocket` в UI-слое не встречаются, вся сеть идёт через Rust (команды
-`animori_http_request`, `animori_anilist_query`, `animori_cloud_*` через `invoke`). Поэтому сужать `connect-src` бессмысленно, а `img-src` и `media-src` оставлены
-широкими из-за обилия хостов обложек и зеркал.
+hls.js выполняет `fetch`/`XMLHttpRequest` из webview для манифеста и каждого сегмента потока.
+Эти запросы ограничены `connect-src` и `media-src`, в которых перечислены только известные
+CDN потоков:
+- Kodik: `*.kodik-cdn.com`, `*.solodcdn.com`
+- Aniliberty: `anilibria.top`, `*.anilibria.top`
+- AnimeThemes: `*.animethemes.moe`
 
-Белый список хостов в `src-tauri/src/hosts.rs`, и проверяет его Rust (`net.rs`) до
-отправки запроса. В CSP он намеренно не продублирован: два списка в разных местах разъедутся.
+Команды UI (`animori_http_request`, `animori_anilist_query`, `animori_cloud_*`) идут через
+`invoke` → Rust, который проверяет адрес по `src-tauri/src/hosts.rs` (`net.rs`). Эти запросы
+не ограничены CSP.
 
 ## Проверка после правки
 

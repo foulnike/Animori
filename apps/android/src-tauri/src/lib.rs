@@ -62,16 +62,9 @@ fn animori_restart(app: AppHandle) -> Result<(), String> {
 /// Открывает адрес в браузере по умолчанию. Схема проверяется здесь, а не на доверии к вызывающему: разметка не должна открыть что угодно.
 #[tauri::command]
 fn animori_open_external(app: AppHandle, url: String) -> Result<(), String> {
-    let trimmed = url.trim();
-
-    let lowered = trimmed.to_ascii_lowercase();
-    if !(lowered.starts_with("https://") || lowered.starts_with("http://")) {
-        return Err(format!("Схема адреса не разрешена: {trimmed}"));
-    }
-
-    // None во втором аргументе — «браузер по умолчанию».
+    let validated = net::validate_external_url(&url)?;
     app.opener()
-        .open_url(trimmed, None::<&str>)
+        .open_url(validated.as_str(), None::<&str>)
         .map_err(|e| e.to_string())
 }
 

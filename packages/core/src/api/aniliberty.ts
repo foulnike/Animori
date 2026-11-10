@@ -6,6 +6,7 @@ import { LIFE_ALIB_MATCH, LIFE_ALIB_MISS, isFresh } from '../core/cache-life'
 import { dbGet, dbSet } from '../core/db'
 import { reportError, reportStatus } from '../core/net-health'
 import { Logger } from '../utils/logger'
+import { validateStreamUrl, streamHost } from '../utils/stream-validation'
 import type { MediaCacheRecord } from '../core/types'
 import type {
   VideoEpisode,
@@ -259,7 +260,15 @@ function toTracks(raw: AniEpisode): VideoTrack[] {
   const tracks: VideoTrack[] = []
   for (const [height, link] of rows) {
     const url = absolute(link)
-    if (url) tracks.push({ height, url })
+    if (!url) continue
+    const check = validateStreamUrl(url)
+    if (!check.valid) {
+      Logger('ERROR', `Aniliberty: адрес потока отклонён: ${check.reason}`, {
+        host: streamHost(url),
+      })
+      continue
+    }
+    tracks.push({ height, url })
   }
   return tracks
 }
