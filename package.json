@@ -32,7 +32,8 @@
     "sync:check": "node scripts/check-sync.mjs",
     "third-party": "node tools/gen-third-party.mjs",
     "drift:accept": "node scripts/drift.mjs --accept",
-    "fix:lock": "node scripts/fix-lock-optional.mjs"
+    "fix:lock": "node scripts/fix-lock-optional.mjs",
+    "third-party:check": "node tools/gen-third-party.mjs --check"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -44,8 +45,11 @@
     "prettier": "^3.9.9",
     "typescript-eslint": "^8.71.1",
     "vite": "^8.3.2",
-    "vitest": "4.1.11",
+    "vitest": "4.1.12",
     "vitest-axe": "0.1.0",
     "vue-eslint-parser": "^10"
+  },
+  "overrides": {
+    "minimatch": "^11.0.1"
   }
 }

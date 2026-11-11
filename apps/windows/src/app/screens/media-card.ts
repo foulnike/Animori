@@ -1,5 +1,14 @@
 // Данные карточки аниме: подробности, русская карточка, оценки, франшиза и правки записи. Правда о списке — в памяти коллекции; карточки кешируются, чтобы возврат назад не спрашивал заново.
-import { computed, nextTick, onScopeDispose, ref, type ComputedRef, type Ref } from 'vue'
+import {
+  computed,
+  nextTick,
+  onScopeDispose,
+  ref,
+  useTemplateRef,
+  type ComputedRef,
+  type Ref,
+  type ShallowRef,
+} from 'vue'
 
 import { fetchMediaCard, type MediaCard } from '@/api/anilist-media'
 import { setupVideoSources } from '@/api/video-sources'
@@ -81,7 +90,7 @@ export interface MediaCardView {
   card: Ref<MediaCard | null>
   busy: Ref<boolean>
   trouble: Ref<string>
-  franList: Ref<HTMLElement | null>
+  franList: Readonly<ShallowRef<HTMLElement | null>>
   status: ComputedRef<string>
   score10: ComputedRef<number>
   progress: ComputedRef<number>
@@ -176,7 +185,7 @@ export function useMediaCard(mediaId: Ref<number>): MediaCardView {
   const nameStamp = ref(0)
 
   /** Полка франшизы: к нынешнему аниме она прокручивается сама. */
-  const franList = ref<HTMLElement | null>(null)
+  const franList = useTemplateRef<HTMLElement>('franList')
 
   /** Счётчик правок этого показа: заставляет пересчитать взятое из памяти. */
   const editStamp = ref(0)

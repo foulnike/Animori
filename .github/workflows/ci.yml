@@ -69,6 +69,12 @@ jobs:
       - name: Синхронность конфигураций
         run: npm run sync:check
 
+      # Перечень компонентов совпадает с lock-файлами, лицензии всех пакетов выпусков — из
+      # [licenses].allow в deny.toml (GPL, AGPL, LGPL не проходят), тексты лицензий находятся.
+      # Генератор читает Cargo.lock через cargo metadata; cargo на ubuntu-latest есть.
+      - name: Лицензии и перечень компонентов
+        run: npm run third-party:check
+
       - name: Наборы ядра
         run: npm run test:core
 

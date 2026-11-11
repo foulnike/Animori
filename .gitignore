@@ -44,3 +44,7 @@ Thumbs.db
 .env.*
 !.env.example
 *.key
+
+# Тексты лицензий для выпуска: генерируются на сборке (tools/gen-third-party.mjs --texts)
+apps/windows/src-tauri/legal/
+apps/*/src-tauri/gen/android/app/src/main/assets/licenses/

@@ -1,0 +1,8 @@
+{
+  "bundle": {
+    "resources": {
+      "legal/THIRD-PARTY-LICENSES.txt": "THIRD-PARTY-LICENSES.txt",
+      "legal/THIRD-PARTY.md": "THIRD-PARTY.md"
+    }
+  }
+}

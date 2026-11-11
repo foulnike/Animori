@@ -161,6 +161,17 @@ jobs:
 
       # Сборка. Файл выходит неподписанным — так делает Tauri и на компьютере:
       # ключа выпуска у него нет. Подписываем следующим шагом.
+      # Тексты лицензий и перечень компонентов внутрь APK: каталог assets Gradle пакует как
+      # есть, файлы лежат в assets/licenses. Генератор падает, если пакет можно взять только
+      # под лицензией вне deny.toml или у него нет текста.
+      - name: Уведомления о лицензиях
+        # Копия в out/ — для страницы выпуска: артефакт прогона собирается из одного каталога,
+        # иначе upload-artifact сохранит пути от общего предка и APK уедут из dist/.
+        run: |
+          node ../../tools/gen-third-party.mjs --texts android-tv --out src-tauri/gen/android/app/src/main/assets/licenses
+          mkdir -p out
+          cp src-tauri/gen/android/app/src/main/assets/licenses/THIRD-PARTY-LICENSES.txt out/
+
       - name: Сборка APK
         run: npm run tauri -- android build -t ${{ matrix.cli }}
 
@@ -225,7 +236,11 @@ jobs:
           # upload-artifact нет параметра working-directory, и defaults.run его
           # не подставляет. Шаг выше пишет в apps/android-tv/out, а загрузчик искал
           # в корне и рапортовал «No files were found» при живом файле.
-          path: apps/android-tv/out/AniMori_${{ steps.ver.outputs.version }}_${{ matrix.abi }}.apk
+          # Вместе с APK — тексты лицензий из того же прогона: publish кладёт их на страницу
+          # выпуска рядом с APK. У обеих разрядностей файл одинаковый.
+          path: |
+            apps/android-tv/out/AniMori_${{ steps.ver.outputs.version }}_${{ matrix.abi }}.apk
+            apps/android-tv/out/THIRD-PARTY-LICENSES.txt
           if-no-files-found: error
 
   publish:
@@ -312,6 +327,23 @@ jobs:
           path: dist
           merge-multiple: true
 
+      # Контрольные суммы APK: ставят их вручную, в обход магазина, и сверить скачанное
+      # больше не с чем. Формат sha256sum, проверка — `sha256sum -c SHA256SUMS`.
+      # Каталог dist — от корня репозитория: туда его кладёт download-artifact.
+      - name: Контрольные суммы
+        working-directory: dist
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          apks=(*.apk)
+          if [[ ${#apks[@]} -ne 2 ]]; then
+            echo "::error::Ждали два APK (arm64 и armv7), нашлось: ${#apks[@]}"
+            exit 1
+          fi
+          sha256sum "${apks[@]}" > SHA256SUMS
+          sha256sum -c SHA256SUMS
+          cat SHA256SUMS
+
       # Предварительный — обязательно, и это не про «бета». Адрес
       # `releases/latest` достаётся старым сборкам Windows: у них он вшит в бильник
       # и сменить его уже нельзя. Пока у приставки был обычный релиз, он становился
@@ -333,4 +365,12 @@ jobs:
           body: ${{ steps.notes.outputs.body }}
           draft: false
           prerelease: true
-          files: dist/*.apk
+          # LICENSE и перечень зависимостей едут рядом с APK: MIT, Apache-2.0 и MPL-2.0
+          # требуют уведомления вместе с бинарником. Апдейтер выбирает APK по точному
+          # имени, лишние файлы выпуска ему не мешают.
+          files: |
+            dist/*.apk
+            dist/SHA256SUMS
+            LICENSE
+            docs/THIRD-PARTY.md
+            dist/THIRD-PARTY-LICENSES.txt

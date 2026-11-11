@@ -130,6 +130,13 @@ jobs:
         working-directory: .
         run: npm ci
 
+      # Тексты лицензий и перечень компонентов для установщиков и портабла. Генератор падает,
+      # если пакет можно взять только под лицензией вне deny.toml или у него нет текста.
+      # Файлы входят в MSI и NSIS через tauri.notices.conf.json (bundle.resources) и ставятся
+      # в каталог программы рядом с AniMori.exe.
+      - name: Уведомления о лицензиях
+        run: node ../../tools/gen-third-party.mjs --texts windows --out src-tauri/legal
+
       # Собирает приложение, создаёт релиз по тегу, подписывает установщик и сам генерирует
       # latest.json. Писать манифест вручную не надо.
       # Пробный прогон: сборка и подпись без публикации. tauri-action создаёт релиз
@@ -142,7 +149,7 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: npx tauri build
+        run: npx tauri build --config src-tauri/tauri.notices.conf.json
 
       - name: Сборка приложения и публикация релиза
         if: github.event_name == 'push' || !inputs.dry
@@ -173,6 +180,8 @@ jobs:
           # По умолчанию (false) манифест берёт первый по приоритету установщик, а первый — как раз
           # msi: все установленные копии поставлены NSIS и пошли бы обновляться через msiexec…
           updaterJsonPreferNsis: true
+          # Путь от projectPath: тексты лицензий входят в установщики, см. шаг выше.
+          args: --config src-tauri/tauri.notices.conf.json
 
       # Короткое имя для человека. Исходный файл остаётся на месте нетронутым — именно на него
       # ссылается latest.json.
@@ -208,11 +217,39 @@ jobs:
           # LICENSE один на репозиторий и лежит в его корне, а не рядом с приложением:
           # им пользуются оба продукта.
           Copy-Item ../../LICENSE (Join-Path $stage 'LICENSE')
-          # Перечень зависимостей с лицензиями: MPL-2.0 требует уведомления, а портабл
-          # разбирают без репозитория под рукой — значит, перечень едет вместе с программой.
-          Copy-Item ../../docs/THIRD-PARTY.md (Join-Path $stage 'THIRD-PARTY.md')
+          # Перечень и тексты лицензий те же, что в установщиках: портабл разбирают без
+          # репозитория под рукой, а MIT и Apache-2.0 требуют текст рядом с бинарником.
+          Copy-Item src-tauri/legal/THIRD-PARTY.md (Join-Path $stage 'THIRD-PARTY.md')
+          Copy-Item src-tauri/legal/THIRD-PARTY-LICENSES.txt (Join-Path $stage 'THIRD-PARTY-LICENSES.txt')
           Compress-Archive -Path "$stage/*" -DestinationPath "artifacts/AniMori_${version}_x64-portable.zip" -Force
           Write-Host "Портабл собран из: $($exe.FullName)"
+
+      # Контрольные суммы всех файлов выпуска: и тех, что выкладывает tauri-action (msi, nsis
+      # под исходным именем), и копий выше. Формат sha256sum: «<хэш>  <имя>», проверка —
+      # `sha256sum -c SHA256SUMS` или Get-FileHash. Считается и в пробном прогоне: шаг
+      # проверяется заранее, а выкладывается только в боевом.
+      - name: Контрольные суммы
+        shell: pwsh
+        run: |
+          $bundles = Get-ChildItem -Path src-tauri/target -Recurse -File |
+            Where-Object {
+              ($_.DirectoryName -match 'bundle\\nsis$' -and $_.Name -like '*-setup.exe') -or
+              ($_.DirectoryName -match 'bundle\\msi$' -and $_.Name -like '*.msi')
+            }
+          $files = @($bundles) + @(Get-ChildItem -Path artifacts -File)
+          if ($files.Count -lt 3) {
+            throw "Для сумм нашлось файлов: $($files.Count), ждали установщики и портабл"
+          }
+          $names = $files | ForEach-Object { $_.Name }
+          if (($names | Select-Object -Unique).Count -ne $names.Count) {
+            throw "Имена файлов выпуска повторяются: $($names -join ', ')"
+          }
+          $lines = $files | Sort-Object Name | ForEach-Object {
+            '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name
+          }
+          # LF и без BOM: файл должен читаться `sha256sum -c` на любой системе.
+          [IO.File]::WriteAllText((Join-Path $PWD 'artifacts/SHA256SUMS'), (($lines -join "`n") + "`n"))
+          Get-Content artifacts/SHA256SUMS
 
       # Пробный прогон сюда не доходит: сборка и подпись уже проверены, а публиковать нечего.
       - name: Доложить артефакты в релиз
@@ -227,6 +264,7 @@ jobs:
           files: |
             apps/windows/artifacts/AniMori_Setup.exe
             apps/windows/artifacts/AniMori_*_x64-portable.zip
+            apps/windows/artifacts/SHA256SUMS
 
       # Канал обновлений Windows: отдельный релиз с постоянным именем, всегда указывающий на
       # последнюю сборку. Зачем он нужен: апдейтер читает адрес по имени, а `releases/latest`

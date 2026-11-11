@@ -75,6 +75,20 @@ https://github.com/foulnike/Animori-Desktop/releases/latest/download/latest.json
 5. **Своё имя канала, а не `releases/latest`**, в конфиге: адрес вписывается в
    бинарный файл при сборке, и смена его не доедет до уже установленных копий.
 
+## Что лежит в выпуске
+
+| Продукт | Файлы |
+| :--- | :--- |
+| Windows | установщики NSIS и MSI от tauri-action, `AniMori_Setup.exe`, портабл-архив, `latest.json`, `SHA256SUMS`. В установщиках и портабле рядом с `AniMori.exe` лежат `THIRD-PARTY.md` и `THIRD-PARTY-LICENSES.txt` |
+| Телефон и приставка | `AniMori_<версия>_arm64.apk`, `AniMori_<версия>_armv7.apk`, `SHA256SUMS`, `LICENSE`, `THIRD-PARTY.md`, `THIRD-PARTY-LICENSES.txt`. Внутри APK — `assets/licenses/` с теми же двумя файлами |
+
+`SHA256SUMS` считается в конвейере после подписи, в формате `sha256sum`. Апдейтеры телефона и
+приставки выбирают APK по точному имени, поэтому лишние файлы выпуска им не мешают.
+
+Выпуск запускает тег `windows-v*`, `android-tv-v*` или `android-v*`. Чтобы тег не мог поставить
+кто угодно с правом push, на эти шаблоны нужно правило в Settings → Rules → Rulesets (цель —
+теги, запрет создания и удаления для всех, кроме владельца).
+
 ## Чего не ждать
 
 Правило переживёт любой порядок выпусков: продукты не зависят друг от друга по

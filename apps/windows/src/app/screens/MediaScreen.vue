@@ -45,7 +45,6 @@ const {
   card,
   busy,
   trouble,
-  franList,
   status,
   score10,
   progress,

@@ -15,6 +15,7 @@
 | Документ | Вопрос |
 | :--- | :--- |
 | [dev/CSP.md](dev/CSP.md) | политика содержимого и её ограничения |
+| [dev/DEPENDENCIES.md](dev/DEPENDENCIES.md) | зависимости, аудит и переопределения версий |
 | [dev/DUPLICATES.md](dev/DUPLICATES.md) | синхронные копии файлов двух приложений |
 | [dev/LINTING.md](dev/LINTING.md) | линт и форматирование |
 | [dev/RELEASES.md](dev/RELEASES.md) | устройство выпусков и каналы обновлений |

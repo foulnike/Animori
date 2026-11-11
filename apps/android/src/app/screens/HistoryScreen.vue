@@ -243,9 +243,6 @@ const days = computed<Day[]>(() => group(shown.value))
 const hasMore = computed<boolean>(() => rows.value.length > limit.value)
 const restCount = computed<number>(() => Math.max(0, rows.value.length - limit.value))
 
-/** Корень экрана: на нём сидит слушатель рельса крестика. */
-const root = ref<HTMLElement | null>(null)
-
 /** Сборка показа из памяти. Сети не требует вовсе. */
 function redraw(): void {
   rows.value = peekHistory()
@@ -351,7 +348,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section ref="root" class="am-page">
+  <section class="am-page">
     <div class="am-hist__top">
       <h2 class="am-h2">Просмотрено</h2>
       <span v-if="rows.length > 0" class="am-hist__num">{{ rows.length }}</span>
