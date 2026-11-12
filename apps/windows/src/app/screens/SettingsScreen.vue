@@ -43,6 +43,7 @@ import CreditsBox from '../components/CreditsBox.vue'
 import DateField from '../components/DateField.vue'
 import ProxyBox from '../components/ProxyBox.vue'
 import TileMark from '../components/TileMark.vue'
+import { tagWord } from '../tag-words'
 import { pickTextFile } from '../load-file'
 import { navigate } from '../router'
 import { saveXmlFile } from '../save-file'
@@ -190,8 +191,11 @@ const datasetStale = ref(false)
  * Сторож в репозитории кричит на десятом дне, но письмо можно пропустить, а этот экран открывают сами. */
 const STALE_DAYS = 30
 
-/** Показ взрослого: списывается из настроек один раз — объект настроек не реактивен. */
-const adult = ref(settings.showAdult)
+/** Три режима фильтра: полная, частичная и отключённая. */
+const adultMode = ref(settings.adultMode)
+const ageVerified = ref(settings.adultAgeVerified)
+const adultTagRules = ref(structuredClone(settings.adultTagRules))
+const pendingAdultMode = ref<typeof settings.adultMode | null>(null)
 
 /** Открыт ли вопрос о возрасте: взрослое включается ответом, а не нажатием — до него тумблер выключен. */
 const askingAge = ref(false)
@@ -561,21 +565,22 @@ function onExport(): void {
 
 /** Переключение показа взрослого: отбор живёт в core/adult.ts и читает ключ в момент вопроса, перезапуск не нужен.
  * Включение спрашивает дату рождения (формально, ничего не хранит); тумблер встаёт в «включено» только после ответа. */
-function onAdult(): void {
-  if (!adult.value) {
-    void saveSetting('showAdult', 'set_adult', false)
-    void purgeAdultPick()
-    closeAge()
+function setAdultMode(next: typeof settings.adultMode): void {
+  if (next === adultMode.value) return
+  if (next !== 'full' && !ageVerified.value) {
+    pendingAdultMode.value = next
+    birth.value = ''
+    ageError.value = ''
+    askingAge.value = true
     return
   }
 
-  adult.value = false
-  birth.value = ''
-  ageError.value = ''
-  askingAge.value = true
+  adultMode.value = next
+  void saveSetting('adultMode', 'set_adult_mode', next)
+  void saveSetting('showAdult', 'set_adult', next === 'none')
+  if (next === 'full') void purgeAdultPick()
 }
 
-/** Ответ календарика. Пустая дата — «стёрли», и это не ответ. */
 function onBirth(value: string): void {
   birth.value = value
   if (value === '') return
@@ -585,9 +590,22 @@ function onBirth(value: string): void {
     return
   }
 
+  ageVerified.value = true
+  void saveSetting('adultAgeVerified', 'set_adult_age_verified', true)
+  const next = pendingAdultMode.value ?? adultMode.value
+  pendingAdultMode.value = null
   closeAge()
-  adult.value = true
-  void saveSetting('showAdult', 'set_adult', true)
+  setAdultMode(next)
+}
+
+function saveAdultTagRules(): void {
+  void saveSetting('adultTagRules', 'set_adult_tag_rules', adultTagRules.value)
+}
+
+function updateAdultTagRule(name: string, field: 'threshold' | 'hideInPartial', value: number | boolean): void {
+  const current = adultTagRules.value[name] ?? { threshold: 70, hideInPartial: false }
+  adultTagRules.value[name] = { ...current, [field]: field === 'threshold' ? Math.max(0, Math.min(100, Math.round(Number(value)))) : value }
+  saveAdultTagRules()
 }
 
 /** Отказ от вопроса: тумблер остаётся выключенным, и это его настоящее состояние. */
@@ -1133,10 +1151,37 @@ onBeforeUnmount(() => {
               </button>
             </div>
 
-            <label class="am-switch">
-              <input v-model="adult" type="checkbox" class="am-switch__box" @change="onAdult" />
-              <span class="am-switch__name">Показывать контент для взрослых (18+)</span>
-            </label>
+            <h3 class="am-h3 am-adult-heading"><TileMark name="adult" /> Взрослое</h3>
+
+<div class="am-adult-control" role="radiogroup" aria-label="Фильтрация контента 18+">
+  <button class="am-adult-mode" :class="{ 'am-adult-mode--active': adultMode === 'full' }" type="button" role="radio" :aria-checked="adultMode === 'full'" @click="setAdultMode('full')">
+    <span class="am-adult-mode__chip am-adult-mode__chip--muted">18+</span>
+    <span><strong>Скрыто</strong><small>Скрывать весь 18+ контент</small></span>
+  </button>
+  <button class="am-adult-mode" :class="{ 'am-adult-mode--active': adultMode === 'partial' }" type="button" role="radio" :aria-checked="adultMode === 'partial'" @click="setAdultMode('partial')">
+    <span class="am-adult-mode__chip am-adult-mode__chip--blue">18+</span>
+    <span><strong>Частично</strong><small>Скрывать красные, настраивать синие</small></span>
+  </button>
+  <button class="am-adult-mode" :class="{ 'am-adult-mode--active': adultMode === 'none' }" type="button" role="radio" :aria-checked="adultMode === 'none'" @click="setAdultMode('none')">
+    <span class="am-adult-mode__chip am-adult-mode__chip--red">18+</span>
+    <span><strong>Показано</strong><small>Показывать весь контент</small></span>
+  </button>
+</div>
+
+            <div v-if="ageVerified && adultMode !== 'full'" class="am-adult-note">
+  <p><span class="am-adult-chip am-adult-chip--red">18+</span> — Хентай и сексуальный контент по версии AniList.</p>
+  <p><span class="am-adult-chip am-adult-chip--blue">18+</span> — Теги, которые могут содержать потенциально неприемлемый контент. Порог скрытия определяется долей тега в тайтле. Можно настроить.</p>
+</div>
+<div v-if="adultMode === 'partial' && ageVerified" class="am-adult-options">
+              <p class="am-adult-options__title">Синие теги</p>
+              <p class="am-adult-options__hint">Выберите, какие категории скрывать, и задайте порог для каждой.</p>
+              <label v-for="(rule, name) in adultTagRules" :key="name" class="am-adult-tag">
+                <input type="checkbox" :checked="rule.hideInPartial" @change="updateAdultTagRule(name, 'hideInPartial', ($event.target as HTMLInputElement).checked)" />
+                <span class="am-adult-tag__name">{{ tagWord(name) }}</span>
+                <input class="am-adult-tag__range" type="range" min="0" max="100" step="1" :value="rule.threshold" @input="updateAdultTagRule(name, 'threshold', ($event.target as HTMLInputElement).valueAsNumber)" />
+                <output>{{ rule.threshold }}%</output>
+              </label>
+            </div>
 
             <!-- Вопрос о возрасте стоит под тумблером, а не отдельным окном: уход с экрана его
                закрывает. Поле даты своё: системное на тёмных темах выбивалось из стекла. -->

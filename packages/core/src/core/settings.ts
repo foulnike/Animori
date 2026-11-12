@@ -10,6 +10,34 @@ export type TitleSource = 'shikimori' | 'off' | 'none'
  * Оформление окна; слово «тема» занято музыкальными темами, `amoled` — чёрный ноль: на OLED он не светится. */
 export type AppearanceName = 'dark' | 'light' | 'amoled'
 
+/** Уровень фильтрации 18+: всё закрыто, только красное закрыто или фильтрации нет. */
+export type AdultFilterMode = 'full' | 'partial' | 'none'
+
+export interface AdultTagRule {
+  threshold: number
+  hideInPartial: boolean
+}
+
+export const ADULT_TAG_RULES_DEFAULT: Record<string, AdultTagRule> = {
+  Incest: { threshold: 40, hideInPartial: false },
+  Inseki: { threshold: 40, hideInPartial: false },
+  'Ero Guro': { threshold: 40, hideInPartial: false },
+  "Boys' Love": { threshold: 70, hideInPartial: false },
+  Yuri: { threshold: 70, hideInPartial: false },
+  'LGBTQ+ Themes': { threshold: 70, hideInPartial: false },
+  'Gender Bending': { threshold: 70, hideInPartial: false },
+  Psychosexual: { threshold: 70, hideInPartial: false },
+  Transgender: { threshold: 70, hideInPartial: false },
+  Crossdressing: { threshold: 70, hideInPartial: false },
+  Bisexual: { threshold: 70, hideInPartial: false },
+  Agender: { threshold: 70, hideInPartial: false },
+  Asexual: { threshold: 70, hideInPartial: false },
+  Nudity: { threshold: 70, hideInPartial: false },
+  Femboy: { threshold: 70, hideInPartial: false },
+  "Teens' Love": { threshold: 70, hideInPartial: false },
+  'Age Gap': { threshold: 70, hideInPartial: false },
+}
+
 /**
  * Где живёт облачная копия; 'google' оставлен нарочно — у кого он лежит в хранилище, панель скажет переставить место. */
 export type CloudPlace = 'none' | 'yandex' | 'google'
@@ -32,10 +60,14 @@ export interface AniMoriSettings {
   blockPlayerPopups: boolean
   /** Резать рекламные блоки AniList: работает всюду — баннеры в главном фрейме на том же домене. */
   hideAds: boolean
-  /**
-   * Показывать взрослое (18+): прячется везде, включая свой список; история остаётся исключением.
-   */
+  /** Режим фильтрации 18+: полная, частичная или отключённая. */
+  adultMode: AdultFilterMode
+  /** Устаревший флаг для совместимости со старыми тестами и снимками. */
   showAdult: boolean
+  /** Возраст подтверждён в этом профиле; дата рождения не хранится. */
+  adultAgeVerified: boolean
+  /** Индивидуальные правила регулируемых тегов AniList. */
+  adultTagRules: Record<string, AdultTagRule>
   /** Показывать пилюлю «Перенос»: смысл ключа чисто интерфейсный — окно остаётся смонтированным. */
   showSyncButton: boolean
   /** Показывать пилюлю ⇄: отдельный ключ, иначе объединение прятало бы обе кнопки ради одной. */
@@ -75,11 +107,14 @@ const DEFAULT_SETTINGS: AniMoriSettings = {
   enableRatings: true,
   enableFranchise: true,
   enableThemes: true,
-  enableLogger: true,
+  enableLogger: false,
   appearance: 'amoled',
   blockPlayerPopups: false,
   hideAds: false,
+  adultMode: 'full',
   showAdult: false,
+  adultAgeVerified: false,
+  adultTagRules: normalizeAdultTagRules(),
   showSyncButton: true,
   showCompareButton: true,
   exportDir: '',
@@ -90,6 +125,19 @@ const DEFAULT_SETTINGS: AniMoriSettings = {
   cloudSavedCount: 0,
   cloudSeenModified: '',
   translateTitles: true,
+}
+
+function normalizeAdultTagRules(value: unknown = null): Record<string, AdultTagRule> {
+  const out: Record<string, AdultTagRule> = {}
+  for (const [name, fallback] of Object.entries(ADULT_TAG_RULES_DEFAULT)) {
+    const raw = value && typeof value === 'object' ? (value as Record<string, unknown>)[name] : null
+    const row = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : null
+    const threshold = typeof row?.threshold === 'number' && Number.isFinite(row.threshold)
+      ? Math.min(100, Math.max(0, Math.round(row.threshold)))
+      : fallback.threshold
+    out[name] = { threshold, hideInPartial: row?.hideInPartial === true }
+  }
+  return out
 }
 
 async function readSettings(): Promise<AniMoriSettings> {
@@ -111,7 +159,10 @@ async function readSettings(): Promise<AniMoriSettings> {
     appearance,
     blockPlayerPopups,
     hideAds,
-    showAdult,
+    storedAdultMode,
+    legacyAdult,
+    adultAgeVerified,
+    storedAdultTagRules,
     showSyncButton,
     showCompareButton,
     exportDir,
@@ -136,7 +187,10 @@ async function readSettings(): Promise<AniMoriSettings> {
     storage.get<AppearanceName>('am_appearance', DEFAULT_SETTINGS.appearance),
     storage.get('set_block_popups', DEFAULT_SETTINGS.blockPlayerPopups),
     storage.get('set_hide_ads', DEFAULT_SETTINGS.hideAds),
+    storage.get<AdultFilterMode>('set_adult_mode'),
     storage.get('set_adult', DEFAULT_SETTINGS.showAdult),
+    storage.get('set_adult_age_verified', DEFAULT_SETTINGS.adultAgeVerified),
+    storage.get<Record<string, AdultTagRule>>('set_adult_tag_rules'),
     storage.get('set_btn_sync', DEFAULT_SETTINGS.showSyncButton),
     storage.get('set_btn_compare', DEFAULT_SETTINGS.showCompareButton),
     storage.get('set_export_dir', DEFAULT_SETTINGS.exportDir),
@@ -152,6 +206,13 @@ async function readSettings(): Promise<AniMoriSettings> {
   // Совместимость: старый set_titles применяется только при отсутствии нового ключа. Литерал 'shikimori' здесь писать НЕЛЬЗЯ.
   const titlePrimary = storedTitlePrimary ?? (legacyTitles ? DEFAULT_SETTINGS.titlePrimary : 'off')
 
+  const adultMode: AdultFilterMode =
+    storedAdultMode === 'partial' || storedAdultMode === 'none'
+      ? storedAdultMode
+      : legacyAdult === true
+        ? 'none'
+        : 'full'
+
   return {
     translateInterface,
     titlePrimary,
@@ -166,7 +227,10 @@ async function readSettings(): Promise<AniMoriSettings> {
     appearance,
     blockPlayerPopups,
     hideAds,
-    showAdult,
+    adultMode,
+    showAdult: adultMode === 'none',
+    adultAgeVerified: adultAgeVerified === true || legacyAdult === true,
+    adultTagRules: normalizeAdultTagRules(storedAdultTagRules),
     showSyncButton,
     showCompareButton,
     exportDir,

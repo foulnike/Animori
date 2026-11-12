@@ -35,6 +35,8 @@ interface Props {
   /** Доля пройденного от нуля до единицы: полоса внизу постера. */
   done?: number
   adult?: boolean
+  /** Регулируемое содержимое по тегам: синяя плашка 18+. */
+  regulated?: boolean
   /** Закреплённый угол: слева повторы с заметкой и оценкой, ниже закладка; справа 18+ под рейтингом. */
   stackTags?: boolean
   /** Крестик «не интересует» поверх постера: только для плиток витрины. */
@@ -57,6 +59,7 @@ const props = withDefaults(defineProps<Props>(), {
   own: null,
   done: 0,
   adult: false,
+  regulated: false,
   stackTags: false,
   hidable: false,
   editable: false,
@@ -97,7 +100,7 @@ const playHint = computed(() => (playMark.value === 'yes' ? 'Можно посм
 
 /** Есть ли вообще что показывать в левом верхнем углу. */
 const hasTags = computed(
-  () => props.mark !== null || props.adult || props.soon || props.repeat > 0 || props.note !== null,
+  () => props.mark !== null || props.adult || props.regulated || props.soon || props.repeat > 0 || props.note !== null,
 )
 
 /** Левый угол закреплённой раскладки: 18+ и «Скоро» в нём не участвуют. */
@@ -153,9 +156,16 @@ const hasStackTags = computed(() => props.mark !== null || props.soon || props.o
           <span v-if="note" v-tip="note" class="am-tile__tag am-tile__tag--sign">✎</span>
 
           <span v-if="adult" class="am-tile__tag am-tile__tag--adult">18+</span>
+          <span v-if="regulated" class="am-tile__tag am-tile__tag--regulated">18+</span>
         </span>
 
         <span v-if="stackTags && adult" class="am-tile__tag am-tile__tag--adult am-tile__adult">
+          18+
+        </span>
+        <span
+          v-if="stackTags && regulated"
+          class="am-tile__tag am-tile__tag--regulated am-tile__adult"
+        >
           18+
         </span>
 
@@ -398,6 +408,12 @@ const hasStackTags = computed(() => props.mark !== null || props.soon || props.o
   color: var(--am-on-art);
   background: color-mix(in srgb, var(--am-bad) 62%, transparent);
   border-color: color-mix(in srgb, var(--am-bad) 70%, transparent);
+}
+
+.am-tile__tag--regulated {
+  color: var(--am-on-art);
+  background: color-mix(in srgb, var(--am-accent) 62%, transparent);
+  border-color: color-mix(in srgb, var(--am-accent) 70%, transparent);
 }
 
 /* Студия и поиск: угол закреплён. Левый столбец двумя рядами — сверху повторы,

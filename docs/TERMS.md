@@ -1,13 +1,14 @@
 # Условия использования
 
-**Редакция от 6 октября 2026 года.**
+**Редакция от 11 ноября 2026 года.**
 
 ## Русская версия
 
 ### 1. Предмет
 
 Настоящие Условия регулируют использование программного обеспечения AniMori
-(далее — Программа). Исходный код Программы распространяется по лицензии MIT
+(далее — Программа). Автор Программы — владелец учётной записи GitHub `foulnike`
+(далее — Автор). Исходный код Программы распространяется по лицензии MIT
 (см. файл `LICENSE`). Установка и использование Программы означает согласие
 с настоящими Условиями.
 
@@ -26,29 +27,52 @@ MyAnimeList, Яндекс, Kodik, Anilibria и иными упомянутыми
 ### 4. Сторонний контент и видеоисточники
 
 Программа предоставляет доступ к материалам, предоставляемым сторонними сервисами.
-Программа не создаёт, не хранит, не распространяет и не передаёт такие материалы,
-не получает на них лицензий и не обладает правами на них. За выбор источника
-просмотра и за сам просмотр отвечает пользователь.
+Программа не создаёт и не размещает такие материалы, не получает на них лицензий
+и не обладает правами на них. За выбор источника просмотра и за сам просмотр
+отвечает пользователь.
 
-### 5. Отсутствие гарантий
+Технически это устроено так:
+
+- **Видео не сохраняется.** Плеер получает поток от стороннего сервиса и
+  воспроизводит его по мере загрузки. Видеофайлы на устройство не записываются;
+  Программа запоминает только номер серии, место остановки и выбранную озвучку.
+- **Только известные адреса.** Поток принимается лишь по https и лишь с узлов
+  сервисов Kodik, Anilibria и AnimeThemes, перечисленных в коде Программы. Адрес с другого
+  узла отклоняется до начала воспроизведения.
+- **Вывод на устройства пользователя.** По команде пользователя поток может быть
+  показан в отдельном окне или передан на его телевизор. Программа не
+  раздаёт поток другим лицам.
+- **Музыкальные темы (настольное приложение).** Опенинги и эндинги загружаются
+  с AnimeThemes, который публикует их укороченные ТВ-версии. Трек сохраняется
+  на диск только по явному нажатию пользователя и в выбранную им папку; за
+  сохранённую копию отвечает пользователь.
+
+### 5. Обращения правообладателей
+
+Правообладатели и уполномоченные органы могут направить обращение на адрес
+foulnike@protonmail.com. В обращении укажите материал, о котором идёт речь,
+сервис-источник и основание требования. Автор отвечает на обращение в течение
+20 дней.
+
+### 6. Отсутствие гарантий
 
 Программа предоставляется «как есть», без каких-либо гарантий. Гарантии
 работоспособности сторонних сервисов, доступности источников контента и
 соответствия результатов ожиданиям пользователя не даются.
 
-### 6. Ограничение ответственности
+### 7. Ограничение ответственности
 
-Пользователь использует Программу на свой риск. Оператор не несёт ответственности
+Пользователь использует Программу на свой риск. Автор не несёт ответственности
 за убытки, возникшие в связи с использованием Программы, удалением данных
 пользователя, действиями сторонних сервисов или содержанием сторонних материалов.
 
-### 7. Возрастные ограничения
+### 8. Возрастные ограничения
 
 Материалы возрастного ограничения по умолчанию скрыты. Их отображение включается
 настройкой «Взрослое содержимое». Использование этой настройки возлагает на
 пользователя ответственность за соответствие законодательству его юрисдикции.
 
-### 8. Применимое право
+### 9. Применимое право
 
 К отношениям, вытекающим из настоящих Условий, применяется право Российской
 Федерации.
@@ -59,7 +83,8 @@ MyAnimeList, Яндекс, Kodik, Anilibria и иными упомянутыми
 
 ### 1. Subject
 
-These Terms govern the use of the AniMori software (the "Software"). The source
+These Terms govern the use of the AniMori software (the "Software"). The author of
+the Software is the owner of the GitHub account `foulnike` (the "Author"). The source
 code of the Software is distributed under the MIT license (see the `LICENSE` file).
 Installation and use of the Software constitutes acceptance of these Terms.
 
@@ -78,29 +103,51 @@ endorsement.
 ### 4. Third-party content and video sources
 
 The Software provides access to materials supplied by third-party services. The
-Software does not create, store, distribute or transmit such materials, obtains no
-licenses for them and holds no rights to them. The user is solely responsible for
-the choice of a viewing source and for the viewing itself.
+Software does not create or host such materials, obtains no licenses for them and
+holds no rights to them. The user is solely responsible for the choice of a viewing
+source and for the viewing itself.
 
-### 5. No warranties
+Technically:
+
+- **Video is not stored.** The player receives a stream from a third-party service
+  and plays it as it loads. No video files are written to the device; the Software
+  only remembers the episode number, playback position and selected voice-over.
+- **Known addresses only.** A stream is accepted only over https and only from
+  Kodik, Anilibria and AnimeThemes hosts listed in the Software's code. An address on any other
+  host is rejected before playback starts.
+- **Output to the user's own devices.** On the user's command a stream may be shown
+  in a separate window or sent to the user's TV. The Software does not share the
+  stream with other people.
+- **Theme songs (desktop app).** Openings and endings are loaded from AnimeThemes,
+  which publishes their shortened TV versions. A track is saved to disk only when
+  the user explicitly clicks to save it, into a folder the user chooses; the user is
+  responsible for the saved copy.
+
+### 5. Notices from rights holders
+
+Rights holders and competent authorities may send a notice to
+foulnike@protonmail.com. Please state the material concerned, the source service
+and the grounds for the request. The Author responds within 20 days.
+
+### 6. No warranties
 
 The Software is provided "as is", without warranties of any kind. No guarantees
 are given regarding the performance of third-party services, the availability of
 content sources or the suitability of results for the user's expectations.
 
-### 6. Limitation of liability
+### 7. Limitation of liability
 
-The user uses the Software at their own risk. The Controller shall not be liable
+The user uses the Software at their own risk. The Author shall not be liable
 for damages arising from the use of the Software, deletion of user data, actions
 of third-party services or third-party materials.
 
-### 7. Age restrictions
+### 8. Age restrictions
 
 Age-restricted materials are hidden by default. Their display is enabled by the
 "Adult content" setting. Enabling this setting makes the user responsible for
 compliance with the law of their jurisdiction.
 
-### 8. Governing law
+### 9. Governing law
 
 Relations arising from these Terms shall be governed by the laws of the Russian
 Federation.

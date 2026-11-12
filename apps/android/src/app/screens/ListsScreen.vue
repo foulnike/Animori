@@ -6,7 +6,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { keepAllowed } from '@/core/adult'
 import { editEntry, getEntry, initCollection } from '@/core/collection'
 import { countByStatus, countEntries, selectEntries } from '@/core/collection-view'
-import { partsCeiling, peekLook } from '@/core/media-looks'
+import { partsCeiling, peekLook, peekRegulated } from '@/core/media-looks'
 import { searchOwnList } from '@/core/media-search'
 import type { SnapshotEntry } from '@/core/snapshot'
 import { Logger } from '@/utils/logger'
@@ -163,7 +163,7 @@ function describe(e: unknown): string {
 function redraw(): void {
   // Взрослое прячется и здесь: тумблер один на всё приложение. Числа считаются по видимому, а не по всей коллекции: подпись «Закладки: 43» над сорока строками читалась бы пропажей.
   const raw = searching.value ? foundEntries : selectEntries({ status: [activeStatus.value] })
-  const list = keepAllowed(raw, (entry) => entry.isAdult)
+  const list = keepAllowed(raw, (entry) => entry.isAdult, (entry) => peekRegulated(entry.mediaId) ? [{ name: 'regulated', rank: 100 }] : null)
 
   counts.value = countByStatus({ hideAdult: true })
   total.value = countEntries({ hideAdult: true })
@@ -532,6 +532,7 @@ onBeforeUnmount(() => {
         :own="row.own"
         :done="row.done"
         :adult="row.adult"
+        :regulated="row.regulated"
         :art="view === 'wide'"
         editable
         @open="open(row.mediaId)"

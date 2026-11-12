@@ -2,7 +2,7 @@
 // Значки плит настроек: нарисованы, а не набраны знаками Юникода — у тех своя величина и толщина. Вектор в клетке 20×20, одна толщина линии, цвет по тексту, все знаки центрированы по (10, 10).
 
 /// Имена плит мозаики. У каждой своё окно, и на него приходится свой знак.
-type Kind = 'list' | 'look' | 'data' | 'cloud' | 'net' | 'about'
+type Kind = 'list' | 'look' | 'data' | 'cloud' | 'net' | 'about' | 'adult'
 
 const props = defineProps<{ name: Kind }>()
 </script>
@@ -59,6 +59,11 @@ const props = defineProps<{ name: Kind }>()
       <circle cx="10" cy="10" r="6.6" />
       <path d="M10 9.2v5" />
       <circle cx="10" cy="6.6" r="0.85" fill="currentColor" stroke="none" />
+    </template>
+
+    <template v-else-if="props.name === 'adult'">
+      <path d="M10 2.8 16.2 5v4.4c0 3.7-2.5 6.3-6.2 7.8-3.7-1.5-6.2-4.1-6.2-7.8V5z" />
+      <path d="M7.1 9.8h5.8" />
     </template>
   </svg>
 </template>

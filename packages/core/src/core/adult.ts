@@ -1,7 +1,7 @@
 // Единая точка отбора взрослого содержимого: решает тумблер настроек, прячется карточка, а не плеер.
-// Свой список тоже подчиняется; история не трогается.
+// Свой список тоже подчиняется; история тоже подчиняется.
 
-import { settings } from './settings'
+import { ADULT_TAG_RULES_DEFAULT, settings, type AdultFilterMode } from './settings'
 
 /** Жанры, которых не бывает при выключенном 18+. Имена серверные. */
 const ADULT_GENRES: ReadonlySet<string> = new Set(['Hentai'])
@@ -12,21 +12,67 @@ const ADULT_TAG_GROUPS: ReadonlySet<string> = new Set(['Sexual Content'])
 /** Тэги вне закрытых разделов, которым в меню отбора тоже не место. */
 const ADULT_TAG_NAMES: ReadonlySet<string> = new Set(['Hentai', 'Nudity', 'Prostitution'])
 
-/** Показывать ли взрослое сейчас: читается в момент вопроса — тумблер действует сразу. */
-export function adultShown(): boolean {
-  return settings.showAdult === true
+/**
+ * Регулируемые тэги: 18+ синий.
+ * Блокируются при rank ≥ порога, если showAdult выключен.
+ */
+const TAG_RULES = ADULT_TAG_RULES_DEFAULT
+
+export function adultMode(): AdultFilterMode {
+  // `showAdult` remains a compatibility escape hatch for old callers and tests.
+  if (settings.showAdult === true) return 'none'
+  return settings.adultMode
 }
 
-/** Пускать ли аниме в показ: неизвестный признак считается безопасным. */
-export function adultAllowed(isAdult: boolean | null | undefined): boolean {
-  if (isAdult !== true) return true
-  return adultShown()
+/** Показывать ли взрослое сейчас: читается в момент вопроса — тумблер действует сразу. */
+export function adultShown(): boolean {
+  return adultMode() === 'none'
+}
+
+/** Пускать ли аниме в показ: isAdult или теги регулируемые с весом выше порога. */
+export function adultAllowed(
+  isAdult: boolean | null | undefined,
+  tagsOrRegulated?: readonly { name: string; rank?: number | null }[] | boolean | null,
+): boolean {
+  const mode = adultMode()
+  if (mode === 'none') return true
+  if (isAdult === true) return false
+  if (mode === 'full' || mode === 'partial') {
+    const regulated = typeof tagsOrRegulated === 'boolean' ? tagsOrRegulated : regulatedByTags(tagsOrRegulated)
+    if (regulated && (mode === 'full' || typeof tagsOrRegulated === 'boolean' || regulatedHiddenInPartial(tagsOrRegulated))) return false
+  }
+  return true
+}
+
+/** Проверка по регулируемым тегам: блокируются при весе ≥ порога. */
+export function regulatedByTags(
+  tags?: readonly { name: string; rank?: number | null }[] | null,
+): boolean {
+  if (!tags || tags.length === 0) return false
+
+  for (const tag of tags) {
+    const rank = tag.rank ?? 0
+    const rule = settings.adultTagRules[tag.name] ?? TAG_RULES[tag.name]
+    if (rule && rank >= rule.threshold) return true
+  }
+
+  return false
+}
+
+export function regulatedHiddenInPartial(
+  tags?: readonly { name: string; rank?: number | null }[] | null,
+): boolean {
+  if (!tags) return false
+  return tags.some((tag) => {
+    const rule = settings.adultTagRules[tag.name] ?? TAG_RULES[tag.name]
+    return rule?.hideInPartial === true && (tag.rank ?? 0) >= rule.threshold
+  })
 }
 
 /** Пускать ли жанр в меню отбора: спрашивается серверным именем, не подписью. */
 export function genreAllowed(genre: string): boolean {
   if (!ADULT_GENRES.has(genre)) return true
-  return adultShown()
+  return adultMode() === 'none'
 }
 
 /** Пускать ли тэг в меню отбора: метка сервера, список имён и закрытые разделы. */
@@ -41,28 +87,38 @@ export function tagAllowed(tag: {
     (typeof tag.category === 'string' && ADULT_TAG_GROUPS.has(tag.category))
 
   if (!blocked) return true
-  return adultShown()
+  return adultMode() === 'none'
 }
 
 /** Отсеивает запрещённое из готовой выдачи. Тот же массив, когда прятать нечего. */
 export function keepAllowed<T>(
   items: readonly T[],
   isAdultOf: (item: T) => boolean | null | undefined,
+  tagsOf?: (item: T) => readonly { name: string; rank?: number | null }[] | null | undefined,
 ): readonly T[] {
-  if (adultShown()) return items
-  return items.filter((item) => isAdultOf(item) !== true)
+  const mode = adultMode()
+  if (mode === 'none') return items
+  return items.filter((item) => {
+    if (isAdultOf(item) === true) return false
+    if (tagsOf && (mode === 'full' ? regulatedByTags(tagsOf(item)) : regulatedHiddenInPartial(tagsOf(item)))) return false
+    return true
+  })
 }
 
 /** Сколько находок спрятано: нужно подписи под выдачей, чтобы не выглядело потерей. */
 export function hiddenCount<T>(
   items: readonly T[],
   isAdultOf: (item: T) => boolean | null | undefined,
+  tagsOf?: (item: T) => readonly { name: string; rank?: number | null }[] | null | undefined,
 ): number {
-  if (adultShown()) return 0
+  const mode = adultMode()
+  if (mode === 'none') return 0
 
   let hidden = 0
   for (const item of items) {
-    if (isAdultOf(item) === true) hidden += 1
+    if (isAdultOf(item) === true || (tagsOf && (mode === 'full' ? regulatedByTags(tagsOf(item)) : regulatedHiddenInPartial(tagsOf(item))))) {
+      hidden += 1
+    }
   }
   return hidden
 }

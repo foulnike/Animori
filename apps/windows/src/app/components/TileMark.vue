@@ -4,7 +4,7 @@
 import { computed } from 'vue'
 
 /** Случаи, для которых есть знак. Список закрытый: чужое имя — ошибка сборки. */
-type TileName = 'import' | 'data' | 'look' | 'about' | 'debug' | 'cloud' | 'proxy'
+type TileName = 'import' | 'data' | 'look' | 'about' | 'debug' | 'cloud' | 'proxy' | 'adult'
 
 /** Пути одного знака массивом: штрих и скругления заданы оформлением ниже. Круги записаны
  *  дугами, а не <circle> — добавление знака сводится к строке. */
@@ -35,6 +35,7 @@ const MARKS: Record<TileName, readonly string[]> = {
     'M3.6 12h16.8',
     'M12 3.6a5 8.4 0 0 1 0 16.8 5 8.4 0 0 1 0-16.8',
   ],
+  adult: ['M12 3.8 19 6.4v5.1c0 4.2-2.8 7.2-7 8.7-4.2-1.5-7-4.5-7-8.7V6.4z', 'M8.6 12h6.8'],
 }
 
 const props = defineProps<{ name: TileName }>()

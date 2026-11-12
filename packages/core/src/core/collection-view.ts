@@ -3,6 +3,7 @@
 
 import { adultAllowed } from './adult'
 import { eachEntry, entryCount } from './collection'
+import { peekRegulated } from './media-looks'
 import type { SnapshotEntry } from './snapshot'
 
 /** Условия отбора. Пустой набор пропускает все записи. */
@@ -64,7 +65,10 @@ export function matchesEntry(entry: SnapshotEntry, filter: EntryFilter = EMPTY_F
 
   if (filter.isAdult !== undefined && entry.isAdult !== filter.isAdult) return false
 
-  if (filter.hideAdult === true && !adultAllowed(entry.isAdult)) return false
+  // Синяя метка живёт в облике: запись списка тегов не знает, облик добирается экраном.
+  if (filter.hideAdult === true && !adultAllowed(entry.isAdult, peekRegulated(entry.mediaId))) {
+    return false
+  }
 
   if (typeof filter.word === 'string' && filter.word !== '') {
     const word = filter.word.toLowerCase()

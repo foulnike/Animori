@@ -8,7 +8,8 @@ import { tip } from './tip'
 import { startDpad } from './dpad'
 import { isWeakPlatform, markPlatform } from './platform'
 import { startUpdateCheck } from './update'
-import { initCollection } from '@/core/collection'
+import { eachEntry, initCollection } from '@/core/collection'
+import { warmLooks } from '@/core/media-looks'
 import { initDatasetNames, updateDatasetNamesInBackground } from '@/core/dataset-names'
 import { loadSettings } from '@/core/settings'
 import { installGlobalErrorHandlers } from '@/utils/logger'
@@ -59,6 +60,7 @@ async function start(): Promise<void> {
   // Ошибка подъёма окно не роняет: список просто останется пустым до первого действия, причина уйдёт в журнал.
   try {
     await initCollection()
+    void warmLooks([...new Set([...eachEntry()].map((entry) => entry.mediaId))])
   } catch (e: unknown) {
     console.error('AniMori: список не поднялся из снимка', e)
   }

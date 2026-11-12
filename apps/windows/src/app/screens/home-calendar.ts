@@ -258,15 +258,15 @@ async function writeCalendarCache(found: AiringEntry[]): Promise<void> {
 
 /** Раскладка ответа по показу: отбор 18+ и счёт скрытого стоят до доборов. */
 function applyFound(found: AiringEntry[]): void {
-  hidden.value = hiddenCount(found, (entry) => entry.isAdult)
+  hidden.value = hiddenCount(found, (entry) => entry.isAdult, (entry) => entry.regulated ? [{ name: 'regulated', rank: 100 }] : null)
 
   const hushed = new Set<number>()
   for (const entry of found) {
-    if (!adultAllowed(entry.isAdult)) hushed.add(dayStart(entry.airingAt * 1000))
+    if (!adultAllowed(entry.isAdult, entry.regulated)) hushed.add(dayStart(entry.airingAt * 1000))
   }
   hiddenDays.value = hushed
 
-  entries.value = keepAllowed(found, (entry) => entry.isAdult) as AiringEntry[]
+  entries.value = keepAllowed(found, (entry) => entry.isAdult, (entry) => entry.regulated ? [{ name: 'regulated', rank: 100 }] : null) as AiringEntry[]
 }
 
 /** Показ кэшированного ответа: дни рисуются сразу, доборы идут фоном. */

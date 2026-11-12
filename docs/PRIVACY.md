@@ -1,160 +1,273 @@
 # Политика обработки персональных данных
 
-**Редакция от 8 октября 2026 года.**
+**Редакция от 11 ноября 2026 года.**
 
-### 1. Оператор
+## Русская версия
 
-Оператором персональных данных является владелец программного обеспечения AniMori —
-владелец учётной записи GitHub `foulnike` (далее — Оператор). Адрес для обращений:
-Issues репозитория `https://github.com/foulnike/Animori`.
+### 1. Автор и контакты
 
-### 2. Какие данные обрабатываются
+Автор программы AniMori — владелец учётной записи GitHub `foulnike` (далее —
+Автор). Автор не получает, не хранит и не передаёт персональные данные
+пользователей: всё, что описано ниже, программа делает на устройстве пользователя
+по его командам. Этот документ описывает, какие данные программа хранит и куда их
+отправляет.
 
-Программа AniMori обрабатывает следующие данные пользователя, которые хранятся
-исключительно на устройстве пользователя:
+Вопросы о данных принимаются по почте **foulnike@protonmail.com**.
+Можно также написать в Issues репозитория `https://github.com/foulnike/Animori`, но
+Issues публичны: если обращение касается ваших данных, пишите на почту.
 
-1. Список просмотра (закладки): статус, оценка, количество серий, пересмотры, даты,
-   заметки, пользовательские идентификаторы записей.
-2. Настройки программы (внешний вид, источники, параметры сетевых подключений,
-   включая настройки прокси).
-3. Токен доступа к AniList и токен доступа к Яндекс Диску — при использовании
-   соответствующих функций.
-4. Кэш изображений и датасет названий, загружаемые программой для своей работы.
-5. Журнал отладки — только после явного включения пользователем.
+### 2. Главное
 
-### 3. Какие данные не обрабатываются
+- **У Автора нет серверов, и Автор не получает ваших данных.** Программа не
+  отправляет Автору ни список, ни настройки, ни сведения об использовании.
+  Аналитики и телеметрии нет.
+- **Данные хранятся на вашем устройстве.**
+- **Программа сама обращается к внешним сервисам**, когда вы пользуетесь их
+  функциями: каталогу, видео, облаку. Эти запросы идут с вашего устройства
+  напрямую к сервису, без посредников. Что сервис делает с полученным, решает он
+  сам по своей политике конфиденциальности.
 
-Программа не устанавливает собственные cookies и не использует средства аналитики
-и телеметрии. Сторонние страницы, которые программа открывает по просьбе пользователя, —
-форма входа AniList и встроенные плееры трейлеров, — могут применять cookies своих
-сервисов; действуют при этом их собственные политики. У Оператора отсутствуют
-собственные серверы: данные не передаются Оператору каким-либо образом. Программа
-не собирает контактных данных и не использует профилирования.
+### 3. Что хранится на устройстве
 
-### 4. Сетевые запросы
+1. Список: статусы, оценки, число серий, пересмотры, даты, заметки.
+2. История просмотра: какие серии смотрели, где остановились, выбранная озвучка,
+   календарь активности.
+3. Настройки, в том числе адрес и порт прокси.
+4. Токен AniList, токен Яндекс Диска и пароль прокси — если вы пользуетесь этими
+   функциями. Они хранятся зашифрованными, см. раздел 8.
+5. Кэш: названия, описания, обложки, датасет названий.
+6. Служебный файл ошибок программы — до 2 МБ, без токенов и паролей. В настольном
+   приложении есть ещё журнал отладки: по умолчанию он выключен и включается в
+   настройках.
 
-Программа выполняет сетевые запросы только к следующим сторонним сервисам и только
-в объёме, необходимом для работы запрошенных пользователем функций:
+Ничего из этого не покидает устройство, кроме случаев из раздела 4.
 
-| Сервис | Назначение |
-| :--- | :--- |
-| AniList (anilist.co, graphql.anilist.co, s4.anilist.co) | каталог, список пользователя при входе, обновление расписания, изображения |
-| Shikimori (shikimori.one, shikimori.io, shikimori.rip) | русские названия и описания, перенос списка по нику |
-| AnimeThemes (api.animethemes.moe, graphql.animethemes.moe, a.animethemes.moe) | опенинги и эдинги — по нажатию пользователя; только настольное приложение |
-| Kodik, Anilibria и их CDN (kodik-api.com, kodikplayer.com, *.solodcdn.com, *.kodik-cdn.com, i.kodikres.com, anilibria.top) | получение ссылок на видео по выбору пользователя |
-| YouTube, Dailymotion (www.youtube.com, www.dailymotion.com) | показ трейлера во встроенном плеере — при открытии трейлера; только настольное приложение |
-| Яндекс Диск (cloud-api.yandex.net, *.disk.yandex.net, *.disk.yandex.ru, *.dst.yandex.net, *.dst.yandex.ru) | сохранение и чтение копии списка — только по команде пользователя |
-| GitHub (github.com, api.github.com, raw.githubusercontent.com, objects.githubusercontent.com) | проверка обновлений, загрузка датасета названий |
+### 4. Кому и что передаётся
 
-Каждый из перечисленных сервисов действует в соответствии с собственной политикой
-конфиденциальности.
+Каждый сетевой запрос сообщает сервису ваш IP-адрес и сведения о программе.
+Запросы самой программы подписываются строкой `AniMori/<версия>`. Изображения,
+видео и трейлеры загружает встроенный браузер, со своей стандартной строкой
+браузера. Если в настройках задан прокси, владелец прокси видит, к каким
+сервисам вы обращаетесь: в Windows через него идут все запросы, в Android — только
+запросы самой программы, а изображения и видео загружаются напрямую.
 
-### 5. Передача данных третьим лицам
+| Получатель | Когда | Что получает помимо IP-адреса и сведений о программе |
+| :--- | :--- | :--- |
+| AniList (`graphql.anilist.co`, `s4.anilist.co`, вход на `anilist.co`) | каталог, расписание; вход в аккаунт по вашему желанию | при входе — ваш токен. Программа только читает список и ничего не меняет в аккаунте |
+| Shikimori (`shikimori.io`, `shikimori.rip`) | русские названия и описания; перенос списка | при переносе — введённый вами ник |
+| Kodik, Anilibria и их сети доставки (`kodik-api.com`, `kodikplayer.com`, `*.kodik-cdn.com`, `*.solodcdn.com`, `i.kodikres.com`, `anilibria.top`) | поиск и воспроизведение видео | номер тайтла, который вы открыли |
+| AnimeThemes (`api.animethemes.moe`, `*.animethemes.moe`) | опенинги и эндинги; только настольное приложение | номер тайтла |
+| YouTube, Dailymotion | трейлер, если вы его открыли; не на ТВ | — |
+| Яндекс Диск (`cloud-api.yandex.net`, `*.disk.yandex.*`, `*.dst.yandex.*`) | сохранение и загрузка копии списка по вашей команде | ваш токен и файл копии списка |
+| GitHub (`github.com`, `api.github.com`, `raw.githubusercontent.com`, `objects.githubusercontent.com`) | проверка обновлений, загрузка датасета названий | — |
+| Хосты обложек и кадров | показ изображений | адрес изображения |
+| Ваш прокси | если вы его настроили | Windows — весь сетевой трафик программы; Android — запросы самой программы |
 
-Передача копии списка на Яндекс Диск осуществляется исключительно по явной команде
-пользователя (нажатию кнопки сохранения). Автоматическая передача данных в фоновом
-режиме не производится. Выгрузка списка в файл XML производится только по команде
-пользователя. Программа не передаёт данные третьим лицам иным образом.
+Данные этим получателям не продаются и для рекламы не используются. Программа не
+передаёт данные иным лицам.
 
-### 6. Права пользователя
+Если вы создали ссылку на копию списка в облаке, копию целиком, вместе с
+заметками, может прочитать любой, кто знает ссылку. После переноса списка
+закройте доступ кнопкой «Закрыть доступ».
 
-Пользователь вправе:
+### 5. Трансграничная передача
 
-1. Получить сведения об обрабатываемых данных — из настоящей Политики и документации
-   к программе.
-2. Удалить данные — средствами программы (удаление списка, отключение аккаунта
-   AniList) либо удалением программы и её файлов с устройства.
-3. Отозвать согласие на обработку — путём прекращения использования программы
-   и удаления её данных, как указано в пункте 2.
+Серверы части сервисов, например AniList, GitHub и YouTube, находятся за пределами
+Российской Федерации. Когда вы пользуетесь их функциями, ваше устройство передаёт
+им данные из раздела 4 напрямую. Автор в этой передаче не участвует.
 
-### 7. Срок хранения
+### 6. Основания передачи
 
-Данные хранятся на устройстве пользователя до их удаления пользователем или
-удаления программы. Оператор не хранит копий данных пользователей.
+Программа отправляет данные только когда вы пользуетесь соответствующей функцией:
+входите в AniList, подключаете облако, переносите список, запускаете видео.
+Внешние сервисы обрабатывают полученное на основаниях, указанных в их политиках
+конфиденциальности. Чтобы прекратить передачу, перестаньте пользоваться функцией
+или удалите данные способами из раздела 9.
 
-### 8. Изменение Политики
+### 7. Сроки хранения
 
-Настоящая Политика может изменяться. Новая редакция публикуется в репозитории
-`https://github.com/foulnike/Animori` (файл `docs/PRIVACY.md`) и вступает в силу
-с момента публикации.
+- **На устройстве** — пока вы не удалите данные или программу.
+- **У Автора** — данных нет, хранить нечего.
+- **У внешних сервисов** — сроки определяют сами сервисы, Автор на них не
+  влияет. Список, который вы ведёте на AniList, и копия на Яндекс Диске хранятся
+  там, пока вы их не удалите.
+
+### 8. Токены
+
+- **AniList.** Токен выдаётся после входа на сайте AniList, программа проверяет,
+  что ответ пришёл на её собственный запрос входа. Срок жизни токена задаёт
+  AniList, по его истечении нужно войти заново. Токен используется только для
+  чтения: запросы на изменение программа отклоняет до отправки.
+- **Яндекс Диск.** Токен вы получаете на странице Яндекса и вводите в программу.
+- **Хранение.** Токены и пароль прокси хранятся зашифрованными: в Windows —
+  средствами системы (DPAPI) для вашей учётной записи, в Android — ключом в
+  системном хранилище Android Keystore. Окно программы токенов не видит: с ними
+  работает только нативная часть программы.
+- **Удаление.** «Выйти» из AniList и «Отключить облако» стирают токен с
+  устройства. Сам доступ на стороне сервиса при этом остаётся. Чтобы отозвать
+  его полностью, отзовите доступ приложения в настройках аккаунта AniList или
+  Яндекс ID.
+
+### 9. Удаление данных
+
+1. **«Удалить мой список»** в настройках стирает список с устройства.
+2. **«Очистить память»** стирает кэш названий, описаний и обложек.
+3. **«Выйти»** из AniList и **«Отключить облако»** — см. раздел 8. Файл копии на
+   Яндекс Диске остаётся, его можно удалить на самом Диске.
+4. **Удаление программы.** На Android удаляются все данные программы, резервное
+   копирование в облако Google для неё выключено. На Windows данные могут
+   остаться в папках `%APPDATA%\com.foulnike.animori` и
+   `%LOCALAPPDATA%\com.foulnike.animori`, их можно удалить вручную.
+5. **У внешних сервисов** данные удаляются средствами этих сервисов: Автор не
+   имеет к ним доступа.
+
+### 10. Ваши данные и обращения
+
+Данные на вашем устройстве вы просматриваете, исправляете и удаляете сами, см.
+раздел 9. Данные, переданные внешним сервисам, исправляются и удаляются по
+запросу к этим сервисам.
+
+На вопросы по почте Автор отвечает в течение 10 рабочих дней.
+
+### 11. Изменение Политики
+
+Новая редакция публикуется в репозитории `https://github.com/foulnike/Animori`,
+файл `docs/PRIVACY.md`, с датой редакции в начале документа, и действует с момента
+публикации. Прежние редакции сохраняются в истории репозитория.
 
 ---
 
 ## English version
 
-**Effective date: October 8, 2026.**
+**Effective date: November 11, 2026.**
 
-### 1. Controller
+### 1. Author and contact
 
-The controller of personal data is the owner of the AniMori software — the owner of
-the GitHub account `foulnike` (the "Controller"). Contact address: the Issues tab of
-the `https://github.com/foulnike/Animori` repository.
+The author of AniMori is the owner of the GitHub account `foulnike` (the
+"Author"). The Author does not receive, store or transfer users' personal data:
+everything described below is done by the application on the user's device at the
+user's command. This document describes what data the application stores and where
+it sends it.
 
-### 2. Data processed
+Questions about data are accepted by email at **foulnike@protonmail.com**. You may also
+open an issue in the `https://github.com/foulnike/Animori` repository, but issues are
+public: for requests concerning your own data, please use email.
 
-AniMori processes the following user data, stored exclusively on the user's device:
+### 2. Summary
 
-1. The watch list (bookmarks): status, score, episode counts, rewatches, dates, notes,
-   user record identifiers.
-2. Application settings (appearance, sources, network parameters, including proxy
-   settings).
-3. AniList access token and Yandex Disk access token — when the respective features
-   are used.
-4. Image cache and the title dataset downloaded by the application for its operation.
-5. Debug log — only after explicit enablement by the user.
+- **The Author runs no servers and receives none of your data.** The application
+  sends the Author neither your list, nor your settings, nor usage information.
+  There is no analytics or telemetry.
+- **Your data is stored on your device.**
+- **The application contacts third-party services itself** when you use their
+  features: the catalog, video, cloud backup. These requests go from your device
+  directly to the service, with no intermediary. What the service does with what it
+  receives is governed by its own privacy policy.
 
-### 3. Data not processed
+### 3. Data stored on the device
 
-The application does not set its own cookies and uses no analytics or telemetry.
-Third-party pages opened at the user's request — the AniList sign-in form and
-embedded trailer players — may use cookies of their own services, governed by those
-services' own policies. The Controller operates no servers: no data is transmitted
-to the Controller. The application does not collect contact details and performs
-no profiling.
+1. Your list: statuses, scores, episode counts, rewatches, dates, notes.
+2. Watch history: episodes watched, playback positions, selected voice-overs, the
+   activity calendar.
+3. Settings, including the proxy address and port.
+4. The AniList token, the Yandex Disk token and the proxy password, if you use these
+   features. They are stored encrypted, see section 8.
+5. Cache: titles, descriptions, covers, the title dataset.
+6. The application's internal error file, up to 2 MB, containing no tokens or
+   passwords. The desktop application also has a debug log: it is off by default and
+   can be enabled in settings.
 
-### 4. Network requests
+None of this leaves the device except as described in section 4.
 
-The application makes network requests only to the following third-party services and
-only to the extent required by features requested by the user:
+### 4. Recipients
 
-| Service | Purpose |
-| :--- | :--- |
-| AniList (anilist.co, graphql.anilist.co, s4.anilist.co) | catalogue, the user's list upon sign-in, schedule updates, images |
-| Shikimori (shikimori.one, shikimori.io, shikimori.rip) | Russian titles and descriptions, list import by nickname |
-| AnimeThemes (api.animethemes.moe, graphql.animethemes.moe, a.animethemes.moe) | openings and endings — at the user's request; desktop application only |
-| Kodik, Anilibria and their CDNs (kodik-api.com, kodikplayer.com, *.solodcdn.com, *.kodik-cdn.com, i.kodikres.com, anilibria.top) | video links at the user's choice |
-| YouTube, Dailymotion (www.youtube.com, www.dailymotion.com) | trailer shown in the embedded player — when the trailer is opened; desktop application only |
-| Yandex Disk (cloud-api.yandex.net, *.disk.yandex.net, *.disk.yandex.ru, *.dst.yandex.net, *.dst.yandex.ru) | saving and reading a backup of the list — only on the user's command |
-| GitHub (github.com, api.github.com, raw.githubusercontent.com, objects.githubusercontent.com) | update checks, title dataset download |
+Every network request discloses your IP address and information about the
+application to the service. Requests made by the application itself are signed
+`AniMori/<version>`. Images, video and trailers are loaded by the built-in browser
+with its standard browser string. If a proxy is configured, the proxy operator can
+see which services you contact: on Windows all requests go through it, on Android
+only the application's own requests do, while images and video load directly.
 
-Each of the listed services acts in accordance with its own privacy policy.
+| Recipient | When | What it receives besides IP address and application information |
+| :--- | :--- | :--- |
+| AniList (`graphql.anilist.co`, `s4.anilist.co`, sign-in at `anilist.co`) | catalog, schedule; sign-in if you choose to | after sign-in, your token. The application only reads your list and never changes your account |
+| Shikimori (`shikimori.io`, `shikimori.rip`) | Russian titles and descriptions; list import | during import, the nickname you enter |
+| Kodik, Anilibria and their delivery networks (`kodik-api.com`, `kodikplayer.com`, `*.kodik-cdn.com`, `*.solodcdn.com`, `i.kodikres.com`, `anilibria.top`) | finding and playing video | the ID of the title you opened |
+| AnimeThemes (`api.animethemes.moe`, `*.animethemes.moe`) | openings and endings; desktop application only | the title ID |
+| YouTube, Dailymotion | a trailer, if you open one; not on TV | — |
+| Yandex Disk (`cloud-api.yandex.net`, `*.disk.yandex.*`, `*.dst.yandex.*`) | saving and loading a copy of your list on your command | your token and the list file |
+| GitHub (`github.com`, `api.github.com`, `raw.githubusercontent.com`, `objects.githubusercontent.com`) | update checks, title dataset download | — |
+| Cover and screenshot hosts | displaying images | the image address |
+| Your proxy | if you configured one | Windows: all of the application's network traffic; Android: the application's own requests |
 
-### 5. Transfer to third parties
+Data is not sold to these recipients and is not used for advertising. The
+application does not disclose data to anyone else.
 
-A backup of the list is transferred to Yandex Disk exclusively upon the user's
-explicit command (pressing the save button). No background or automatic transfer
-takes place. Export of the list to an XML file occurs only on the user's command.
-The application does not transfer data to third parties in any other manner.
+If you created a link to your cloud copy, anyone who knows the link can read the
+whole copy, including notes. After transferring your list, close access with
+"Close access".
 
-### 6. User rights
+### 5. International transfers
 
-The user may:
+Some services, such as AniList, GitHub and YouTube, operate servers outside the
+Russian Federation. When you use their features, your device sends them the data in
+section 4 directly. The Author takes no part in this transfer.
 
-1. Obtain information about the processed data — from this Policy and the software
-   documentation.
-2. Delete the data — by application means (list deletion, AniList account unlinking)
-   or by removing the application and its files from the device.
-3. Withdraw consent to processing — by ceasing use of the application and deleting
-   its data as described in item 2.
+### 6. Grounds for transfers
+
+The application sends data only when you use the corresponding feature: signing in
+to AniList, connecting cloud backup, importing a list, starting a video.
+Third-party services process what they receive on the grounds stated in their
+privacy policies. To stop a transfer, stop using the feature or delete the data as
+described in section 9.
 
 ### 7. Retention
 
-Data is stored on the user's device until deleted by the user or until the
-application is removed. The Controller keeps no copies of user data.
+- **On the device**: until you delete the data or the application.
+- **By the Author**: there is no data to retain.
+- **By third-party services**: retention is set by the services themselves; the
+  Author has no influence over it. A list you keep on AniList and a copy on Yandex
+  Disk remain there until you delete them.
 
-### 8. Changes to this Policy
+### 8. Tokens
 
-This Policy may be amended. The new version is published in the repository
-`https://github.com/foulnike/Animori` (file `docs/PRIVACY.md`) and takes effect
-upon publication.
+- **AniList.** The token is issued after you sign in on the AniList website; the
+  application checks that the response belongs to its own sign-in request. The token
+  lifetime is set by AniList; after it expires you need to sign in again. The token is
+  used for reading only: the application rejects requests that would change data
+  before they are sent.
+- **Yandex Disk.** You obtain the token on the Yandex page and enter it in the
+  application.
+- **Storage.** Tokens and the proxy password are stored encrypted: on Windows with
+  the system's DPAPI for your user account, on Android with a key in the Android
+  Keystore. The application window cannot read the tokens: only the native part of
+  the application handles them.
+- **Removal.** "Sign out" of AniList and "Disconnect cloud" erase the token from the
+  device. Access on the service's side remains. To revoke it fully, revoke the
+  application's access in your AniList account settings or in Yandex ID.
 
+### 9. Deleting data
+
+1. **"Delete my list"** in settings erases the list from the device.
+2. **"Clear memory"** erases the cache of titles, descriptions and covers.
+3. **"Sign out"** of AniList and **"Disconnect cloud"**: see section 8. The backup file
+   on Yandex Disk stays; you can delete it on Yandex Disk itself.
+4. **Uninstalling.** On Android all application data is deleted; cloud backup to
+   Google is disabled for the application. On Windows data may remain in
+   `%APPDATA%\com.foulnike.animori` and `%LOCALAPPDATA%\com.foulnike.animori`; you can
+   delete these folders manually.
+5. **With third-party services**, data is deleted through those services: the
+   Author has no access to it.
+
+### 10. Your data and requests
+
+You view, correct and delete data on your device yourself, see section 9. Data sent
+to third-party services is corrected and deleted by request to those services.
+
+The Author responds to email questions within 10 business days.
+
+### 11. Changes to this Policy
+
+A new revision is published in the `https://github.com/foulnike/Animori` repository,
+file `docs/PRIVACY.md`, with the revision date at the top, and takes effect on
+publication. Earlier revisions remain in the repository history.

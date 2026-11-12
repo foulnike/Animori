@@ -249,6 +249,12 @@
   background: color-mix(in srgb, var(--am-veil) 30%, transparent);
 }
 
+
+.am-pill--regulated {
+  color: var(--am-on-art);
+  background: color-mix(in srgb, var(--am-accent) 34%, transparent);
+  border-color: color-mix(in srgb, var(--am-accent) 52%, transparent);
+}
 .am-pill--adult {
   color: var(--am-on-art);
   background: color-mix(in srgb, var(--am-bad) 34%, transparent);

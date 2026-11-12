@@ -4,8 +4,10 @@
 
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
-import { peekLook } from '@/core/media-looks'
+import { adultAllowed } from '@/core/adult'
+import { peekLook, peekRestricted, warmLooks } from '@/core/media-looks'
 import { peekRussianName, prefetchRussianNames } from '@/core/media-title'
+import { getEntry } from '@/core/collection'
 import { Logger } from '@/utils/logger'
 
 import EmptyMark from '../components/EmptyMark.vue'
@@ -238,10 +240,20 @@ let armTimer = 0
 /** Номер добора имён: старый видит, что его ответ больше не нужен. */
 let titleRun = 0
 
-const shown = computed<WatchRow[]>(() => rows.value.slice(0, limit.value))
+/** Прятать ли запись при выключенном 18+: метка из своего списка или из облика (красная и синяя). */
+function restricted(row: WatchRow): boolean {
+  const entry = getEntry(row.mediaId)
+  return !adultAllowed(entry?.isAdult === true, peekRestricted(row.mediaId) && entry?.isAdult !== true)
+}
+
+/** История подчиняется тумблеру, как своя полка и каталог; отбор до среза — иначе «ещё N» врёт. */
+const allowed = computed<WatchRow[]>(() =>
+  rows.value.filter((row) => !restricted(row)),
+)
+const shown = computed<WatchRow[]>(() => allowed.value.slice(0, limit.value))
 const days = computed<Day[]>(() => group(shown.value))
-const hasMore = computed<boolean>(() => rows.value.length > limit.value)
-const restCount = computed<number>(() => Math.max(0, rows.value.length - limit.value))
+const hasMore = computed<boolean>(() => allowed.value.length > limit.value)
+const restCount = computed<number>(() => Math.max(0, allowed.value.length - limit.value))
 
 /** Сборка показа из памяти. Сети не требует вовсе. */
 function redraw(): void {
@@ -320,6 +332,20 @@ async function warmTitles(): Promise<void> {
   }
 }
 
+/** Облики для меток 18+: у чужих тайтлов истории метка есть только в облике, без него запись не спрятать. */
+async function warmRestricted(): Promise<void> {
+  const wanted = [...new Set(rows.value.map((row) => row.mediaId))].filter(
+    (mediaId) => peekLook(mediaId) === null || !('regulated' in (peekLook(mediaId) ?? {})),
+  )
+  if (wanted.length === 0) return
+
+  try {
+    if ((await warmLooks(wanted)) > 0) redraw()
+  } catch (e) {
+    Logger('WARN', 'История: облики для отбора 18+ добрать не вышло', e)
+  }
+}
+
 onMounted(() => {
   // capture: true — запускаемся раньше остальных слушателей keydown, чтобы spatial nav не успела увести фокус.
   window.addEventListener('keydown', railKey, true)
@@ -335,6 +361,7 @@ onMounted(() => {
     }
 
     void warmTitles()
+    void warmRestricted()
   })()
 })
 

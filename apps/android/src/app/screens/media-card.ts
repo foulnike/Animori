@@ -419,7 +419,7 @@ export function useMediaCard(mediaId: Ref<number>): MediaCardView {
 
     return keepAllowed(
       works.filter((w) => w.type !== 'MANGA'),
-      (w) => w.isAdult,
+      (w) => w.isAdult, (w) => w.regulated ? [{ name: 'regulated', rank: 100 }] : null,
     )
   })
 
@@ -429,7 +429,7 @@ export function useMediaCard(mediaId: Ref<number>): MediaCardView {
 
     return hiddenCount(
       works.filter((w) => w.type !== 'MANGA'),
-      (w) => w.isAdult,
+      (w) => w.isAdult, (w) => w.regulated ? [{ name: 'regulated', rank: 100 }] : null,
     )
   })
 

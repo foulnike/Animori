@@ -1,6 +1,8 @@
 // Дерево франшизы: хронология с Шикимори одним запросом + маппинг MAL→AniList одной пачкой, склад бессрочный.
 // Манга из дерева отбрасывается по адресу; на один узел MAL — столько строк, сколько записей AniList.
 
+import { readTags, type TagRankReply } from '../api/anilist-media'
+import { regulatedByTags } from './adult'
 import { anilistQuery } from '../api/anilist'
 import { fetchShiki } from '../api/shikimori'
 import { dbGet, dbSet } from './db'
@@ -37,6 +39,8 @@ export interface FranchiseWork {
   kind: string | null
   cover: string | null
   isAdult: boolean
+  /** Регулируемое по тегам: синее 18+. */
+  regulated: boolean
 }
 
 interface FranchiseMapEntry {
@@ -44,6 +48,7 @@ interface FranchiseMapEntry {
   idMal: number | null
   type: string | null
   isAdult: boolean
+  tags?: Array<TagRankReply | null> | null
   coverImage: { medium: string | null } | null
   /** Состояние выпуска: по нему выбирается запись, когда их несколько. */
   status: string | null
@@ -60,6 +65,10 @@ query ($ids: [Int], $type: MediaType) {
       idMal
       type
       isAdult
+      tags {
+        name
+        rank
+      }
       status
       startDate { year month day }
       title { romaji }
@@ -117,6 +126,8 @@ async function readCache(mediaId: number): Promise<FranchiseWork[] | null> {
     if (!work || typeof work.name !== 'string') return null
     if (!('cover' in work) || !('date' in work)) return null
     if (!('title' in work) || !('stage' in work)) return null
+    // Записи до отбора по тегам переспрашиваются: без признака часть не спрятать.
+    if (typeof work.regulated !== 'boolean') return null
     if (work.mediaId === undefined || work.mediaId === null) return null
     if (work.type === 'MANGA') return null
   }
@@ -205,6 +216,7 @@ async function load(mediaId: number, malId: number): Promise<FranchiseWork[] | n
           kind: node.kind ?? null,
           cover: entry.coverImage?.medium ?? null,
           isAdult: entry.isAdult === true,
+          regulated: entry.isAdult !== true && regulatedByTags(readTags(entry.tags)),
         },
         stamp: startStamp(entry.startDate),
       })

@@ -82,6 +82,10 @@ const BRIEF_FIELDS = `
       seasonYear
       averageScore
       isAdult
+      tags {
+        name
+        rank
+      }
       nextAiringEpisode {
         episode
         airingAt
@@ -211,6 +215,7 @@ interface BriefReply {
   seasonYear?: number | null
   averageScore?: number | null
   isAdult?: boolean | null
+  tags?: Array<{ name?: string | null; rank?: number | null } | null> | null
   nextAiringEpisode?: AiringReply | null
   title?: { romaji?: string | null; english?: string | null; native?: string | null } | null
   coverImage?: { large?: string | null; medium?: string | null; color?: string | null } | null
@@ -350,6 +355,14 @@ function toBrief(item: BriefReply | null | undefined): MediaBrief | null {
   if (!item || typeof item.id !== 'number') return null
   if (item.type === 'MANGA') return null
 
+  const tags =
+    item.tags
+      ?.map((t) => {
+        if (!t || typeof t.name !== 'string' || typeof t.rank !== 'number') return null
+        return { name: t.name, rank: t.rank }
+      })
+      .filter((t): t is { name: string; rank: number } => t !== null) ?? null
+
   return {
     mediaId: item.id,
     malId: countOrNull(item.idMal),
@@ -362,6 +375,7 @@ function toBrief(item: BriefReply | null | undefined): MediaBrief | null {
     seasonYear: countOrNull(item.seasonYear),
     averageScore: countOrNull(item.averageScore),
     isAdult: item.isAdult === true,
+    tags: tags && tags.length > 0 ? tags : null,
     romaji: textOrNull(item.title?.romaji),
     english: textOrNull(item.title?.english),
     native: textOrNull(item.title?.native),

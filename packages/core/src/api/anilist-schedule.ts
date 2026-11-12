@@ -2,6 +2,8 @@
 // знает только ближайшую серию, календарю нужна неделя.
 import { Logger } from '../utils/logger'
 
+import { readTags, type TagRankReply } from './anilist-media'
+import { regulatedByTags } from '../core/adult'
 import { anilistQuery } from './anilist'
 
 /** Потолок страницы у AniList. */
@@ -29,6 +31,10 @@ const SCHEDULE_QUERY = `query Week($from: Int, $to: Int, $ids: [Int], $page: Int
       mediaId
       media {
         isAdult
+        tags {
+          name
+          rank
+        }
         title {
           romaji
           english
@@ -60,6 +66,8 @@ export interface AiringEntry {
   english: string | null
   /** Метка 18+: расписание спрашивается по номерам, облика у чужого тайтла нет. */
   isAdult: boolean
+  /** Регулируемое по тегам: синее 18+. */
+  regulated: boolean
 }
 
 interface ScheduleAnswer {
@@ -71,6 +79,7 @@ interface ScheduleAnswer {
       mediaId?: number | null
       media?: {
         isAdult?: boolean | null
+        tags?: Array<TagRankReply | null> | null
         title?: { romaji?: string | null; english?: string | null } | null
       } | null
     }> | null
@@ -134,6 +143,7 @@ export async function fetchAiringSchedules(
         english: text(title?.english),
         // Неизвестный признак считается безопасным: хуже спрятать половину календаря из-за пустого поля.
         isAdult: row.media?.isAdult === true,
+        regulated: row.media?.isAdult !== true && regulatedByTags(readTags(row.media?.tags)),
       })
     }
 

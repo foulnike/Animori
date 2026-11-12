@@ -189,6 +189,7 @@ async function visible(briefs: MediaBrief[]): Promise<MediaBrief[]> {
       (brief) => getEntry(brief.mediaId) === undefined && !hiddenSet.has(brief.mediaId),
     ),
     (brief) => brief.isAdult,
+    (brief) => brief.tags,
   ).slice()
 }
 

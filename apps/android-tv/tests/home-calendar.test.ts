@@ -40,9 +40,9 @@ function secs(stamp: number): number {
 
 /** Выход так, как его держит разбор: срок в секундах, название с сервера. */
 function airing(mediaId: number, episode: number, airingAt: number, romaji: string | null = null) {
-  // isAdult обязателен у AiringEntry: без метки календарь не знает, прятать ли выход.
-  // Пустой тут означает «не взрослый», и это состояние по умолчанию у большинства тайтлов.
-  return { mediaId, episode, airingAt, romaji, english: null, isAdult: false }
+  // isAdult и regulated обязательны у AiringEntry: без них календарь не знает, прятать ли выход.
+  // Пустые означают «обычный тайтл», это состояние по умолчанию у большинства тайтлов.
+  return { mediaId, episode, airingAt, romaji, english: null, isAdult: false, regulated: false }
 }
 
 /**
@@ -62,6 +62,7 @@ function brief(mediaId: number, cover: string | null, color: string | null): Med
     seasonYear: null,
     averageScore: null,
     isAdult: false,
+    tags: null,
     romaji: null,
     english: null,
     native: null,

@@ -17,7 +17,7 @@ import { clearCache, getDbStats } from '@/core/db'
 import { adultByBirth } from '@/core/adult'
 import { clearHidden } from '@/core/recs'
 import { saveSetting, settings } from '@/core/settings'
-import { purgeAdultPick } from './home-keep'
+
 import { APPEARANCES, appearance, setAppearance } from '../appearance'
 import { checkUpdate, installUpdate, updateOffer } from '../update'
 import BrandMark from '../components/BrandMark.vue'
@@ -27,15 +27,15 @@ import DateField from '../components/DateField.vue'
 import ProxyBox from '../components/ProxyBox.vue'
 import SettingMark from '../components/SettingMark.vue'
 import SettingsSheet from '../components/SettingsSheet.vue'
+import { tagWord } from '../tag-words'
 import { restoreFocus } from '../focus-return'
-import { canOpenOutside, isWeakPlatform } from '../platform'
+import { canOpenOutside } from '../platform'
 import { SAKURA_ROSETTE, SAKURA_ROSETTE_BOX } from '../sakura'
 
 const version = __ANIMORI_VERSION__
 
 /** Слабая ли площадка — то есть телевизор. По ней строка-тумблер берёт фокус сама,
  * а галочка внутри уходит из обхода: см. разметку тумблера. */
-const lite = isWeakPlatform()
 
 /// Человеку важна его система, а не имя нашей сборки: слово «app» ему не говорит ничего.
 function systemName(): string {
@@ -153,7 +153,10 @@ function onUpInstall(): void {
 
 /** Показ взрослого. Значение списывается с памяти настроек один раз:
  * общий объект настроек не реактивен, и v-model по его полю не дал бы ответа на клик. */
-const adult = ref(settings.showAdult)
+const adultMode = ref(settings.adultMode)
+const ageVerified = ref(settings.adultAgeVerified)
+const adultTagRules = ref(structuredClone(settings.adultTagRules))
+const pendingAdultMode = ref<typeof settings.adultMode | null>(null)
 
 /** Открыт ли вопрос о возрасте. Взрослое включается не нажатием, а ответом на этот
  * вопрос: до него тумблер стоит выключенным. */
@@ -340,46 +343,32 @@ function onDropList(): void {
 /** Переключение показа взрослого: отбор читает ключ в момент вопроса, перезапуск не нужен.
  * Исключение —
  * полки витрины: состав собран заранее, тумблер выбрасывает его через clearHidden. */
-function onAdult(): void {
-  if (!adult.value) {
-    void saveSetting('showAdult', 'set_adult', false)
-    void purgeAdultPick()
-    void clearHidden()
-    closeAge()
-    return
-  }
-
-  adult.value = false
-  birth.value = ''
-  ageError.value = ''
-  askingAge.value = true
+function setAdultMode(next: typeof settings.adultMode): void {
+  if (next === adultMode.value) return
+  if (next !== 'full' && !ageVerified.value) { pendingAdultMode.value = next; askingAge.value = true; return }
+  adultMode.value = next
+  void saveSetting('adultMode', 'set_adult_mode', next)
+  void saveSetting('showAdult', 'set_adult', next === 'none')
+  void clearHidden()
 }
 
-/** Enter на строке-тумблере. Галочка внутри строки переключается с клавиатуры сама, а метка вокруг
- * неё
- * нет: `<label>` разбирает только щелчок мышью. Переключаем значение сами и зовём тот же обработчик. */
-function onAdultKey(): void {
-  adult.value = !adult.value
-  onAdult()
-}
-
-/** Ответ поля даты. Пустая дата — «стёрли»: сказанный прежде отказ к пустому полю не относится. */
 function onBirth(value: string): void {
   birth.value = value
-  if (value === '') {
-    ageError.value = ''
-    return
-  }
-
-  if (!adultByBirth(value)) {
-    ageError.value = 'В доступе отказано'
-    return
-  }
-
+  if (value === '') return
+  if (!adultByBirth(value)) { ageError.value = 'В доступе отказано'; return }
+  ageVerified.value = true
+  void saveSetting('adultAgeVerified', 'set_adult_age_verified', true)
+  const next = pendingAdultMode.value ?? adultMode.value
+  pendingAdultMode.value = null
   closeAge()
-  adult.value = true
-  void saveSetting('showAdult', 'set_adult', true)
-  void clearHidden()
+  setAdultMode(next)
+}
+
+function saveAdultTagRules(): void { void saveSetting('adultTagRules', 'set_adult_tag_rules', adultTagRules.value) }
+function updateAdultTagRule(name: string, field: 'threshold' | 'hideInPartial', value: number | boolean): void {
+  const current = adultTagRules.value[name] ?? { threshold: 70, hideInPartial: false }
+  adultTagRules.value[name] = { ...current, [field]: field === 'threshold' ? Math.max(0, Math.min(100, Math.round(Number(value)))) : value }
+  saveAdultTagRules()
 }
 
 /** Отказ от вопроса: тумблер остаётся выключенным, и это его настоящее состояние. */
@@ -618,28 +607,29 @@ onMounted(() => {
           </button>
         </div>
 
-        <!-- Строка-тумблер на телевизоре сама берёт фокус, а галочка внутри из обхода убирается: обход
-     пульта ищет соседа по геометрии, и рядом с тумблером по горизонтали нет ничего, что его перекрывало бы. -->
-        <label
-          class="am-switch"
-          :tabindex="lite ? 0 : -1"
-          role="switch"
-          :aria-checked="adult"
-          @keydown.enter.prevent="onAdultKey"
-          @keydown.space.prevent="onAdultKey"
-        >
-          <input
-            v-model="adult"
-            type="checkbox"
-            class="am-switch__box"
-            :tabindex="lite ? -1 : 0"
-            @change="onAdult"
-          />
-          <span class="am-switch__name">Показывать контент для взрослых (18+)</span>
-        </label>
+        <h3 class="am-h3 am-adult-heading"><SettingMark name="adult" /> Взрослое</h3>
 
-        <!-- Вопрос о возрасте стоит под тумблером, а не отдельным окном: он живёт ровно столько,
-     сколько человек его видит. Поле даты своё: системное на тёмных темах выбивалось из стекла. -->
+<div class="am-adult-control" role="radiogroup" aria-label="Фильтрация контента 18+">
+  <button class="am-adult-mode" :class="{ 'am-adult-mode--active': adultMode === 'full' }" type="button" role="radio" :aria-checked="adultMode === 'full'" @click="setAdultMode('full')">
+    <span class="am-adult-mode__chip am-adult-mode__chip--muted">18+</span>
+    <span><strong>Скрыто</strong><small>Скрывать весь 18+ контент</small></span>
+  </button>
+  <button class="am-adult-mode" :class="{ 'am-adult-mode--active': adultMode === 'partial' }" type="button" role="radio" :aria-checked="adultMode === 'partial'" @click="setAdultMode('partial')">
+    <span class="am-adult-mode__chip am-adult-mode__chip--blue">18+</span>
+    <span><strong>Частично</strong><small>Скрывать красные, настраивать синие</small></span>
+  </button>
+  <button class="am-adult-mode" :class="{ 'am-adult-mode--active': adultMode === 'none' }" type="button" role="radio" :aria-checked="adultMode === 'none'" @click="setAdultMode('none')">
+    <span class="am-adult-mode__chip am-adult-mode__chip--red">18+</span>
+    <span><strong>Показано</strong><small>Показывать весь контент</small></span>
+  </button>
+</div>
+
+        <div v-if="ageVerified && adultMode !== 'full'" class="am-adult-note">
+  <p><span class="am-adult-chip am-adult-chip--red">18+</span> — Хентай и сексуальный контент по версии AniList.</p>
+  <p><span class="am-adult-chip am-adult-chip--blue">18+</span> — Теги, которые могут содержать потенциально неприемлемый контент. Порог скрытия определяется долей тега в тайтле. Можно настроить.</p>
+</div>
+<div v-if="adultMode === 'partial' && ageVerified" class="am-adult-options"><p class="am-adult-options__title">Синие теги</p><p class="am-adult-options__hint">Выберите, какие категории скрывать, и задайте порог для каждой.</p><label v-for="(rule, name) in adultTagRules" :key="name" class="am-adult-tag"><input type="checkbox" :checked="rule.hideInPartial" @change="updateAdultTagRule(name, 'hideInPartial', ($event.target as HTMLInputElement).checked)" /><span class="am-adult-tag__name">{{ tagWord(name) }}</span><input class="am-adult-tag__range" type="range" min="0" max="100" :value="rule.threshold" @input="updateAdultTagRule(name, 'threshold', ($event.target as HTMLInputElement).valueAsNumber)" /><output>{{ rule.threshold }}%</output></label></div>
+
         <div v-if="askingAge" class="am-age">
           <p class="am-age__ask">Укажите ваш возраст</p>
 

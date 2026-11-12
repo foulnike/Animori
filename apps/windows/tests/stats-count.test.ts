@@ -68,6 +68,7 @@ function brief(mediaId: number, over: Partial<MediaBrief> = {}): void {
     seasonYear: null,
     averageScore: null,
     isAdult: false,
+    tags: null,
     romaji: null,
     english: null,
     native: null,

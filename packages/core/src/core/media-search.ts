@@ -6,6 +6,7 @@ import { searchMedia, type MediaBrief, type SearchPage } from '../api/anilist-me
 import { hasCyrillic, searchShikimori } from '../api/shikimori-search'
 import { Logger } from '../utils/logger'
 import { adultAllowed, hiddenCount, keepAllowed } from './adult'
+import { peekRegulated } from './media-looks'
 import { selectEntries } from './collection-view'
 import { peekRussianName, rememberRussianName, warmRussianNames } from './media-title'
 import type { SnapshotEntry } from './snapshot'
@@ -51,10 +52,10 @@ function briefIsAdult(brief: MediaBrief): boolean {
  * Убирает взрослое из страницы и правит числа: общее число сервера обнуляется, признак следующей страницы — серверный.
  */
 function sift(page: SearchPage, word: string): SearchPage {
-  const hidden = hiddenCount(page.items, briefIsAdult)
+  const hidden = hiddenCount(page.items, briefIsAdult, (item) => item.tags)
   if (hidden === 0) return page
 
-  const items = keepAllowed(page.items, briefIsAdult) as MediaBrief[]
+  const items = keepAllowed(page.items, briefIsAdult, (item) => item.tags) as MediaBrief[]
   Logger('INFO', `Поиск «${word}»: спрятано взрослых ${hidden} из ${page.items.length}`)
 
   return { items, hasNext: page.hasNext, total: null }
@@ -91,7 +92,7 @@ export async function searchOwnList(word: string, limit: number): Promise<OwnSea
       continue
     }
 
-    if (!adultAllowed(entry.isAdult)) {
+    if (!adultAllowed(entry.isAdult, peekRegulated(entry.mediaId))) {
       hidden += 1
       continue
     }

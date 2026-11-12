@@ -144,9 +144,26 @@ describe('запрос расписания', () => {
         romaji: 'Ван-Пис',
         english: 'One Piece',
         isAdult: false,
+        regulated: false,
       },
-      { mediaId: 22, episode: 0, airingAt: FROM + 300, romaji: null, english: null, isAdult: false },
-      { mediaId: 23, episode: 1, airingAt: FROM + 400, romaji: null, english: null, isAdult: false },
+      {
+        mediaId: 22,
+        episode: 0,
+        airingAt: FROM + 300,
+        romaji: null,
+        english: null,
+        isAdult: false,
+        regulated: false,
+      },
+      {
+        mediaId: 23,
+        episode: 1,
+        airingAt: FROM + 400,
+        romaji: null,
+        english: null,
+        isAdult: false,
+        regulated: false,
+      },
     ])
   })
 

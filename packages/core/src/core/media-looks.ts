@@ -1,5 +1,6 @@
 // Облик тайтла для сетки постеров и сводки: обложка, цвет, счёт серий и формат — память, склад, сеть. Снимок картинок не держит, поэтому вид живёт отдельно; хозяин обликов — этот модуль.
 
+import { regulatedByTags } from './adult'
 import { CACHE_TIME } from './constants'
 import { dbGet, dbGetMany, dbSet } from './db'
 import { localCover } from './posters'
@@ -39,6 +40,10 @@ export interface MediaLook {
   airingEpisode: number | null
   /** Срок выхода той серии в секундах: по нему видно, что облик отстал. */
   airingAt: number | null
+  /** Регулируемое по тегам (синее 18+). У записи склада до 6.4 поля нет: такой облик переспрашивается. */
+  regulated?: boolean
+  /** Метка 18+ сервера: история и чужие тайтлы без записи в списке знают её только отсюда. */
+  isAdult?: boolean
 }
 
 /** Знание этого запуска. `null` значит «спрашивали, сервер тайтла не знает». */
@@ -126,7 +131,7 @@ async function writeCache(mediaId: number, look: MediaLook): Promise<void> {
  * появления длины серии поля нет. Ответ сервера «не знаю» — это null, и он собран: иначе сводка спрашивала бы до бесконечности. */
 function lookComplete(look: MediaLook | null): boolean {
   if (look === null) return true
-  return !airedOut(look) && look.duration !== undefined
+  return !airedOut(look) && look.duration !== undefined && look.regulated !== undefined
 }
 
 /** Выписка сервера в облик: из ответа берётся только видимое глазу. */
@@ -144,7 +149,20 @@ function fromBrief(brief: MediaBrief): MediaLook {
     status: brief.status,
     airingEpisode: brief.airingEpisode,
     airingAt: brief.airingAt,
+    regulated: !brief.isAdult && regulatedByTags(brief.tags),
+    isAdult: brief.isAdult,
   }
+}
+
+/** Регулируемое ли по облику: неизвестный облик считается обычным, как неизвестный признак 18+. */
+export function peekRegulated(mediaId: number): boolean {
+  return memory.get(mediaId)?.regulated === true
+}
+
+/** Прячется ли тайтл при выключенном 18+ по облику: красная или синяя метка. */
+export function peekRestricted(mediaId: number): boolean {
+  const look = memory.get(mediaId)
+  return look?.isAdult === true || look?.regulated === true
 }
 
 /** Что известно прямо сейчас, без ожидания — разметка ждать не умеет. Обложка отдаётся локальной,

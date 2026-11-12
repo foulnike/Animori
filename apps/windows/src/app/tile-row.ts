@@ -2,6 +2,7 @@
 // Появилась со страницей студии (3.10): поиск и она собирали одно и то же дважды.
 
 import type { MediaBrief } from '@/api/anilist-media'
+import { regulatedByTags } from '@/core/adult'
 import { getEntry } from '@/core/collection'
 import { SOON_STATUS } from '@/core/media-looks'
 import { peekRussianName } from '@/core/media-title'
@@ -26,6 +27,8 @@ export interface TileRow {
   /** Есть ли тайтл у источников видео. null — ещё не спрашивали. */
   play: PlayState | null
   adult: boolean
+  /** Регулируемое по тегам: синяя плашка; у взрослого её нет, там уже красная. */
+  regulated: boolean
 }
 
 /** Оценка сервера для угла постера: у AniList она в сотнях. */
@@ -133,5 +136,6 @@ export function toTileRow(brief: MediaBrief): TileRow {
     // Спрашивается только память: сеть здесь задержала бы отрисовку полки целиком.
     play: peekPlayable(brief.mediaId),
     adult: brief.isAdult,
+    regulated: !brief.isAdult && regulatedByTags(brief.tags),
   }
 }

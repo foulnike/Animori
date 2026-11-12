@@ -1,6 +1,8 @@
 // Главные работы автора: постеры для полки в его карточке.
 
 import { Logger } from '../utils/logger'
+import { readTags, type TagRankReply } from './anilist-media'
+import { regulatedByTags } from '../core/adult'
 import { anilistQuery } from './anilist'
 
 /** Сколько работ просить: полка листается, но бесконечной ей быть незачем. */
@@ -16,6 +18,10 @@ const STAFF_WORKS_QUERY = `query ($id: Int!, $perPage: Int!) {
         node {
           id
           isAdult
+          tags {
+            name
+            rank
+          }
           seasonYear
           title {
             romaji
@@ -42,11 +48,14 @@ export interface StaffWork {
   cover: string | null
   color: string | null
   isAdult: boolean
+  /** Регулируемое по тегам: синее 18+. */
+  regulated: boolean
 }
 
 interface NodeReply {
   id?: number
   isAdult?: boolean | null
+  tags?: Array<TagRankReply | null> | null
   seasonYear?: number | null
   title?: { romaji?: string | null; english?: string | null } | null
   coverImage?: { large?: string | null; medium?: string | null; color?: string | null } | null
@@ -113,6 +122,7 @@ export async function fetchStaffWorks(personId: number): Promise<StaffWork[]> {
       cover: textOrNull(node.coverImage?.large) ?? textOrNull(node.coverImage?.medium),
       color: textOrNull(node.coverImage?.color),
       isAdult: node.isAdult === true,
+      regulated: node.isAdult !== true && regulatedByTags(readTags(node.tags)),
     })
   }
 

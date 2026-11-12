@@ -385,6 +385,7 @@ onBeforeUnmount(() => {
         :soon="row.soon"
         :play="row.play"
         :adult="row.adult"
+        :regulated="row.regulated"
         stack-tags
         @open="open(row.mediaId)"
       />

@@ -5,6 +5,7 @@ import { Logger } from '../utils/logger'
 import { anilistQuery } from './anilist'
 import { pickEntry, type PartEntry } from '../core/media-parts'
 import type { MediaBrief } from './anilist-media'
+import { readTags, type TagRankReply } from './anilist-media'
 
 /** Потолок страницы у AniList — пятьдесят записей за запрос. */
 const LOOKUP_PAGE_SIZE = 50
@@ -33,6 +34,10 @@ function lookupQuery(field: LookupField): string {
       seasonYear
       averageScore
       isAdult
+      tags {
+        name
+        rank
+      }
       nextAiringEpisode {
         episode
         airingAt
@@ -68,6 +73,7 @@ interface MediaReply {
   seasonYear?: number | null
   averageScore?: number | null
   isAdult?: boolean | null
+  tags?: Array<TagRankReply | null> | null
   nextAiringEpisode?: AiringReply | null
   title?: { romaji?: string | null; english?: string | null; native?: string | null } | null
   coverImage?: { large?: string | null; medium?: string | null; color?: string | null } | null
@@ -121,6 +127,7 @@ function toBrief(item: MediaReply | null): MediaBrief | null {
     seasonYear: countOrNull(item.seasonYear),
     averageScore: countOrNull(item.averageScore),
     isAdult: item.isAdult === true,
+    tags: readTags(item.tags),
     airingEpisode: countOrNull(item.nextAiringEpisode?.episode),
     airingAt: countOrNull(item.nextAiringEpisode?.airingAt),
     romaji: textOrNull(item.title?.romaji),

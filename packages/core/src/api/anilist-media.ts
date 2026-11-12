@@ -92,6 +92,10 @@ const CARD_QUERY = `query ($id: Int!) {
     seasonYear
     genres
     isAdult
+    tags {
+      name
+      rank
+    }
     siteUrl
     bannerImage
     description(asHtml: false)
@@ -144,6 +148,10 @@ const SEARCH_QUERY = `query ($word: String!, $page: Int!, $perPage: Int!) {
       seasonYear
       averageScore
       isAdult
+      tags {
+        name
+        rank
+      }
       nextAiringEpisode {
         episode
         airingAt
@@ -184,6 +192,10 @@ const STUDIO_QUERY = `query ($id: Int!, $page: Int!, $perPage: Int!) {
         seasonYear
         averageScore
         isAdult
+        tags {
+          name
+          rank
+        }
         nextAiringEpisode {
           episode
           airingAt
@@ -215,6 +227,26 @@ interface AiringReply {
   airingAt?: number | null
 }
 
+/** Тэг тайтла с весом: вес нужен отбору регулируемого содержимого. */
+export interface TagRankReply {
+  name?: string | null
+  rank?: number | null
+}
+
+/** Тэги с весом; битые отбрасываются, пустой список — `null`. Общий разбор для всех выписок. */
+export function readTags(
+  tags: Array<TagRankReply | null> | null | undefined,
+): Array<{ name: string; rank: number }> | null {
+  if (!Array.isArray(tags)) return null
+
+  const out: Array<{ name: string; rank: number }> = []
+  for (const tag of tags) {
+    if (!tag || typeof tag.name !== 'string' || typeof tag.rank !== 'number') continue
+    out.push({ name: tag.name, rank: tag.rank })
+  }
+  return out.length > 0 ? out : null
+}
+
 /** Край связи со студией: основная отмечена у самого края. */
 interface StudioEdgeReply {
   isMain?: boolean | null
@@ -233,6 +265,7 @@ interface BriefReply {
   seasonYear?: number | null
   averageScore?: number | null
   isAdult?: boolean | null
+  tags?: Array<TagRankReply | null> | null
   nextAiringEpisode?: AiringReply | null
   title?: { romaji?: string | null; english?: string | null; native?: string | null } | null
   coverImage?: { large?: string | null; medium?: string | null; color?: string | null } | null
@@ -251,6 +284,7 @@ interface CardReply {
     seasonYear?: number | null
     genres?: Array<string | null> | null
     isAdult?: boolean | null
+    tags?: Array<TagRankReply | null> | null
     siteUrl?: string | null
     bannerImage?: string | null
     description?: string | null
@@ -324,6 +358,8 @@ export interface MediaCard {
   seasonYear: number | null
   genres: string[]
   isAdult: boolean
+  /** Тэги с весом: по ним карточка решает, регулируемое ли это содержимое. */
+  tags: Array<{ name: string; rank: number }> | null
   siteUrl: string | null
   description: string | null
   romaji: string | null
@@ -364,6 +400,7 @@ export interface MediaBrief {
   seasonYear: number | null
   averageScore: number | null
   isAdult: boolean
+  tags: Array<{ name: string; rank: number }> | null
   romaji: string | null
   english: string | null
   native: string | null
@@ -674,6 +711,7 @@ function briefOrNull(item: BriefReply | null | undefined): MediaBrief | null {
     seasonYear: countOrNull(item.seasonYear),
     averageScore: countOrNull(item.averageScore),
     isAdult: item.isAdult === true,
+    tags: readTags(item.tags),
     romaji: textOrNull(item.title?.romaji),
     english: textOrNull(item.title?.english),
     native: textOrNull(item.title?.native),
@@ -734,6 +772,7 @@ async function loadCard(mediaId: number): Promise<MediaCard | null> {
       ? media.genres.filter((genre): genre is string => typeof genre === 'string' && genre !== '')
       : [],
     isAdult: media.isAdult === true,
+    tags: readTags(media.tags),
     siteUrl: textOrNull(media.siteUrl),
     description: textOrNull(media.description),
     romaji: textOrNull(media.title?.romaji),

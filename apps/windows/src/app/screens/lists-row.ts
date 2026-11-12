@@ -3,7 +3,7 @@
 import { onScopeDispose, ref, type Ref } from 'vue'
 
 import { setupVideoSources } from '@/api/video-sources'
-import { notOutYet, partsCeiling, peekLook, warmLooks, type MediaLook } from '@/core/media-looks'
+import { notOutYet, partsCeiling, peekLook, peekRegulated, warmLooks, type MediaLook } from '@/core/media-looks'
 import { peekRussianName, prefetchRussianNames } from '@/core/media-title'
 import {
   onPlayableChange,
@@ -47,6 +47,8 @@ export interface Row {
   cover: string | null
   color: string | null
   adult: boolean
+  /** Регулируемое: не проверяется, нужна карточка. Всегда false для списка. */
+  regulated: boolean
 }
 
 /** Доборы, отданные экрану: флажки для подвала, пуски и отметка о показе. */
@@ -169,6 +171,7 @@ export function toRow(entry: SnapshotEntry): Row {
     cover: look?.cover ?? null,
     color: look?.color ?? null,
     adult: entry.isAdult,
+    regulated: peekRegulated(entry.mediaId),
   }
 }
 

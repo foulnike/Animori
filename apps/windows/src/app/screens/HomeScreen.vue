@@ -12,6 +12,7 @@ import {
   notOutYet,
   partsCeiling,
   peekLook,
+  peekRegulated,
   rememberBrief,
   SOON_STATUS,
   warmLooks,
@@ -128,6 +129,8 @@ interface Row {
   cover: string | null
   color: string | null
   adult: boolean
+  /** Регулируемое: не проверяется, нужна карточка. Всегда false для списка. */
+  regulated: boolean
 }
 
 /** Полка витрины в показе: заголовок и готовые плитки. */
@@ -378,6 +381,7 @@ function toRow(entry: SnapshotEntry): Row {
     cover: look?.cover ?? null,
     color: look?.color ?? null,
     adult: entry.isAdult,
+    regulated: peekRegulated(entry.mediaId),
   }
 }
 
@@ -388,7 +392,7 @@ function redrawOwn(): void {
 
 /** Пересобирает плитки ленты; взрослое отсеивается при отрисовке: набранное живёт дольше настройки. */
 function drawFeed(): void {
-  feedRows.value = keepAllowed(feedKeep.items, (item) => item.isAdult).map(toTileRow)
+  feedRows.value = keepAllowed(feedKeep.items, (item) => item.isAdult, (item) => item.tags).map(toTileRow)
 }
 
 /** Добирает обложки своей полки: снимок картинок не хранит. */
@@ -503,7 +507,7 @@ function publish(): void {
     const items = staged.get(def.key)
     if (items === undefined || items.length === 0) continue
 
-    const fresh = keepAllowed(items, (brief) => brief.isAdult).filter(
+    const fresh = keepAllowed(items, (brief) => brief.isAdult, (brief) => brief.tags).filter(
       (brief) => !seen.has(brief.mediaId),
     )
     if (fresh.length < SHELF_MIN) continue
@@ -1260,6 +1264,7 @@ watch(
             :soon="row.soon"
             :play="row.play"
             :adult="row.adult"
+            :regulated="row.regulated"
             editable
             @open="open(row.mediaId)"
             @edit="openEdit(row)"
@@ -1290,6 +1295,7 @@ watch(
             :soon="row.soon"
             :play="row.play"
             :adult="row.adult"
+            :regulated="row.regulated"
             editable
             hidable
             @open="open(row.mediaId)"
@@ -1323,6 +1329,7 @@ watch(
             :soon="row.soon"
             :play="row.play"
             :adult="row.adult"
+            :regulated="row.regulated"
             editable
             hidable
             @open="open(row.mediaId)"

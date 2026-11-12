@@ -9,7 +9,7 @@ import { initSplash } from './splash'
 import { tip } from './tip'
 import { eachEntry, initCollection } from '@/core/collection'
 import { initDatasetNames, updateDatasetNamesInBackground } from '@/core/dataset-names'
-import { hydrateLooks, peekLook } from '@/core/media-looks'
+import { hydrateLooks, peekLook, warmLooks } from '@/core/media-looks'
 import { loadCoversFromStore, prefetchCovers, type CoverPair } from '@/core/posters'
 import { loadSettings, settings } from '@/core/settings'
 import { installGlobalErrorHandlers, Logger, setLogEnabled } from '@/utils/logger'
@@ -38,6 +38,8 @@ async function warmListCovers(): Promise<void> {
 
   // Адреса обложек лежат в складе обликов, а не в снимке: без этого шага догружать было бы нечего.
   await hydrateLooks(ids)
+  // Поднимаем метки 18+ для всей коллекции, а не только первой сотни строк.
+  await warmLooks(ids)
 
   const pairs: CoverPair[] = []
   for (const mediaId of ids) {
