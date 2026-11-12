@@ -413,6 +413,8 @@ export interface MediaBrief {
   airingAt: number | null
   /** Всегда null: свои метки плитка ставит по памяти коллекции. */
   ownEntry: ServerEntry | null
+  /** Conservative AniList relation bucket used only to avoid franchise clusters on recommendation shelves. */
+  franchiseKey?: number | null
 }
 
 /**

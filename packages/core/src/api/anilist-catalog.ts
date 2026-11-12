@@ -23,7 +23,7 @@ import { once } from './rate-limit'
 /**
  * Сколько плиток просит полка: показ держит 14, остальное — запас на «не интересно» (отмеченное уходит из полки).
  */
-const SHELF_PAGE = 30
+const SHELF_PAGE = 50
 
 /** Сколько советов просим у семени: после склейки повторов останется меньше. */
 const SEED_PAGE = 25
@@ -43,7 +43,7 @@ const FEED_SKIP_STATUS = 'NOT_YET_RELEASED'
 /**
  * Ключи склада; цифра — поколение формы: сменился состав полей — сменилась и она, прежние записи перестанут находиться.
  */
-const SHELF_PREFIX = 'SHELF2_'
+const SHELF_PREFIX = 'SHELF3_'
 const TAGS_KEY = 'TAGS1_all'
 const GENRE_PREFIX = 'GENRE1_'
 const RECS_PREFIX = 'RECS1_'
@@ -99,6 +99,12 @@ const BRIEF_FIELDS = `
         large
         medium
         color
+      }
+      relations {
+        edges {
+          relationType
+          node { id }
+        }
       }`
 
 /** Те же поля фрагментом для пачек: три полки в одном запросе иначе повторили бы их трижды. */
@@ -219,6 +225,9 @@ interface BriefReply {
   nextAiringEpisode?: AiringReply | null
   title?: { romaji?: string | null; english?: string | null; native?: string | null } | null
   coverImage?: { large?: string | null; medium?: string | null; color?: string | null } | null
+  relations?: {
+    edges?: Array<{ relationType?: string | null; node?: { id?: number | null } | null } | null> | null
+  } | null
 }
 
 /** Одна выборка страницы: и у полки, и у каждой доли пачки вид общий. */
@@ -363,6 +372,19 @@ function toBrief(item: BriefReply | null | undefined): MediaBrief | null {
       })
       .filter((t): t is { name: string; rank: number } => t !== null) ?? null
 
+  // Relations are enough for a conservative franchise bucket. Unknown relations stay null,
+  // so a missing graph never hides an unrelated title.
+  const franchiseIds = (item.relations?.edges ?? [])
+    .filter((edge) =>
+      edge?.relationType === 'PREQUEL' ||
+      edge?.relationType === 'SEQUEL' ||
+      edge?.relationType === 'SIDE_STORY' ||
+      edge?.relationType === 'SPIN_OFF',
+    )
+    .map((edge) => edge?.node?.id)
+    .filter((id): id is number => typeof id === 'number' && id > 0)
+  const franchiseKey = franchiseIds.length > 0 ? Math.min(item.id, ...franchiseIds) : null
+
   return {
     mediaId: item.id,
     malId: countOrNull(item.idMal),
@@ -384,6 +406,7 @@ function toBrief(item: BriefReply | null | undefined): MediaBrief | null {
     airingEpisode: countOrNull(item.nextAiringEpisode?.episode),
     airingAt: countOrNull(item.nextAiringEpisode?.airingAt),
     ownEntry: null,
+    franchiseKey,
   }
 }
 

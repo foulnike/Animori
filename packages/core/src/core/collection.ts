@@ -29,6 +29,7 @@ export type EntryLook = {
   format?: string | null
   seasonYear?: number | null
   episodes?: number | null
+  airingEpisode?: number | null
   duration?: number | null
 }
 

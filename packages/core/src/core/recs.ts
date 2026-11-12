@@ -42,7 +42,7 @@ const FEED_TRIES = 3
 
 /** Сколько страниц добирает полка за одну просьбу о наполнении. Запас страницы закрывает отметки
  * «не интересно» без сети, так что второй заход нужен лишь когда подчистили и его. */
-const SHELF_TRIES = 2
+const SHELF_TRIES = 6
 
 /** Сколько кругов семян «по мотивам» опрашивается, прежде чем полка
     признаёт советы исчерпанными: каждый круг — новая пара любимых. */
@@ -182,11 +182,14 @@ function lovedIds(): number[] {
 }
 
 /** Что не показываем: своё, скрытое и взрослое при выключенном показе. */
-async function visible(briefs: MediaBrief[]): Promise<MediaBrief[]> {
+async function visible(briefs: MediaBrief[], excluded: ReadonlySet<number> = new Set()): Promise<MediaBrief[]> {
   const hiddenSet = await loadHidden()
   return keepAllowed(
     briefs.filter(
-      (brief) => getEntry(brief.mediaId) === undefined && !hiddenSet.has(brief.mediaId),
+      (brief) =>
+        getEntry(brief.mediaId) === undefined &&
+        !hiddenSet.has(brief.mediaId) &&
+        !excluded.has(brief.mediaId),
     ),
     (brief) => brief.isAdult,
     (brief) => brief.tags,
@@ -325,16 +328,48 @@ async function grow(stock: Stock): Promise<boolean> {
 /**
  * Полка витрины: ровно `want` плиток, сколько бы хозяин ни отметил «не интересно» (добор — следующей страницей).
  */
-export async function shelfFill(name: ShelfName, want: number): Promise<MediaBrief[]> {
+export async function shelfFill(
+  name: ShelfName,
+  want: number,
+  excluded: ReadonlySet<number> = new Set(),
+): Promise<MediaBrief[]> {
   const stock = stockOf(name)
 
-  let out = await visible(stock.raw)
+  let out = await visible(stock.raw, excluded)
   for (let attempt = 0; out.length < want && attempt < SHELF_TRIES; attempt++) {
     if (!(await grow(stock))) break
-    out = await visible(stock.raw)
+    out = await visible(stock.raw, excluded)
   }
 
   return out.slice(0, want)
+}
+
+/** Дедупликация уже набранных полок: порядок `names` задаёт, где тайтл подходит лучше.
+ *  Внутри одной полки второй тайтл той же AniList-франшизы не вытесняет первый. */
+export function distributeShelves(
+  names: readonly ShelfName[],
+  staged: ReadonlyMap<ShelfName, readonly MediaBrief[]>,
+  want: number,
+): Map<ShelfName, MediaBrief[]> {
+  const out = new Map<ShelfName, MediaBrief[]>()
+  const claimed = new Set<number>()
+
+  for (const name of names) {
+    const rows: MediaBrief[] = []
+    const franchises = new Set<number>()
+    for (const brief of staged.get(name) ?? []) {
+      if (rows.length >= want || claimed.has(brief.mediaId)) continue
+      if (brief.franchiseKey !== null && brief.franchiseKey !== undefined) {
+        if (franchises.has(brief.franchiseKey)) continue
+        franchises.add(brief.franchiseKey)
+      }
+      rows.push(brief)
+      claimed.add(brief.mediaId)
+    }
+    out.set(name, rows)
+  }
+
+  return out
 }
 
 /** Справочник тэгов для меню отбора; провал сбрасывает обещание — второе открытие пробует снова. */
@@ -373,7 +408,11 @@ export function newFeed(pick: CatalogPick): FeedRun {
 /**
  * Следующая порция ленты: ровно `want` плиток, лишнее ждёт в остатке; пустой ответ — не конец ленты.
  */
-export async function feedMore(run: FeedRun, want: number): Promise<MediaBrief[]> {
+export async function feedMore(
+  run: FeedRun,
+  want: number,
+  excluded: ReadonlySet<number> = new Set(),
+): Promise<MediaBrief[]> {
   // Остаток прежнего захода идёт вперед сети: он уже отобран и проверен.
   const out: MediaBrief[] = run.rest.splice(0, want)
 
@@ -393,7 +432,10 @@ export async function feedMore(run: FeedRun, want: number): Promise<MediaBrief[]
     if (!reply.hasNext) run.over = true
 
     for (const brief of await visible(reply.items)) {
-      if (run.seen.has(brief.mediaId)) continue
+      if (run.seen.has(brief.mediaId) || excluded.has(brief.mediaId)) {
+        run.seen.add(brief.mediaId)
+        continue
+      }
       run.seen.add(brief.mediaId)
 
       // Сверх порции — в остаток. В виденные оно уже записано: иначе

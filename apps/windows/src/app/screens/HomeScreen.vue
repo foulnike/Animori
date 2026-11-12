@@ -27,7 +27,7 @@ import {
   type PlayAsk,
   type PlayState,
 } from '@/core/playable'
-import { feedMore, hideRec, newFeed, shelfFill, type ShelfName } from '@/core/recs'
+import { distributeShelves, feedMore, hideRec, newFeed, shelfFill, type ShelfName } from '@/core/recs'
 import type { SnapshotEntry } from '@/core/snapshot'
 import { Logger } from '@/utils/logger'
 
@@ -50,6 +50,7 @@ import { dropFeed, feedKeep, homePick } from './home-keep'
 
 /** Сколько постеров класть на полку: и на свою, и на полку витрины. */
 const SHELF_SIZE = 14
+const SHELF_FETCH = SHELF_SIZE * 3
 
 // Плашка приветствия: фраза запуска — из колоды, круг которой лежит в хранилище (см. splash.ts).
 const splash = splashLine()
@@ -195,11 +196,22 @@ const editLook = computed(() => (editId.value > 0 ? peekLook(editId.value) : nul
 
 /** Сколько серий уже вышло. Без облика потолка нет, и окно его не выдумывает. */
 const editParts = computed<number | null>(() =>
-  editLook.value === null ? null : partsCeiling(editLook.value),
+  editLook.value !== null
+    ? partsCeiling(editLook.value)
+    : editLookDraft.value === undefined
+      ? null
+      : partsCeiling({
+          episodes: editLookDraft.value.episodes ?? null,
+          airingEpisode: editLookDraft.value.airingEpisode ?? null,
+        }),
 )
 
 /** Идёт ли показ: онгоингу окно не ставит «Просмотрено» на потолке счёта. */
-const editOngoing = computed<boolean>(() => (editLook.value?.airingEpisode ?? null) !== null)
+const editOngoing = computed<boolean>(() =>
+  editLook.value !== null
+    ? editLook.value.airingEpisode !== null
+    : editLookDraft.value?.airingEpisode !== null && editLookDraft.value?.airingEpisode !== undefined,
+)
 
 /** Календарь выхода. Всё считает home-calendar, здесь только разметка. */
 const {
@@ -392,7 +404,10 @@ function redrawOwn(): void {
 
 /** Пересобирает плитки ленты; взрослое отсеивается при отрисовке: набранное живёт дольше настройки. */
 function drawFeed(): void {
-  feedRows.value = keepAllowed(feedKeep.items, (item) => item.isAdult, (item) => item.tags).map(toTileRow)
+  const reserved = new Set(recs.value.flatMap((shelf) => shelf.rows.map((row) => row.mediaId)))
+  feedRows.value = keepAllowed(feedKeep.items, (item) => item.isAdult, (item) => item.tags)
+    .filter((item) => !reserved.has(item.mediaId))
+    .map(toTileRow)
 }
 
 /** Добирает обложки своей полки: снимок картинок не хранит. */
@@ -501,22 +516,32 @@ function shelfDefs(): ShelfDef[] {
     пересекаются), взрослое отсеивается здесь: состав полок запоминается дольше настройки. */
 function publish(): void {
   const out: Shelf[] = []
-  const seen = new Set<number>()
+  const distributed = distributeShelves(
+    activeDefs.map((def) => def.key),
+    new Map([...staged].map(([key, items]) => [key, keepAllowed(items, (brief) => brief.isAdult, (brief) => brief.tags)])),
+    SHELF_SIZE,
+  )
 
   for (const def of activeDefs) {
-    const items = staged.get(def.key)
-    if (items === undefined || items.length === 0) continue
-
-    const fresh = keepAllowed(items, (brief) => brief.isAdult, (brief) => brief.tags).filter(
-      (brief) => !seen.has(brief.mediaId),
-    )
+    const fresh = distributed.get(def.key) ?? []
     if (fresh.length < SHELF_MIN) continue
-
-    for (const brief of fresh) seen.add(brief.mediaId)
     out.push({ key: def.key, title: def.title, rows: fresh.map(toTileRow) })
   }
 
   recs.value = out
+  drawFeed()
+}
+
+/** Без отбора лента ждёт полки: иначе «Ещё рекомендации» успевает показать дубли до их приезда. */
+async function waitForRecs(): Promise<void> {
+  if (picked.value || !recsPending.value) return
+  await new Promise<void>((resolve) => {
+    const stop = watch(recsPending, (pending) => {
+      if (pending) return
+      stop()
+      resolve()
+    })
+  })
 }
 
 // Очередь доступности отвечает вразброд, и один ответ часто касается разом полки, витрины и ленты.
@@ -696,7 +721,7 @@ function loadRecs(): void {
   recsPending.value = activeDefs.length > 0
 
   const tasks = activeDefs.map((def) =>
-    shelfFill(def.key, SHELF_SIZE)
+    shelfFill(def.key, SHELF_FETCH)
       .then((items) => {
         if (mine !== recsRun || items.length === 0) return
         staged.set(def.key, items)
@@ -722,7 +747,10 @@ async function growFeed(mine: number): Promise<void> {
   feedBusy.value = true
 
   try {
-    const got = await feedMore(run, FEED_WANT)
+    await waitForRecs()
+    if (mine !== feedRun) return
+    const reserved = new Set(recs.value.flatMap((shelf) => shelf.rows.map((row) => row.mediaId)))
+    const got = await feedMore(run, FEED_WANT, reserved)
     if (mine !== feedRun) return
 
     // Обложки приехали вместе с ответом: кладём их в общую память даром, иначе списки и карточки полезут за тем же самым второй раз.
@@ -771,7 +799,7 @@ function refill(mine: number, key: ShelfName): void {
   const run = (refillRun.get(key) ?? 0) + 1
   refillRun.set(key, run)
 
-  void shelfFill(key, SHELF_SIZE)
+  void shelfFill(key, SHELF_FETCH)
     .then((items) => {
       if (mine !== recsRun || refillRun.get(key) !== run || items.length === 0) return
 
@@ -883,6 +911,8 @@ function closeEdit(): void {
 /** Облик для новой записи: имя и метка 18+ берутся у своей записи или у брифа каталога; сведения
  *  для баннера (вид, год, серии) — там же, длина серии у брифа нет. */
 function lookOf(mediaId: number): EntryLook | undefined {
+  const known = [...staged.values()].flat().find((brief) => brief.mediaId === mediaId)
+  const brief = known ?? feedKeep.items.find((item) => item.mediaId === mediaId)
   const own = getEntry(mediaId)
   if (own !== undefined) {
     return {
@@ -891,13 +921,12 @@ function lookOf(mediaId: number): EntryLook | undefined {
       isAdult: own.isAdult,
       format: own.format,
       seasonYear: own.seasonYear,
-      episodes: own.episodes,
-      duration: own.duration,
+      episodes: own.episodes ?? brief?.episodes ?? null,
+      airingEpisode: brief?.airingEpisode ?? null,
+      duration: own.duration ?? brief?.duration ?? null,
     }
   }
 
-  const known = [...staged.values()].flat().find((brief) => brief.mediaId === mediaId)
-  const brief = known ?? feedKeep.items.find((item) => item.mediaId === mediaId)
   if (brief === undefined) return undefined
 
   return {
@@ -907,6 +936,7 @@ function lookOf(mediaId: number): EntryLook | undefined {
     format: brief.format,
     seasonYear: brief.seasonYear,
     episodes: brief.episodes,
+    airingEpisode: brief.airingEpisode,
   }
 }
 

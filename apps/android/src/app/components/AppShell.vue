@@ -122,13 +122,59 @@ function onBack(): void {
   goBack()
 }
 
-// Смена экрана всегда начинается с верха: позиция прошлого экрана не должна выезжать на новый.
-// Памяти позиций, как на ПК, на телефоне нет — там возврат на карточку уходит в плеер,
-// а из плеера назад человек возвращается к началу карточки, а не к её середине.
+/** Позиция каждого экрана: возврат с карточки возвращает к месту, где человек её открыл. */
+const scrollByScreen = new Map<string, number>()
+const SCROLL_TRIES = 20
+const SCROLL_STEP_MS = 60
+let scrollStop: (() => void) | null = null
+
+function restoreScroll(top: number): void {
+  let left = SCROLL_TRIES
+  let timer: ReturnType<typeof setTimeout> | null = null
+
+  const stop = (): void => {
+    if (timer !== null) clearTimeout(timer)
+    timer = null
+    left = 0
+    scrollStop = null
+    window.removeEventListener('wheel', stop)
+    window.removeEventListener('touchmove', stop)
+    window.removeEventListener('keydown', stop)
+  }
+
+  const step = (): void => {
+    if (left <= 0) return
+    window.scrollTo(0, top)
+    if (Math.abs(window.scrollY - top) <= 2 || --left <= 0) {
+      stop()
+      return
+    }
+    timer = setTimeout(step, SCROLL_STEP_MS)
+  }
+
+  window.addEventListener('wheel', stop, { passive: true })
+  window.addEventListener('touchmove', stop, { passive: true })
+  window.addEventListener('keydown', stop)
+  scrollStop = stop
+  step()
+}
+
+function rememberScroll(): void {
+  scrollByScreen.set(active.value, window.scrollY)
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', rememberScroll, { passive: true })
+})
+
 watch(
   active,
-  () => {
+  (next, prev) => {
+    scrollByScreen.set(prev, scrollByScreen.get(prev) ?? window.scrollY)
+    scrollStop?.()
     window.scrollTo(0, 0)
+    const want = scrollByScreen.get(next) ?? 0
+    if (want > 0) restoreScroll(want)
   },
   { flush: 'post' },
 )
@@ -148,6 +194,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  scrollStop?.()
+  window.removeEventListener('scroll', rememberScroll)
   window.removeEventListener('keydown', onKey)
   window.removeEventListener('touchstart', onEdgeStart)
   window.removeEventListener('touchend', onEdgeEnd)

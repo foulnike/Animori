@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Рамка окна — рельс, шапка, сменный экран внутри; имена и подписи экранов в routes.ts. Рельс раскрывается поверх содержимого (fixed, не sticky).
 
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
 
 import { APPEARANCES, appearance, setAppearance } from '../appearance'
 import { runBackStop } from '../back-stop'
@@ -28,6 +28,59 @@ const BACK_SCREENS: ReadonlyArray<string> = ['media', 'studio', 'log']
 
 const canGoBack = computed(() => BACK_SCREENS.includes(active.value))
 
+/** Позиция каждого экрана: возврат с карточки возвращает к месту, где человек её открыл. */
+const scrollByScreen = new Map<string, number>()
+const SCROLL_TRIES = 20
+const SCROLL_STEP_MS = 60
+let scrollStop: (() => void) | null = null
+
+function restoreScroll(top: number): void {
+  let left = SCROLL_TRIES
+  let timer: ReturnType<typeof setTimeout> | null = null
+
+  const stop = (): void => {
+    if (timer !== null) clearTimeout(timer)
+    timer = null
+    left = 0
+    scrollStop = null
+    window.removeEventListener('wheel', stop)
+    window.removeEventListener('touchmove', stop)
+    window.removeEventListener('keydown', stop)
+  }
+
+  const step = (): void => {
+    if (left <= 0) return
+    window.scrollTo(0, top)
+    if (Math.abs(window.scrollY - top) <= 2 || --left <= 0) {
+      stop()
+      return
+    }
+    timer = setTimeout(step, SCROLL_STEP_MS)
+  }
+
+  window.addEventListener('wheel', stop, { passive: true })
+  window.addEventListener('touchmove', stop, { passive: true })
+  window.addEventListener('keydown', stop)
+  scrollStop = stop
+  step()
+}
+
+function rememberScroll(): void {
+  scrollByScreen.set(active.value, window.scrollY)
+}
+
+watch(
+  active,
+  (next, prev) => {
+    scrollByScreen.set(prev, scrollByScreen.get(prev) ?? window.scrollY)
+    scrollStop?.()
+    window.scrollTo(0, 0)
+    const want = scrollByScreen.get(next) ?? 0
+    if (want > 0) restoreScroll(want)
+  },
+  { flush: 'post' },
+)
+
 /** Выбор пункта меню. detail у клавиатуры равен нулю — там фокус остаётся на
  *  кнопке, иначе обход меню оборвётся на первом же выборе. */
 function onPick(name: MenuName, e: MouseEvent): void {
@@ -45,6 +98,15 @@ function onBack(): void {
 function onReload(): void {
   window.location.reload()
 }
+
+onMounted(() => {
+  window.addEventListener('scroll', rememberScroll, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  scrollStop?.()
+  window.removeEventListener('scroll', rememberScroll)
+})
 </script>
 
 <template>

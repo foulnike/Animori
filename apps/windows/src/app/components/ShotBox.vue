@@ -35,6 +35,19 @@ const look = ref(-1)
 /** Открыто ли окно трейлера. */
 const reel = ref(false)
 
+/** Превью трейлера может быть недоступно отдельно от самого ролика: вместо пустого кадра показываем название. */
+const reelBroken = ref(false)
+
+const reelBare = computed<boolean>(() => {
+  const trailer = reelTrailer.value
+  return trailer !== null && (trailer.thumb === null || reelBroken.value)
+})
+
+function onReelError(url: string | null): void {
+  reelBroken.value = true
+  markReady(url)
+}
+
 /** Открыта ли галерея всех кадров. */
 const gal = ref(false)
 
@@ -193,6 +206,7 @@ async function load(): Promise<void> {
   reel.value = false
   gal.value = false
   broken.value = false
+  reelBroken.value = false
 
   if (props.mediaId === 0) return
 
@@ -266,20 +280,24 @@ watch(reel, (open) => track(open, reelRoot.value, reelHold), { flush: 'post' })
         v-if="reelTrailer"
         v-tip="`Смотреть: ${reelTrailer.title}`"
         class="am-shots__reel"
-        :class="{ 'am-skeleton': pending(reelTrailer.thumb) }"
+        :class="{
+          'am-skeleton': pending(reelTrailer.thumb) && !reelBare,
+          'am-shots__reel--bare': reelBare,
+        }"
         type="button"
         @click="openReel"
       >
         <img
-          v-if="reelTrailer.thumb"
+          v-if="reelTrailer.thumb && !reelBare"
           class="am-shots__reelart"
           :src="reelTrailer.thumb"
           alt=""
           loading="lazy"
           decoding="async"
           @load="markReady(reelTrailer.thumb)"
-          @error="markReady(reelTrailer.thumb)"
+          @error="onReelError(reelTrailer.thumb)"
         />
+        <span v-if="reelBare" class="am-shots__reelname">{{ reelTrailer.title }}</span>
         <span class="am-shots__play" aria-hidden="true">
           <svg viewBox="0 0 16 16">
             <path d="M5.2 3.4 12.4 8l-7.2 4.6z" />
@@ -524,6 +542,31 @@ watch(reel, (open) => track(open, reelRoot.value, reelHold), { flush: 'post' })
   background: var(--am-fill-1);
   border: 0;
   border-radius: var(--am-r-m);
+}
+
+/** Заглушка вместо недоступного превью: ролик остаётся кликабельным, а кадр не выглядит пустотой. */
+.am-shots__reel--bare {
+  display: grid;
+  place-items: center;
+  background: linear-gradient(
+    135deg,
+    rgb(var(--am-accent-2-rgb) / 0.22),
+    rgb(var(--am-accent-rgb) / 0.08)
+  );
+}
+
+.am-shots__reelname {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  left: 12px;
+  overflow: hidden;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--am-dim);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .am-shots__reelart {

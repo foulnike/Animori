@@ -565,20 +565,24 @@ function onExport(): void {
 
 /** Переключение показа взрослого: отбор живёт в core/adult.ts и читает ключ в момент вопроса, перезапуск не нужен.
  * Включение спрашивает дату рождения (формально, ничего не хранит); тумблер встаёт в «включено» только после ответа. */
+function applyAdultMode(next: typeof settings.adultMode): void {
+  adultMode.value = next
+  void saveSetting('adultMode', 'set_adult_mode', next)
+  void saveSetting('showAdult', 'set_adult', next === 'none')
+  if (next === 'full') void purgeAdultPick()
+}
+
 function setAdultMode(next: typeof settings.adultMode): void {
   if (next === adultMode.value) return
-  if (next !== 'full' && !ageVerified.value) {
+  // Leaving full filtering always asks again, even after an earlier successful check.
+  if (adultMode.value === 'full' && next !== 'full') {
     pendingAdultMode.value = next
     birth.value = ''
     ageError.value = ''
     askingAge.value = true
     return
   }
-
-  adultMode.value = next
-  void saveSetting('adultMode', 'set_adult_mode', next)
-  void saveSetting('showAdult', 'set_adult', next === 'none')
-  if (next === 'full') void purgeAdultPick()
+  applyAdultMode(next)
 }
 
 function onBirth(value: string): void {
@@ -595,7 +599,7 @@ function onBirth(value: string): void {
   const next = pendingAdultMode.value ?? adultMode.value
   pendingAdultMode.value = null
   closeAge()
-  setAdultMode(next)
+  applyAdultMode(next)
 }
 
 function saveAdultTagRules(): void {

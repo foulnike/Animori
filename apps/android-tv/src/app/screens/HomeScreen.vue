@@ -27,7 +27,7 @@ import {
   type PlayAsk,
   type PlayState,
 } from '@/core/playable'
-import { feedMore, hideRec, newFeed, shelfFill, type ShelfName } from '@/core/recs'
+import { distributeShelves, feedMore, hideRec, newFeed, shelfFill, type ShelfName } from '@/core/recs'
 import type { SnapshotEntry } from '@/core/snapshot'
 import { Logger } from '@/utils/logger'
 
@@ -48,6 +48,7 @@ import { sprayGrains, type Grain, type KeepOut } from './home-spray'
 
 /** Сколько постеров класть на свою полку. */
 const SHELF_SIZE = 14
+const SHELF_FETCH = SHELF_SIZE * 3
 
 /** Фраза плашки на этот запуск: реестр живёт в app/splash.ts, инициализируется он оттуда же при старте. */
 const splash = splashLine()
@@ -346,7 +347,10 @@ function redrawOwn(): void {
 /** Пересобирает плитки ленты подбора из набранного. Взрослое отсеивается при отрисовке:
  * набранное лента держит дольше, чем живёт настройка показа. */
 function drawFeed(): void {
-  feedRows.value = keepAllowed(feedKeep.items, (item) => item.isAdult, (item) => item.tags).map(toTileRow)
+  const reserved = new Set(recs.value.flatMap((shelf) => shelf.rows.map((row) => row.mediaId)))
+  feedRows.value = keepAllowed(feedKeep.items, (item) => item.isAdult, (item) => item.tags)
+    .filter((item) => !reserved.has(item.mediaId))
+    .map(toTileRow)
 }
 
 /** Добирает обложки своей полки: снимок картинок не хранит. */
@@ -453,22 +457,31 @@ function shelfDefs(): ShelfDef[] {
  * ровно на одной полке — у каталога они пересекаются почти наполовину. Взрослое отсеивается здесь, не при загрузке полки. */
 function publish(): void {
   const out: Shelf[] = []
-  const seen = new Set<number>()
+  const distributed = distributeShelves(
+    activeDefs.map((def) => def.key as ShelfName),
+    new Map([...staged].map(([key, items]) => [key as ShelfName, keepAllowed(items, (brief) => brief.isAdult, (brief) => brief.tags)])),
+    SHELF_SIZE,
+  )
 
   for (const def of activeDefs) {
-    const items = staged.get(def.key)
-    if (items === undefined || items.length === 0) continue
-
-    const fresh = keepAllowed(items, (brief) => brief.isAdult, (brief) => brief.tags).filter(
-      (brief) => !seen.has(brief.mediaId),
-    )
+    const fresh = distributed.get(def.key as ShelfName) ?? []
     if (fresh.length < SHELF_MIN) continue
-
-    for (const brief of fresh) seen.add(brief.mediaId)
     out.push({ key: def.key, title: def.title, rows: fresh.map(toTileRow) })
   }
 
   recs.value = out
+  drawFeed()
+}
+
+async function waitForRecs(): Promise<void> {
+  if (picked.value || !recsPending.value) return
+  await new Promise<void>((resolve) => {
+    const stop = watch(recsPending, (pending) => {
+      if (pending) return
+      stop()
+      resolve()
+    })
+  })
 }
 
 // Очередь доступности отвечает вразброд и по одному аниме, причём один ответ часто касается разом и своей полки, и витрины, и ленты: рисуем всё три.
@@ -646,7 +659,7 @@ function loadRecs(): void {
   recsPending.value = activeDefs.length > 0
 
   const tasks = activeDefs.map((def) =>
-    shelfFill(def.key, SHELF_SIZE)
+    shelfFill(def.key as ShelfName, SHELF_FETCH)
       .then((items) => {
         if (mine !== recsRun || items.length === 0) return
         staged.set(def.key, items)
@@ -676,7 +689,10 @@ async function growFeed(mine: number): Promise<void> {
   const want = wholeRows(FEED_WANT, gridCols(document.querySelector('.am-grid')))
 
   try {
-    const got = await feedMore(run, want)
+    await waitForRecs()
+    if (mine !== feedRun) return
+    const reserved = new Set(recs.value.flatMap((shelf) => shelf.rows.map((row) => row.mediaId)))
+    const got = await feedMore(run, want, reserved)
     if (mine !== feedRun) return
 
     // Обложки приехали вместе с ответом: кладём их в общую память даром, иначе списки и карточки полезут за тем же второй раз.

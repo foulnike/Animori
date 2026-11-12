@@ -85,6 +85,23 @@ beforeEach(async () => {
 })
 
 describe('полка витрины', () => {
+  it('распределяет повтор между полками и оставляет одну часть франшизы на полку', async () => {
+    const a = { ...brief(1), franchiseKey: 10 }
+    const b = { ...brief(2), franchiseKey: 10 }
+    const c = { ...brief(3), franchiseKey: 11 }
+    const distributed = recs.distributeShelves(
+      ['taste', 'top'],
+      new Map([
+        ['taste', [a, b, c]],
+        ['top', [a, b, { ...brief(4), franchiseKey: 12 }]],
+      ]),
+      3,
+    )
+
+    expect(distributed.get('taste')?.map((item) => item.mediaId)).toEqual([1, 3])
+    expect(distributed.get('top')?.map((item) => item.mediaId)).toEqual([2, 4])
+  })
+
   it('добирает плитки из запаса страницы, не ходят в сеть', async () => {
     pages.top = [row(1, 30)]
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Рамка окна — рельс меню, шапка, сменный экран; о экранах знает только имена из routes.ts. Рельс всегда сложен: раскрывается под курсором или фокусом поверх сетки; мышью фокус снимается сразу.
-import { computed, onBeforeUnmount, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
 
 import { APPEARANCES, appearance, setAppearance } from '../appearance'
 import { currentRoute, goBack, navigate, navDirection } from '../router'
@@ -68,10 +68,19 @@ function restoreScroll(top: number): void {
 }
 
 // post: место возвращается после отрисовки нового экрана, иначе прокручивать некуда.
+function rememberScroll(): void {
+  scrollByScreen.set(active.value, window.scrollY)
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', rememberScroll, { passive: true })
+})
+
 watch(
   active,
   (next, prev) => {
-    scrollByScreen.set(prev, window.scrollY)
+    // Scroll is recorded continuously; the route transition may already have moved the document.
+    scrollByScreen.set(prev, scrollByScreen.get(prev) ?? window.scrollY)
     scrollStop?.()
 
     window.scrollTo(0, 0)
@@ -84,6 +93,7 @@ watch(
 
 onBeforeUnmount(() => {
   scrollStop?.()
+  window.removeEventListener('scroll', rememberScroll)
 })
 
 /** Выбор пункта меню: у клавиатуры detail нулевой, и фокус остаётся на кнопке; мыши фокус не нужен. */

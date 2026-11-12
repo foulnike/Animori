@@ -27,7 +27,8 @@ tauri-plugin-log = "2"
 # Плагин по умолчанию выбрасывает Referer, потому что спецификация fetch держит его запрещённым.
 # Kodik без него не работает: страница серии отдаёт заглушку без подписей.
 tauri-plugin-http = { version = "2", default-features = false, features = [
-  "rustls-tls",
+  "rustls-tls-native-roots",
+  "system-proxy",
   "http2",
   "charset",
   "socks",

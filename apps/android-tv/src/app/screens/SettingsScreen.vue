@@ -343,13 +343,18 @@ function onDropList(): void {
 /** Переключение показа взрослого: отбор читает ключ в момент вопроса, перезапуск не нужен.
  * Исключение —
  * полки витрины: состав собран заранее, тумблер выбрасывает его через clearHidden. */
-function setAdultMode(next: typeof settings.adultMode): void {
-  if (next === adultMode.value) return
-  if (next !== 'full' && !ageVerified.value) { pendingAdultMode.value = next; askingAge.value = true; return }
+function applyAdultMode(next: typeof settings.adultMode): void {
   adultMode.value = next
   void saveSetting('adultMode', 'set_adult_mode', next)
   void saveSetting('showAdult', 'set_adult', next === 'none')
   void clearHidden()
+}
+
+function setAdultMode(next: typeof settings.adultMode): void {
+  if (next === adultMode.value) return
+  // Leaving full filtering always asks again, even after an earlier successful check.
+  if (adultMode.value === 'full' && next !== 'full') { pendingAdultMode.value = next; birth.value = ''; ageError.value = ''; askingAge.value = true; return }
+  applyAdultMode(next)
 }
 
 function onBirth(value: string): void {
@@ -361,7 +366,7 @@ function onBirth(value: string): void {
   const next = pendingAdultMode.value ?? adultMode.value
   pendingAdultMode.value = null
   closeAge()
-  setAdultMode(next)
+  applyAdultMode(next)
 }
 
 function saveAdultTagRules(): void { void saveSetting('adultTagRules', 'set_adult_tag_rules', adultTagRules.value) }
