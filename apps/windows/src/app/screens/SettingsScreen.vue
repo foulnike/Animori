@@ -27,7 +27,7 @@ import { clearHidden } from '@/core/recs'
 import { saveSetting, settings } from '@/core/settings'
 import { setLogEnabled } from '@/utils/logger'
 
-import { APPEARANCES, appearance, setAppearance } from '../appearance'
+import { APPEARANCES, appearance, setAppearance, setVisualTheme, visualTheme } from '../appearance'
 import {
   authStatus,
   isDesktop,
@@ -1152,6 +1152,27 @@ onBeforeUnmount(() => {
               >
                 <span class="am-skins__mark" aria-hidden="true">{{ item.mark }}</span>
                 <span class="am-skins__name">{{ item.title }}</span>
+              </button>
+            </div>
+
+            <div class="am-family am-family--settings" role="group" aria-label="Семейство интерфейса">
+              <button
+                class="am-family__btn"
+                :class="{ 'am-family__btn--on': visualTheme === 'standard' }"
+                type="button"
+                :aria-pressed="visualTheme === 'standard'"
+                @click="setVisualTheme('standard')"
+              >
+                Стандартная
+              </button>
+              <button
+                class="am-family__btn"
+                :class="{ 'am-family__btn--on': visualTheme === 'lain' }"
+                type="button"
+                :aria-pressed="visualTheme === 'lain'"
+                @click="setVisualTheme('lain')"
+              >
+                Lain
               </button>
             </div>
 

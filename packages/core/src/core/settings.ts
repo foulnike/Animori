@@ -10,6 +10,9 @@ export type TitleSource = 'shikimori' | 'off' | 'none'
  * Оформление окна; слово «тема» занято музыкальными темами, `amoled` — чёрный ноль: на OLED он не светится. */
 export type AppearanceName = 'dark' | 'light' | 'amoled'
 
+/** Визуальное семейство интерфейса; Windows использует Lain поверх трёх цветовых схем. */
+export type VisualTheme = 'standard' | 'lain'
+
 /** Уровень фильтрации 18+: всё закрыто, только красное закрыто или фильтрации нет. */
 export type AdultFilterMode = 'full' | 'partial' | 'none'
 
@@ -55,6 +58,7 @@ export interface AniMoriSettings {
   enableLogger: boolean
   /** Оформление окна: тёмное, светлое или AMOLED. */
   appearance: AppearanceName
+  visualTheme: VisualTheme
   /**
    * Блокировать всплывающие окна плеера: ловит только НОВЫЕ окна (on_new_window), редиректы не режет. */
   blockPlayerPopups: boolean
@@ -109,6 +113,7 @@ const DEFAULT_SETTINGS: AniMoriSettings = {
   enableThemes: true,
   enableLogger: false,
   appearance: 'amoled',
+  visualTheme: 'standard',
   blockPlayerPopups: false,
   hideAds: false,
   adultMode: 'full',
@@ -157,6 +162,7 @@ async function readSettings(): Promise<AniMoriSettings> {
     enableThemes,
     enableLogger,
     appearance,
+    visualTheme,
     blockPlayerPopups,
     hideAds,
     storedAdultMode,
@@ -185,6 +191,7 @@ async function readSettings(): Promise<AniMoriSettings> {
     storage.get('set_themes', DEFAULT_SETTINGS.enableThemes),
     storage.get('set_logger', DEFAULT_SETTINGS.enableLogger),
     storage.get<AppearanceName>('am_appearance', DEFAULT_SETTINGS.appearance),
+    storage.get<VisualTheme>('am_visual_theme', DEFAULT_SETTINGS.visualTheme),
     storage.get('set_block_popups', DEFAULT_SETTINGS.blockPlayerPopups),
     storage.get('set_hide_ads', DEFAULT_SETTINGS.hideAds),
     storage.get<AdultFilterMode>('set_adult_mode'),
@@ -225,6 +232,7 @@ async function readSettings(): Promise<AniMoriSettings> {
     enableThemes,
     enableLogger,
     appearance,
+    visualTheme: visualTheme === 'lain' ? 'lain' : 'standard',
     blockPlayerPopups,
     hideAds,
     adultMode,

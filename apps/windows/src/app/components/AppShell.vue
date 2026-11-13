@@ -2,7 +2,7 @@
 // Рамка окна — рельс меню, шапка, сменный экран; о экранах знает только имена из routes.ts. Рельс всегда сложен: раскрывается под курсором или фокусом поверх сетки; мышью фокус снимается сразу.
 import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
 
-import { APPEARANCES, appearance, setAppearance } from '../appearance'
+import { APPEARANCES, appearance, setAppearance, setVisualTheme, visualTheme } from '../appearance'
 import { currentRoute, goBack, navigate, navDirection } from '../router'
 import { MENU, SCREEN_TITLES } from '../router/routes'
 
@@ -188,6 +188,27 @@ function onReload(): void {
           </button>
         </div>
 
+        <div class="am-family" role="group" aria-label="Семейство интерфейса">
+          <button
+            class="am-family__btn"
+            :class="{ 'am-family__btn--on': visualTheme === 'standard' }"
+            type="button"
+            :aria-pressed="visualTheme === 'standard'"
+            @click="setVisualTheme('standard')"
+          >
+            Стандартная
+          </button>
+          <button
+            class="am-family__btn"
+            :class="{ 'am-family__btn--on': visualTheme === 'lain' }"
+            type="button"
+            :aria-pressed="visualTheme === 'lain'"
+            @click="setVisualTheme('lain')"
+          >
+            Lain
+          </button>
+        </div>
+
         <button
           v-tip="'Обновить окно'"
           aria-label="Обновить окно"
@@ -280,7 +301,7 @@ function onReload(): void {
 
 /* На AMOLED ореол убирается: знак там сам тёмный, и свечение вокруг него
    на чистом чёрном читается грязным пятном. */
-:global([data-am-skin='amoled']) .am-side__logo {
+:global(html[data-am-skin='amoled']) .am-side__logo {
   box-shadow: none;
 }
 

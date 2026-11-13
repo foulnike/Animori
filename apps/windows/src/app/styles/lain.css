@@ -1,0 +1,434 @@
+/* Lain is a skin over the standard layout. Keep geometry in theme.css and
+   scope the visual treatment from the document root so Vue scoped CSS cannot
+   turn a descendant selector into a rule on <html>. */
+
+.am-family {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  flex: none;
+  padding: 3px;
+  background: var(--am-fill-2);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-cap);
+}
+
+.am-family--settings {
+  align-self: flex-start;
+  margin: 2px 0 8px;
+}
+
+.am-family__btn {
+  min-width: 96px;
+  min-height: 34px;
+  padding: 0 13px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--am-dim);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: var(--am-r-cap);
+  transition: color var(--am-fast) var(--am-ease), background-color var(--am-fast) var(--am-ease), box-shadow var(--am-fast) var(--am-ease);
+}
+
+.am-family__btn:hover,
+.am-family__btn:focus-visible {
+  color: var(--am-text);
+  background: var(--am-fill-2);
+}
+
+.am-family__btn--on {
+  color: var(--am-text);
+  background: var(--am-fill-3);
+  box-shadow: inset 0 0 0 1px var(--am-line-soft);
+}
+
+.am-family__btn:disabled {
+  cursor: default;
+}
+
+
+html[data-am-family='lain'] {
+  --am-r-s: 2px;
+  --am-r-m: 3px;
+  --am-r-l: 4px;
+  --am-r-xl: 5px;
+  --am-r-leaf: 0;
+  --am-r-drop: 0;
+  --am-font-tech: 'Lucida Console', 'Cascadia Mono', ui-monospace, monospace;
+  --am-blur: 5px;
+  --am-blur-strong: 8px;
+  --am-fast: 0.08s;
+  --am-mid: 0.16s;
+  --am-drift: 18s;
+  --am-accent: #8ee9ff;
+  --am-accent-rgb: 142 233 255;
+  --am-accent-2: #ff405f;
+  --am-accent-2-rgb: 255 64 95;
+  --am-accent-soft: rgb(142 233 255 / 0.14);
+  --am-sakura: #ff405f;
+  --am-sakura-rgb: 255 64 95;
+  --am-on-accent: #05070b;
+}
+
+html[data-am-family='lain'][data-am-skin='dark'] {
+  --am-bg: #05070b;
+  --am-bg-2: #080d12;
+  --am-panel: #0a1016;
+  --am-panel-2: #0d161d;
+  --am-hover: #101e25;
+  --am-bloom-base: #0b1419;
+  --am-glass: rgb(7 14 19 / 0.9);
+  --am-glass-2: rgb(12 24 29 / 0.94);
+  --am-glass-deep: rgb(4 9 12 / 0.96);
+  --am-glass-rail: rgb(5 10 14 / 0.96);
+  --am-text: #d9f5f7;
+  --am-dim: #8aafb7;
+  --am-faint: #62838c;
+  --am-line: rgb(142 233 255 / 0.28);
+  --am-line-soft: rgb(142 233 255 / 0.2);
+  --am-edge: rgb(220 252 255 / 0.1);
+  --am-fill-1: rgb(142 233 255 / 0.04);
+  --am-fill-2: rgb(142 233 255 / 0.08);
+  --am-fill-3: rgb(142 233 255 / 0.14);
+  --am-aurora-1: rgb(142 233 255 / 0.08);
+  --am-aurora-2: rgb(255 64 95 / 0.1);
+  --am-aurora-3: transparent;
+  --am-sh-2: 0 18px 40px rgb(0 0 0 / 0.72), 0 0 24px rgb(142 233 255 / 0.06);
+  --am-bar: rgb(5 10 14 / 0.9);
+  --am-scroll: #1a333d;
+  --am-scroll-on: #285564;
+}
+
+html[data-am-family='lain'][data-am-skin='amoled'] {
+  --am-bg: #000;
+  --am-bg-2: #000;
+  --am-panel: #000;
+  --am-panel-2: #000;
+  --am-hover: rgb(142 233 255 / 0.08);
+  --am-bloom-base: #05090b;
+  --am-glass: #000;
+  --am-glass-2: #000;
+  --am-glass-deep: #000;
+  --am-glass-rail: rgb(142 233 255 / 0.05);
+  --am-text: #e4f8fa;
+  --am-dim: #91b5bd;
+  --am-faint: #6b8d95;
+  --am-line: rgb(142 233 255 / 0.3);
+  --am-line-soft: rgb(142 233 255 / 0.2);
+  --am-edge: rgb(220 252 255 / 0.12);
+  --am-fill-1: transparent;
+  --am-fill-2: rgb(142 233 255 / 0.07);
+  --am-fill-3: rgb(142 233 255 / 0.14);
+  --am-aurora-1: transparent;
+  --am-aurora-2: transparent;
+  --am-aurora-3: transparent;
+  --am-sh-2: 0 18px 44px rgb(0 0 0 / 0.9), 0 0 24px rgb(142 233 255 / 0.06);
+  --am-bar: rgb(0 0 0 / 0.92);
+  --am-scroll: #14262d;
+  --am-scroll-on: #23434e;
+}
+
+html[data-am-family='lain'][data-am-skin='light'] {
+  --am-bg: #cbd9da;
+  --am-bg-2: #b9ccce;
+  --am-panel: #f3f8f8;
+  --am-panel-2: #e5eeee;
+  --am-hover: #d8e7e8;
+  --am-bloom-base: #edf5f5;
+  --am-glass: rgb(247 252 252 / 0.94);
+  --am-glass-2: rgb(255 255 255 / 0.96);
+  --am-glass-deep: rgb(247 252 252 / 0.98);
+  --am-glass-rail: rgb(236 245 245 / 0.98);
+  --am-text: #0a171b;
+  --am-dim: #2b4a50;
+  --am-faint: #45656b;
+  --am-line: rgb(10 23 27 / 0.34);
+  --am-line-soft: rgb(10 23 27 / 0.24);
+  --am-edge: rgb(255 255 255 / 0.96);
+  --am-fill-1: rgb(10 23 27 / 0.06);
+  --am-fill-2: rgb(10 23 27 / 0.1);
+  --am-fill-3: rgb(10 23 27 / 0.16);
+  --am-accent: #006b83;
+  --am-accent-rgb: 0 107 131;
+  --am-accent-2: #c32942;
+  --am-accent-2-rgb: 195 41 66;
+  --am-accent-soft: rgb(0 107 131 / 0.16);
+  --am-sakura: #c32942;
+  --am-sakura-rgb: 195 41 66;
+  --am-on-accent: #fff;
+  --am-aurora-1: rgb(0 107 131 / 0.1);
+  --am-aurora-2: rgb(195 41 66 / 0.1);
+  --am-aurora-3: transparent;
+  --am-sh-2: 0 18px 40px rgb(10 23 27 / 0.2), 0 0 20px rgb(0 107 131 / 0.08);
+  --am-bar: rgb(243 248 248 / 0.92);
+  --am-scroll: #8ea8aa;
+  --am-scroll-on: #6c8b8e;
+}
+
+html[data-am-family='lain'] body,
+html[data-am-family='lain'] #app {
+  font-family: var(--am-font-tech);
+}
+
+/* The home page keeps the standard columns and spacing; these are only contained
+   surfaces and signals, so the skin cannot cover or disable the page. */
+html[data-am-family='lain'] .am-hey {
+  background: linear-gradient(125deg, var(--am-glass-deep), var(--am-panel-2));
+  border-color: rgb(var(--am-accent-rgb) / 0.42);
+  border-radius: var(--am-r-s);
+  box-shadow: 6px 6px 0 rgb(var(--am-accent-2-rgb) / 0.22), inset 0 0 0 1px rgb(255 255 255 / 0.04), 0 0 30px rgb(var(--am-accent-rgb) / 0.1);
+}
+
+html[data-am-family='lain'] .am-hey::after {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  content: '';
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent 0 3px, rgb(var(--am-accent-rgb) / 0.04) 4px, transparent 5px);
+}
+
+html[data-am-family='lain'] .am-hey__glow,
+html[data-am-family='lain'] .am-hey__beam,
+html[data-am-family='lain'] .am-hey__rose,
+html[data-am-family='lain'] .am-hey__spray {
+  z-index: 0;
+}
+
+html[data-am-family='lain'] .am-hey__text,
+html[data-am-family='lain'] .am-hey__side {
+  position: relative;
+  z-index: 1;
+}
+
+html[data-am-family='lain'] .am-hey__title,
+html[data-am-family='lain'] .am-h2,
+html[data-am-family='lain'] .am-btn {
+  font-family: var(--am-font-tech);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+html[data-am-family='lain'] .am-hey__title {
+  display: block;
+  padding-top: 18px;
+  position: relative;
+}
+
+html[data-am-family='lain'] .am-hey__title::before {
+  display: block;
+  margin: 0 0 6px;
+  color: var(--am-accent-2);
+  font: 11px var(--am-font-tech);
+  content: '[ LAYER: HOME ]';
+  white-space: nowrap;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+}
+
+html[data-am-family='lain'] .am-hey__title > .am-hey__seed {
+  display: inline-flex;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
+html[data-am-family='lain'] .am-hey__title > span:last-child {
+  display: inline;
+}
+
+/* The standard hero keeps its sakura; Lain scales it into a quiet signal
+   behind the copy instead of letting it dictate the plate height. */
+html[data-am-family='lain'] .am-hey__rose {
+  top: 6%;
+  right: 2%;
+  width: min(30%, 250px);
+  height: auto;
+  aspect-ratio: 38.4 / 36.8;
+  color: rgb(var(--am-accent-2-rgb) / 0.22);
+  opacity: 0.72;
+}
+
+/* Recommendation shelves use the same content inset as the personal shelf.
+   This is deliberately family-scoped so the standard layout remains untouched. */
+html[data-am-family='lain'] .am-shelf:not(.am-shelf--mine) {
+  padding-inline: 18px;
+}
+
+html[data-am-family='lain'] .am-shelf::before,
+html[data-am-family='lain'] .am-cal::before {
+  display: block;
+  color: var(--am-accent-2);
+  font: 10px var(--am-font-tech);
+  letter-spacing: 0.1em;
+  opacity: 0.72;
+}
+
+html[data-am-family='lain'] .am-shelf::before {
+  content: '[ LAYER: SHELF ]';
+}
+
+html[data-am-family='lain'] .am-shelf--mine::before {
+  content: '[ LAYER: WATCHING ]';
+}
+
+html[data-am-family='lain'] .am-cal::before {
+  content: '[ LAYER: SCHEDULE ]';
+}
+
+html[data-am-family='lain'] .am-hey__glow {
+  background: rgb(var(--am-accent-2-rgb) / 0.24);
+  filter: blur(22px);
+}
+
+html[data-am-family='lain'] .am-hey__beam {
+  background: linear-gradient(104deg, transparent 34%, rgb(var(--am-accent-rgb) / 0.12) 48%, rgb(var(--am-accent-2-rgb) / 0.22) 56%, transparent 70%);
+}
+
+html[data-am-family='lain'] .am-shelf,
+html[data-am-family='lain'] .am-cal {
+  border-color: rgb(var(--am-accent-rgb) / 0.2);
+  border-radius: var(--am-r-s);
+  box-shadow: inset 4px 0 0 rgb(var(--am-accent-2-rgb) / 0.3);
+}
+
+html[data-am-family='lain'] .am-tile {
+  border-radius: var(--am-r-s);
+  filter: saturate(0.88) contrast(1.05);
+}
+
+html[data-am-family='lain'] .am-tile:hover,
+html[data-am-family='lain'] .am-tile:focus-within {
+  box-shadow: 4px 4px 0 rgb(var(--am-accent-2-rgb) / 0.32), 0 0 18px rgb(var(--am-accent-rgb) / 0.14);
+}
+
+/* A contained scanline roll replaces the standard glossy sweep. It never clips
+   the page itself and remains an inert visual layer over the poster. */
+html[data-am-family='lain'] .am-tile__sheen {
+  inset: 0;
+  opacity: 0;
+  transform: none;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent 0 3px, rgb(var(--am-accent-rgb) / 0.2) 4px, transparent 5px);
+  mix-blend-mode: screen;
+  transition: opacity var(--am-fast) var(--am-ease);
+}
+
+html[data-am-family='lain'] .am-tile:hover .am-tile__sheen,
+html[data-am-family='lain'] .am-tile:has(:focus-visible) .am-tile__sheen {
+  opacity: 0.85;
+  animation: am-lain-crt-ripple 0.65s steps(6, end) both;
+}
+
+@keyframes am-lain-crt-ripple {
+  from { background-position: 0 100%; }
+  to { background-position: 0 -100%; }
+}
+
+html[data-am-family='lain'] .am-family {
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--am-r-s);
+  background: var(--am-glass);
+  border-color: rgb(var(--am-accent-rgb) / 0.38);
+}
+
+html[data-am-family='lain'] .am-family__btn {
+  border-radius: var(--am-r-s);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+html[data-am-family='lain'] .am-family__btn--on {
+  color: var(--am-on-accent);
+  background: var(--am-accent);
+  box-shadow: 3px 3px 0 rgb(var(--am-accent-2-rgb) / 0.55);
+}
+
+html[data-am-family='lain'] .am-top::before {
+  background: linear-gradient(180deg, var(--am-bar), transparent);
+  box-shadow: none;
+}
+
+/* Lucida Console gives symbolic glyphs a taller line box. Reassert the
+   control centering explicitly for every compact button family used by the
+   desktop screens; the standard family keeps its original rules. */
+html[data-am-family='lain'] button.am-skin__btn,
+html[data-am-family='lain'] button.am-family__btn,
+html[data-am-family='lain'] button.am-seg__btn,
+html[data-am-family='lain'] button.am-chip,
+html[data-am-family='lain'] button.am-icon,
+html[data-am-family='lain'] button.am-top__icon,
+html[data-am-family='lain'] button.am-look__btn,
+html[data-am-family='lain'] button.am-btn,
+html[data-am-family='lain'] button.am-stats__back,
+html[data-am-family='lain'] button.am-age__back,
+html[data-am-family='lain'] button.am-sheet__close,
+html[data-am-family='lain'] button.am-year__step,
+html[data-am-family='lain'] button.am-look__step,
+html[data-am-family='lain'] button.am-look__close,
+html[data-am-family='lain'] button.am-tune__step,
+html[data-am-family='lain'] button.am-tune__open,
+html[data-am-family='lain'] button.am-ps-back,
+html[data-am-family='lain'] button.am-play__back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+html[data-am-family='lain'] button.am-skin__btn,
+html[data-am-family='lain'] button.am-icon,
+html[data-am-family='lain'] button.am-top__icon,
+html[data-am-family='lain'] button.am-sheet__close,
+html[data-am-family='lain'] button.am-year__step,
+html[data-am-family='lain'] button.am-look__step,
+html[data-am-family='lain'] button.am-look__close,
+html[data-am-family='lain'] button.am-tune__step {
+  line-height: 1;
+}
+
+html[data-am-family='lain'] button.am-btn,
+html[data-am-family='lain'] button.am-chip,
+html[data-am-family='lain'] button.am-seg__btn,
+html[data-am-family='lain'] button.am-family__btn,
+html[data-am-family='lain'] button.am-stats__back,
+html[data-am-family='lain'] button.am-age__back,
+html[data-am-family='lain'] button.am-ps-back,
+html[data-am-family='lain'] button.am-play__back {
+  line-height: 1.15;
+}
+
+html[data-am-family='lain'] button.am-skin__btn > span {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  line-height: 1;
+  font-family: 'Segoe UI Symbol', 'Segoe UI Emoji', sans-serif;
+}
+
+html[data-am-family='lain'] button.am-top__icon > span {
+  display: grid;
+  width: 100%;
+  height: 100%;
+  place-items: center;
+  line-height: 1;
+}
+
+html[data-am-family='lain'] button.am-icon,
+html[data-am-family='lain'] button.am-top__icon {
+  font-family: 'Segoe UI Symbol', 'Segoe UI Emoji', 'Segoe UI', sans-serif;
+  font-size: 14px;
+}
+
+html[data-am-family='lain'] button.am-seg__btn {
+  min-height: 30px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-am-family='lain'] .am-tile__sheen {
+    animation: none;
+  }
+}

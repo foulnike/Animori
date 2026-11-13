@@ -12,6 +12,7 @@ import { closePerson, shownPerson } from './person-layer'
 import { currentRoute, startRouter } from './router'
 import type { ScreenName } from './router/routes'
 import './styles/theme.css'
+import './styles/lain.css'
 
 // Полный набор имён обязателен: забытый экран уронит проверку типов, а не вскроется пустым окном у пользователя.
 const SCREENS: Record<ScreenName, Component> = {
