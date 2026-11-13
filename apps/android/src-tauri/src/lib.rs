@@ -83,8 +83,6 @@ pub fn run() {
 
     builder
         .plugin(tauri_plugin_clipboard_manager::init())
-        .manage(anilist::AniListClientState::default())
-        .manage(net::NetClientState::default())
         .plugin(tauri_plugin_store::Builder::new().build())
         // Шифр секретов: ключ AES-GCM в Android Keystore (SecretPlugin.kt). Окну прав на плагин нет.
         .plugin(secrets::plugin("com.foulnike.animori.mobile"))

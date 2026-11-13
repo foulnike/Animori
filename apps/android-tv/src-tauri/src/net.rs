@@ -4,7 +4,6 @@
 // Список адресов — в hosts.rs (у каждого продукта свой); проверяется здесь, до сети.
 
 use std::collections::HashMap;
-use std::sync::Mutex;
 use std::time::Duration;
 
 use base64::engine::general_purpose::STANDARD as BASE64;
@@ -251,30 +250,41 @@ fn build_client(proxy: Option<&ProxyConf>) -> Result<reqwest::Client, String> {
         .map_err(|e| format!("network: клиент не собрался: {}", e.without_url()))
 }
 
-/// Клиент держится до смены настроек прокси: TLS-сессии и соединения переиспользуются.
-#[derive(Default)]
-pub struct NetClientState(Mutex<Option<(Option<ProxyConf>, reqwest::Client)>>);
-
-pub fn cached_client(app: &AppHandle, state: &NetClientState) -> Result<reqwest::Client, String> {
+/// Новый клиент на операцию: системный прокси и пул соединений не живут дольше запроса.
+pub fn client_for_request(app: &AppHandle) -> Result<reqwest::Client, String> {
     let proxy = read_proxy(app);
-    let mut guard = state.0.lock().unwrap_or_else(|e| e.into_inner());
+    build_client(proxy.as_ref())
+}
 
-    if let Some((key, client)) = guard.as_ref() {
-        if *key == proxy {
-            return Ok(client.clone());
-        }
+fn compose_request(
+    client: &reqwest::Client,
+    method: &reqwest::Method,
+    url: &reqwest::Url,
+    headers: &HashMap<String, String>,
+    body: Option<&String>,
+    timeout_ms: Option<u64>,
+    has_agent: bool,
+) -> reqwest::RequestBuilder {
+    let mut request = client.request(method.clone(), url.clone());
+    for (name, value) in headers {
+        request = request.header(name, value);
     }
-
-    let client = build_client(proxy.as_ref())?;
-    *guard = Some((proxy, client.clone()));
-    Ok(client)
+    if !has_agent {
+        request = request.header(reqwest::header::USER_AGENT, user_agent());
+    }
+    if let Some(body) = body {
+        request = request.body(body.clone());
+    }
+    if let Some(ms) = timeout_ms {
+        request = request.timeout(Duration::from_millis(ms));
+    }
+    request
 }
 
 /// Один запрос окна. Адрес вне списка отклоняется до сети с префиксом blocked:.
 #[tauri::command]
 pub async fn animori_http_request(
     app: AppHandle,
-    state: tauri::State<'_, NetClientState>,
     request: NetRequest,
 ) -> Result<NetReply, String> {
     let url = reqwest::Url::parse(request.url.trim())
@@ -297,27 +307,43 @@ pub async fn animori_http_request(
     let method = reqwest::Method::from_bytes(method.as_bytes())
         .map_err(|_| "request: метод не разобран".to_string())?;
 
-    let client = cached_client(&app, &state)?;
-    let mut builder = client.request(method, url);
-
     let has_agent = request
         .headers
         .keys()
         .any(|name| name.eq_ignore_ascii_case("user-agent"));
-    for (name, value) in request.headers {
-        builder = builder.header(name, value);
-    }
-    if !has_agent {
-        builder = builder.header(reqwest::header::USER_AGENT, user_agent());
-    }
-    if let Some(body) = request.body {
-        builder = builder.body(body);
-    }
-    if let Some(ms) = request.timeout_ms {
-        builder = builder.timeout(Duration::from_millis(ms));
-    }
-
-    let response = builder.send().await.map_err(classify)?;
+    let explicit_proxy = read_proxy(&app);
+    let client = build_client(explicit_proxy.as_ref())?;
+    let response = match compose_request(
+        &client,
+        &method,
+        &url,
+        &request.headers,
+        request.body.as_ref(),
+        request.timeout_ms,
+        has_agent,
+    )
+    .send()
+    .await
+    {
+        Ok(response) => response,
+        Err(error) if explicit_proxy.is_none() && (error.is_connect() || error.is_timeout()) => {
+            log::warn!("Системный прокси не ответил, повторяем запрос напрямую");
+            let direct = build_client(None)?;
+            compose_request(
+                &direct,
+                &method,
+                &url,
+                &request.headers,
+                request.body.as_ref(),
+                request.timeout_ms,
+                has_agent,
+            )
+            .send()
+            .await
+            .map_err(classify)?
+        }
+        Err(error) => return Err(classify(error)),
+    };
 
     let status = response.status();
     let final_url = response.url().to_string();

@@ -1,7 +1,6 @@
 // Запросы к AniList GraphQL из процесса оболочки. Пропуск в разметку не отдаётся: команда принимает только тело запроса, а заголовок авторизации подставляет сама, читая настройки.
 
 use std::collections::HashMap;
-use std::sync::Mutex;
 use std::time::Duration;
 
 use serde::Serialize;
@@ -30,20 +29,6 @@ const TIMEOUT_SECS: u64 = 30;
 /// Потолок ожидания соединения. Короче общего таймаута намеренно: у AniList два адреса, и DNS нередко отдаёт
 /// мёртвым первым. Без своего потолка клиент висит на нём все тридцать секунд и не доходит до живого.
 const CONNECT_TIMEOUT_SECS: u64 = 5;
-
-struct CachedClient {
-    key: String,
-    client: reqwest::Client,
-}
-
-/** Переиспользует TLS-сессии и соединения до смены настроек прокси. */
-pub struct AniListClientState(Mutex<Option<CachedClient>>);
-
-impl Default for AniListClientState {
-    fn default() -> Self {
-        Self(Mutex::new(None))
-    }
-}
 
 /// Ответ в том же виде, что HttpResponse у моста, кроме адреса: он всегда один. Заголовки идут наверх целиком: по ним ограничитель узнаёт остаток лимита.
 #[derive(Serialize)]
@@ -147,12 +132,12 @@ fn user_agent() -> String {
 }
 
 /// Клиент на один запрос: прокси читается каждый раз, и смена настройки действует сразу — в отличие от окна, где адрес живёт до перезапуска.
-fn build_client(app: &AppHandle) -> Result<reqwest::Client, String> {
+pub(crate) fn build_client(proxy: Option<(String, String, String)>, use_system_proxy: bool) -> Result<reqwest::Client, String> {
     let mut builder = reqwest::Client::builder()
         .timeout(Duration::from_secs(TIMEOUT_SECS))
         .connect_timeout(Duration::from_secs(CONNECT_TIMEOUT_SECS));
 
-    if let Some((url, login, password)) = read_proxy(app) {
+    if let Some((url, login, password)) = proxy {
         let mut proxy = reqwest::Proxy::all(&url)
             .map_err(|e| format!("network: адрес прокси не разбирается: {e}"))?;
 
@@ -162,45 +147,13 @@ fn build_client(app: &AppHandle) -> Result<reqwest::Client, String> {
         }
 
         builder = builder.proxy(proxy);
+    } else if !use_system_proxy {
+        builder = builder.no_proxy();
     }
 
     builder
         .build()
         .map_err(|e| format!("network: клиент не собрался: {e}"))
-}
-
-fn client_key(proxy: &Option<(String, String, String)>) -> String {
-    match proxy {
-        Some((url, login, password)) => format!("{url}\u{0}{login}\u{0}{password}"),
-        None => String::new(),
-    }
-}
-
-fn cached_client(app: &AppHandle, state: &AniListClientState) -> Result<reqwest::Client, String> {
-    let proxy = read_proxy(app);
-    let key = client_key(&proxy);
-
-    {
-        let guard = state.0.lock().unwrap_or_else(|e| e.into_inner());
-        if let Some(cached) = guard.as_ref() {
-            if cached.key == key {
-                return Ok(cached.client.clone());
-            }
-        }
-    }
-
-    let client = build_client(app)?;
-    let mut guard = state.0.lock().unwrap_or_else(|e| e.into_inner());
-    if let Some(cached) = guard.as_ref() {
-        if cached.key == key {
-            return Ok(cached.client.clone());
-        }
-    }
-    *guard = Some(CachedClient {
-        key,
-        client: client.clone(),
-    });
-    Ok(client)
 }
 
 /// Вид сбоя префиксом в тексте ошибки: кода ответа тут нет, а мосту нужно поднять свой класс сбоя. Второе место разбора — TauriAniList.ts.
@@ -276,7 +229,6 @@ fn reject_mutation(body: &str) -> Result<(), String> {
 #[tauri::command]
 pub async fn animori_anilist_query(
     app: AppHandle,
-    state: tauri::State<'_, AniListClientState>,
     body: String,
     use_auth: bool,
 ) -> Result<AniListReply, String> {
@@ -288,8 +240,11 @@ pub async fn animori_anilist_query(
         return Err("Вход в AniList не выполнен".to_string());
     }
 
-    let client = cached_client(&app, &state)?;
+    let proxy = read_proxy(&app);
+    let client = build_client(proxy.clone(), true)?;
+    let request_body = body.clone();
 
+    let retry_token = token.clone();
     let mut request = client
         .post(GRAPHQL_URL)
         .header(reqwest::header::CONTENT_TYPE, "application/json")
@@ -301,7 +256,24 @@ pub async fn animori_anilist_query(
         request = request.bearer_auth(token);
     }
 
-    let response = request.send().await.map_err(classify)?;
+    let response = match request.send().await {
+        Ok(response) => response,
+        Err(error) if proxy.is_none() && (error.is_connect() || error.is_timeout()) => {
+            log::warn!("Системный прокси AniList не ответил, повторяем запрос напрямую");
+            let direct = build_client(None, false)?;
+            let mut retry = direct
+                .post(GRAPHQL_URL)
+                .header(reqwest::header::CONTENT_TYPE, "application/json")
+                .header(reqwest::header::ACCEPT, "application/json")
+                .header(reqwest::header::USER_AGENT, user_agent())
+                .body(request_body);
+            if let Some(token) = retry_token {
+                retry = retry.bearer_auth(token);
+            }
+            retry.send().await.map_err(classify)?
+        }
+        Err(error) => return Err(classify(error)),
+    };
 
     let status = response.status().as_u16();
 

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 use tauri_plugin_http::reqwest;
 
-use crate::net::{self, NetClientState};
+use crate::net;
 use crate::secrets::{self, Secret};
 
 const API: &str = "https://cloud-api.yandex.net/v1/disk/resources";
@@ -183,11 +183,10 @@ pub fn animori_cloud_status(app: AppHandle) -> CloudStatus {
 #[tauri::command]
 pub async fn animori_cloud_connect(
     app: AppHandle,
-    state: tauri::State<'_, NetClientState>,
     token: String,
 ) -> Result<CloudStep, String> {
     let token = check_token_shape(&token)?;
-    let client = net::cached_client(&app, &state)?;
+    let client = net::client_for_request(&app)?;
     let step = check_with(&client, &token).await?;
 
     if (200..300).contains(&step.status) || step.status == 404 {
@@ -209,10 +208,9 @@ pub async fn animori_cloud_delete(app: AppHandle) -> Result<CloudStatus, String>
 #[tauri::command]
 pub async fn animori_cloud_check(
     app: AppHandle,
-    state: tauri::State<'_, NetClientState>,
 ) -> Result<CloudStep, String> {
     let token = stored_token(&app)?;
-    let client = net::cached_client(&app, &state)?;
+    let client = net::client_for_request(&app)?;
     check_with(&client, &token).await
 }
 
@@ -220,10 +218,9 @@ pub async fn animori_cloud_check(
 #[tauri::command]
 pub async fn animori_cloud_stat(
     app: AppHandle,
-    state: tauri::State<'_, NetClientState>,
 ) -> Result<CloudStep, String> {
     let token = stored_token(&app)?;
-    let client = net::cached_client(&app, &state)?;
+    let client = net::client_for_request(&app)?;
     let url = api_url("", &[("path", FILE_PATH), ("fields", FILE_FIELDS)])?;
     api_call(&client, &token, reqwest::Method::GET, url).await
 }
@@ -232,14 +229,13 @@ pub async fn animori_cloud_stat(
 #[tauri::command]
 pub async fn animori_cloud_save(
     app: AppHandle,
-    state: tauri::State<'_, NetClientState>,
     text: String,
 ) -> Result<CloudStep, String> {
     if text.len() > MAX_COPY_BYTES {
         return Err("request: копия больше допустимого".to_string());
     }
     let token = stored_token(&app)?;
-    let client = net::cached_client(&app, &state)?;
+    let client = net::client_for_request(&app)?;
 
     let url = api_url("/upload", &[("path", FILE_PATH), ("overwrite", "true")])?;
     let link = api_call(&client, &token, reqwest::Method::GET, url).await?;
@@ -266,10 +262,9 @@ pub async fn animori_cloud_save(
 #[tauri::command]
 pub async fn animori_cloud_restore(
     app: AppHandle,
-    state: tauri::State<'_, NetClientState>,
 ) -> Result<CloudStep, String> {
     let token = stored_token(&app)?;
-    let client = net::cached_client(&app, &state)?;
+    let client = net::client_for_request(&app)?;
 
     let url = api_url("/download", &[("path", FILE_PATH)])?;
     let link = api_call(&client, &token, reqwest::Method::GET, url).await?;
@@ -289,10 +284,9 @@ pub async fn animori_cloud_restore(
 #[tauri::command]
 pub async fn animori_cloud_share(
     app: AppHandle,
-    state: tauri::State<'_, NetClientState>,
 ) -> Result<CloudStep, String> {
     let token = stored_token(&app)?;
-    let client = net::cached_client(&app, &state)?;
+    let client = net::client_for_request(&app)?;
     let url = api_url("/publish", &[("path", FILE_PATH)])?;
     api_call(&client, &token, reqwest::Method::PUT, url).await
 }
@@ -301,10 +295,9 @@ pub async fn animori_cloud_share(
 #[tauri::command]
 pub async fn animori_cloud_unshare(
     app: AppHandle,
-    state: tauri::State<'_, NetClientState>,
 ) -> Result<CloudStep, String> {
     let token = stored_token(&app)?;
-    let client = net::cached_client(&app, &state)?;
+    let client = net::client_for_request(&app)?;
     let url = api_url("/unpublish", &[("path", FILE_PATH)])?;
     api_call(&client, &token, reqwest::Method::PUT, url).await
 }

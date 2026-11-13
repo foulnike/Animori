@@ -155,8 +155,6 @@ fn animori_devtools(window: WebviewWindow) -> Result<(), String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_clipboard_manager::init())
-        .manage(anilist::AniListClientState::default())
-        .manage(net::NetClientState::default())
         .plugin(tauri_plugin_store::Builder::new().build())
         // Шифр секретов. На Windows пустышка (DPAPI зовётся напрямую), на Android — Keystore.
         .plugin(secrets::plugin("com.foulnike.animori"))
