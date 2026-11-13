@@ -8,6 +8,10 @@ contact_links:
     about: |
       Выпуск приставки лежит среди общих, с тегом `android-tv-v` и пометкой «предварительный».
       Этот статус — не ошибка: он держит `releases/latest` за настольным приложением.
+  - name: Установка APK для телефона
+    url: https://github.com/foulnike/Animori/releases
+    about: |
+      Выпуск телефона лежит среди общих, с тегом `android-v` и двумя APK для arm64 и armv7.
   - name: Название, описание или номер не те
     url: https://github.com/foulnike/animori-data
     about: Русские названия, описания и соответствия номеров собирает отдельный репозиторий.
@@ -17,3 +21,6 @@ contact_links:
   - name: Устройство приложения на приставке
     url: https://github.com/foulnike/Animori/blob/main/docs/dev/android-tv/README.md
     about: Интерфейс, пульт и фокус, данные, видео, хранение, сборка APK.
+  - name: Устройство приложения на телефоне
+    url: https://github.com/foulnike/Animori/blob/main/docs/dev/android/README.md
+    about: Интерфейс, жесты, данные, видео, хранение, сборка APK.
