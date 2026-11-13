@@ -13,7 +13,7 @@
 
 | Продукт | Файлы выпуска | Интерфейс (npm) | Нативная часть (Rust) | Полные тексты лицензий |
 | --- | --- | --- | --- | --- |
-| Windows | MSI, NSIS, портабл | 26 | 316 | в каталоге установки и в портабл-архиве |
+| Windows | MSI, NSIS, портабл | 26 | 317 | в каталоге установки и в портабл-архиве |
 | Телефон | APK arm64, APK armv7 | 26 | 300 | внутри APK (assets) и на странице выпуска |
 | Android TV | APK arm64, APK armv7 | 26 | 300 | внутри APK (assets) и на странице выпуска |
 
@@ -113,7 +113,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | --- | --- | --- |
 | @tauri-apps/plugin-clipboard-manager | 2.5.0 |
 
-### Нативная часть: Windows — 316
+### Нативная часть: Windows — 317
 
 #### (Apache-2.0 OR MIT) AND BSD-3-Clause (1)
 
@@ -164,12 +164,13 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | --- | --- | --- |
 | ryu | 1.0.23 |
 
-#### Apache-2.0 OR ISC OR MIT (2)
+#### Apache-2.0 OR ISC OR MIT (3)
 
 | Пакет | Версия | |
 | --- | --- | --- |
 | hyper-rustls | 0.27.10 |
 | rustls | 0.23.46 |
+| rustls-native-certs | 0.8.5 |
 
 #### Apache-2.0 OR MIT (35)
 
@@ -259,12 +260,6 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | constant_time_eq | 0.6.1 |
 | dunce | 1.0.5 |
 
-#### CDLA-Permissive-2.0 (1)
-
-| Пакет | Версия | |
-| --- | --- | --- |
-| webpki-roots | 1.0.11 |
-
 #### ISC (2)
 
 | Пакет | Версия | |
@@ -272,7 +267,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | rustls-webpki | 0.103.16 |
 | untrusted | 0.9.0 |
 
-#### MIT (59)
+#### MIT (60)
 
 | Пакет | Версия | |
 | --- | --- | --- |
@@ -307,6 +302,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | precomputed-hash | 0.1.1 |
 | quick-xml | 0.42.0 |
 | rfd | 0.17.2 |
+| schannel | 0.1.30 |
 | schemars | 0.8.22 |
 | schemars | 0.9.0 |
 | schemars | 1.2.3 |
