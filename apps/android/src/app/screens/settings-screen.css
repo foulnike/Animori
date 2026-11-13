@@ -1506,10 +1506,12 @@ code {
   }
 
   .am-adult-tag {
-    grid-template-columns: minmax(0, 1fr) auto;
+    /* Keep the range track independent from the translated tag name. The old
+       two-column auto layout made long names steal width from their slider. */
+    grid-template-columns: 20px minmax(0, 1fr) 46px;
     grid-template-areas:
-      'check name'
-      'range output';
+      'check name name'
+      'range range output';
     gap: 6px 8px;
     padding: 10px 0;
   }
@@ -1534,7 +1536,10 @@ code {
 
   .am-adult-tag__range {
     grid-area: range;
+    display: block;
+    width: 100%;
     min-width: 0;
+    box-sizing: border-box;
   }
 
   .am-adult-tag output {
