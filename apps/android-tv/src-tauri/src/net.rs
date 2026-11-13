@@ -283,10 +283,7 @@ fn compose_request(
 
 /// Один запрос окна. Адрес вне списка отклоняется до сети с префиксом blocked:.
 #[tauri::command]
-pub async fn animori_http_request(
-    app: AppHandle,
-    request: NetRequest,
-) -> Result<NetReply, String> {
+pub async fn animori_http_request(app: AppHandle, request: NetRequest) -> Result<NetReply, String> {
     let url = reqwest::Url::parse(request.url.trim())
         .map_err(|_| "blocked: адрес не разобран".to_string())?;
 

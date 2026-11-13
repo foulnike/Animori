@@ -162,7 +162,11 @@ function describe(e: unknown): string {
 function redraw(): void {
   // Взрослое прячется и здесь: тумблер один на всё приложение. Числа считаются по видимому, а спрятанное сказано словами ниже — так счёт и список сходятся.
   const raw = searching.value ? foundEntries : selectEntries({ status: [activeStatus.value] })
-  const list = keepAllowed(raw, (entry) => entry.isAdult, (entry) => peekRegulated(entry.mediaId) ? [{ name: 'regulated', rank: 100 }] : null)
+  const list = keepAllowed(
+    raw,
+    (entry) => entry.isAdult,
+    (entry) => (peekRegulated(entry.mediaId) ? [{ name: 'regulated', rank: 100 }] : null),
+  )
 
   counts.value = countByStatus({ hideAdult: true })
   total.value = countEntries({ hideAdult: true })

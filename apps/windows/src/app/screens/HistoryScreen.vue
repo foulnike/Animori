@@ -243,13 +243,14 @@ let titleRun = 0
 /** Прятать ли запись при выключенном 18+: метка из своего списка или из облика (красная и синяя). */
 function restricted(row: WatchRow): boolean {
   const entry = getEntry(row.mediaId)
-  return !adultAllowed(entry?.isAdult === true, peekRestricted(row.mediaId) && entry?.isAdult !== true)
+  return !adultAllowed(
+    entry?.isAdult === true,
+    peekRestricted(row.mediaId) && entry?.isAdult !== true,
+  )
 }
 
 /** История подчиняется тумблеру, как своя полка и каталог; отбор до среза — иначе «ещё N» врёт. */
-const allowed = computed<WatchRow[]>(() =>
-  rows.value.filter((row) => !restricted(row)),
-)
+const allowed = computed<WatchRow[]>(() => rows.value.filter((row) => !restricted(row)))
 const shown = computed<WatchRow[]>(() => allowed.value.slice(0, limit.value))
 const days = computed<Day[]>(() => group(shown.value))
 const hasMore = computed<boolean>(() => allowed.value.length > limit.value)

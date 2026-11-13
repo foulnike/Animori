@@ -606,9 +606,16 @@ function saveAdultTagRules(): void {
   void saveSetting('adultTagRules', 'set_adult_tag_rules', adultTagRules.value)
 }
 
-function updateAdultTagRule(name: string, field: 'threshold' | 'hideInPartial', value: number | boolean): void {
+function updateAdultTagRule(
+  name: string,
+  field: 'threshold' | 'hideInPartial',
+  value: number | boolean,
+): void {
   const current = adultTagRules.value[name] ?? { threshold: 70, hideInPartial: false }
-  adultTagRules.value[name] = { ...current, [field]: field === 'threshold' ? Math.max(0, Math.min(100, Math.round(Number(value)))) : value }
+  adultTagRules.value[name] = {
+    ...current,
+    [field]: field === 'threshold' ? Math.max(0, Math.min(100, Math.round(Number(value)))) : value,
+  }
   saveAdultTagRules()
 }
 
@@ -1155,7 +1162,11 @@ onBeforeUnmount(() => {
               </button>
             </div>
 
-            <div class="am-family am-family--settings" role="group" aria-label="Семейство интерфейса">
+            <div
+              class="am-family am-family--settings"
+              role="group"
+              aria-label="Семейство интерфейса"
+            >
               <button
                 class="am-family__btn"
                 :class="{ 'am-family__btn--on': visualTheme === 'standard' }"
@@ -1178,32 +1189,88 @@ onBeforeUnmount(() => {
 
             <h3 class="am-h3 am-adult-heading"><TileMark name="adult" /> Взрослое</h3>
 
-<div class="am-adult-control" role="radiogroup" aria-label="Фильтрация контента 18+">
-  <button class="am-adult-mode" :class="{ 'am-adult-mode--active': adultMode === 'full' }" type="button" role="radio" :aria-checked="adultMode === 'full'" @click="setAdultMode('full')">
-    <span class="am-adult-mode__chip am-adult-mode__chip--muted">18+</span>
-    <span><strong>Скрыто</strong><small>Скрывать весь 18+ контент</small></span>
-  </button>
-  <button class="am-adult-mode" :class="{ 'am-adult-mode--active': adultMode === 'partial' }" type="button" role="radio" :aria-checked="adultMode === 'partial'" @click="setAdultMode('partial')">
-    <span class="am-adult-mode__chip am-adult-mode__chip--blue">18+</span>
-    <span><strong>Частично</strong><small>Скрывать красные, настраивать синие</small></span>
-  </button>
-  <button class="am-adult-mode" :class="{ 'am-adult-mode--active': adultMode === 'none' }" type="button" role="radio" :aria-checked="adultMode === 'none'" @click="setAdultMode('none')">
-    <span class="am-adult-mode__chip am-adult-mode__chip--red">18+</span>
-    <span><strong>Показано</strong><small>Показывать весь контент</small></span>
-  </button>
-</div>
+            <div class="am-adult-control" role="radiogroup" aria-label="Фильтрация контента 18+">
+              <button
+                class="am-adult-mode"
+                :class="{ 'am-adult-mode--active': adultMode === 'full' }"
+                type="button"
+                role="radio"
+                :aria-checked="adultMode === 'full'"
+                @click="setAdultMode('full')"
+              >
+                <span class="am-adult-mode__chip am-adult-mode__chip--muted">18+</span>
+                <span><strong>Скрыто</strong><small>Скрывать весь 18+ контент</small></span>
+              </button>
+              <button
+                class="am-adult-mode"
+                :class="{ 'am-adult-mode--active': adultMode === 'partial' }"
+                type="button"
+                role="radio"
+                :aria-checked="adultMode === 'partial'"
+                @click="setAdultMode('partial')"
+              >
+                <span class="am-adult-mode__chip am-adult-mode__chip--blue">18+</span>
+                <span
+                  ><strong>Частично</strong><small>Скрывать красные, настраивать синие</small></span
+                >
+              </button>
+              <button
+                class="am-adult-mode"
+                :class="{ 'am-adult-mode--active': adultMode === 'none' }"
+                type="button"
+                role="radio"
+                :aria-checked="adultMode === 'none'"
+                @click="setAdultMode('none')"
+              >
+                <span class="am-adult-mode__chip am-adult-mode__chip--red">18+</span>
+                <span><strong>Показано</strong><small>Показывать весь контент</small></span>
+              </button>
+            </div>
 
             <div v-if="ageVerified && adultMode !== 'full'" class="am-adult-note">
-  <p><span class="am-adult-chip am-adult-chip--red">18+</span> — Хентай и сексуальный контент по версии AniList.</p>
-  <p><span class="am-adult-chip am-adult-chip--blue">18+</span> — Теги, которые могут содержать потенциально неприемлемый контент. Порог скрытия определяется долей тега в тайтле. Можно настроить.</p>
-</div>
-<div v-if="adultMode === 'partial' && ageVerified" class="am-adult-options">
+              <p>
+                <span class="am-adult-chip am-adult-chip--red">18+</span> — Хентай и сексуальный
+                контент по версии AniList.
+              </p>
+              <p>
+                <span class="am-adult-chip am-adult-chip--blue">18+</span> — Теги, которые могут
+                содержать потенциально неприемлемый контент. Порог скрытия определяется долей тега в
+                тайтле. Можно настроить.
+              </p>
+            </div>
+            <div v-if="adultMode === 'partial' && ageVerified" class="am-adult-options">
               <p class="am-adult-options__title">Синие теги</p>
-              <p class="am-adult-options__hint">Выберите, какие категории скрывать, и задайте порог для каждой.</p>
+              <p class="am-adult-options__hint">
+                Выберите, какие категории скрывать, и задайте порог для каждой.
+              </p>
               <label v-for="(rule, name) in adultTagRules" :key="name" class="am-adult-tag">
-                <input type="checkbox" :checked="rule.hideInPartial" @change="updateAdultTagRule(name, 'hideInPartial', ($event.target as HTMLInputElement).checked)" />
+                <input
+                  type="checkbox"
+                  :checked="rule.hideInPartial"
+                  @change="
+                    updateAdultTagRule(
+                      name,
+                      'hideInPartial',
+                      ($event.target as HTMLInputElement).checked,
+                    )
+                  "
+                />
                 <span class="am-adult-tag__name">{{ tagWord(name) }}</span>
-                <input class="am-adult-tag__range" type="range" min="0" max="100" step="1" :value="rule.threshold" @input="updateAdultTagRule(name, 'threshold', ($event.target as HTMLInputElement).valueAsNumber)" />
+                <input
+                  class="am-adult-tag__range"
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="1"
+                  :value="rule.threshold"
+                  @input="
+                    updateAdultTagRule(
+                      name,
+                      'threshold',
+                      ($event.target as HTMLInputElement).valueAsNumber,
+                    )
+                  "
+                />
                 <output>{{ rule.threshold }}%</output>
               </label>
             </div>

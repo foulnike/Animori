@@ -137,9 +137,10 @@ function normalizeAdultTagRules(value: unknown = null): Record<string, AdultTagR
   for (const [name, fallback] of Object.entries(ADULT_TAG_RULES_DEFAULT)) {
     const raw = value && typeof value === 'object' ? (value as Record<string, unknown>)[name] : null
     const row = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : null
-    const threshold = typeof row?.threshold === 'number' && Number.isFinite(row.threshold)
-      ? Math.min(100, Math.max(0, Math.round(row.threshold)))
-      : fallback.threshold
+    const threshold =
+      typeof row?.threshold === 'number' && Number.isFinite(row.threshold)
+        ? Math.min(100, Math.max(0, Math.round(row.threshold)))
+        : fallback.threshold
     out[name] = { threshold, hideInPartial: row?.hideInPartial === true }
   }
   return out

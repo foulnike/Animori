@@ -225,7 +225,12 @@ watch(card, (now) => {
                   </li>
                   <li v-for="item in facts" :key="item" class="am-pill">{{ item }}</li>
                   <li v-if="card.isAdult" class="am-pill am-pill--adult">18+</li>
-                  <li v-if="!card.isAdult && card.tags && regulatedByTags(card.tags)" class="am-pill am-pill--regulated">18+</li>
+                  <li
+                    v-if="!card.isAdult && card.tags && regulatedByTags(card.tags)"
+                    class="am-pill am-pill--regulated"
+                  >
+                    18+
+                  </li>
                 </ul>
 
                 <ul v-if="card.genres.length > 0" class="am-pills">

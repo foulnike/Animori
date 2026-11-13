@@ -226,7 +226,10 @@ interface BriefReply {
   title?: { romaji?: string | null; english?: string | null; native?: string | null } | null
   coverImage?: { large?: string | null; medium?: string | null; color?: string | null } | null
   relations?: {
-    edges?: Array<{ relationType?: string | null; node?: { id?: number | null } | null } | null> | null
+    edges?: Array<{
+      relationType?: string | null
+      node?: { id?: number | null } | null
+    } | null> | null
   } | null
 }
 
@@ -375,11 +378,12 @@ function toBrief(item: BriefReply | null | undefined): MediaBrief | null {
   // Relations are enough for a conservative franchise bucket. Unknown relations stay null,
   // so a missing graph never hides an unrelated title.
   const franchiseIds = (item.relations?.edges ?? [])
-    .filter((edge) =>
-      edge?.relationType === 'PREQUEL' ||
-      edge?.relationType === 'SEQUEL' ||
-      edge?.relationType === 'SIDE_STORY' ||
-      edge?.relationType === 'SPIN_OFF',
+    .filter(
+      (edge) =>
+        edge?.relationType === 'PREQUEL' ||
+        edge?.relationType === 'SEQUEL' ||
+        edge?.relationType === 'SIDE_STORY' ||
+        edge?.relationType === 'SPIN_OFF',
     )
     .map((edge) => edge?.node?.id)
     .filter((id): id is number => typeof id === 'number' && id > 0)

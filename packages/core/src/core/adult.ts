@@ -38,8 +38,15 @@ export function adultAllowed(
   if (mode === 'none') return true
   if (isAdult === true) return false
   if (mode === 'full' || mode === 'partial') {
-    const regulated = typeof tagsOrRegulated === 'boolean' ? tagsOrRegulated : regulatedByTags(tagsOrRegulated)
-    if (regulated && (mode === 'full' || typeof tagsOrRegulated === 'boolean' || regulatedHiddenInPartial(tagsOrRegulated))) return false
+    const regulated =
+      typeof tagsOrRegulated === 'boolean' ? tagsOrRegulated : regulatedByTags(tagsOrRegulated)
+    if (
+      regulated &&
+      (mode === 'full' ||
+        typeof tagsOrRegulated === 'boolean' ||
+        regulatedHiddenInPartial(tagsOrRegulated))
+    )
+      return false
   }
   return true
 }
@@ -100,7 +107,11 @@ export function keepAllowed<T>(
   if (mode === 'none') return items
   return items.filter((item) => {
     if (isAdultOf(item) === true) return false
-    if (tagsOf && (mode === 'full' ? regulatedByTags(tagsOf(item)) : regulatedHiddenInPartial(tagsOf(item)))) return false
+    if (
+      tagsOf &&
+      (mode === 'full' ? regulatedByTags(tagsOf(item)) : regulatedHiddenInPartial(tagsOf(item)))
+    )
+      return false
     return true
   })
 }
@@ -116,7 +127,11 @@ export function hiddenCount<T>(
 
   let hidden = 0
   for (const item of items) {
-    if (isAdultOf(item) === true || (tagsOf && (mode === 'full' ? regulatedByTags(tagsOf(item)) : regulatedHiddenInPartial(tagsOf(item))))) {
+    if (
+      isAdultOf(item) === true ||
+      (tagsOf &&
+        (mode === 'full' ? regulatedByTags(tagsOf(item)) : regulatedHiddenInPartial(tagsOf(item))))
+    ) {
       hidden += 1
     }
   }

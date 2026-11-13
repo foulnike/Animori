@@ -100,7 +100,13 @@ const playHint = computed(() => (playMark.value === 'yes' ? 'Можно посм
 
 /** Есть ли вообще что показывать в левом верхнем углу. */
 const hasTags = computed(
-  () => props.mark !== null || props.adult || props.regulated || props.soon || props.repeat > 0 || props.note !== null,
+  () =>
+    props.mark !== null ||
+    props.adult ||
+    props.regulated ||
+    props.soon ||
+    props.repeat > 0 ||
+    props.note !== null,
 )
 
 /** Левый угол закреплённой раскладки: 18+ и «Скоро» в нём не участвуют. */

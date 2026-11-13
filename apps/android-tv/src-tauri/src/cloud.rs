@@ -181,10 +181,7 @@ pub fn animori_cloud_status(app: AppHandle) -> CloudStatus {
 /// Проверяет вставленный пропуск и, если Диск его принял, сохраняет шифром.
 /// 404 — тоже «принят»: папки приложения ещё нет, её заведёт сам Диск.
 #[tauri::command]
-pub async fn animori_cloud_connect(
-    app: AppHandle,
-    token: String,
-) -> Result<CloudStep, String> {
+pub async fn animori_cloud_connect(app: AppHandle, token: String) -> Result<CloudStep, String> {
     let token = check_token_shape(&token)?;
     let client = net::client_for_request(&app)?;
     let step = check_with(&client, &token).await?;
@@ -206,9 +203,7 @@ pub async fn animori_cloud_delete(app: AppHandle) -> Result<CloudStatus, String>
 
 /// Проверяет сохранённый пропуск.
 #[tauri::command]
-pub async fn animori_cloud_check(
-    app: AppHandle,
-) -> Result<CloudStep, String> {
+pub async fn animori_cloud_check(app: AppHandle) -> Result<CloudStep, String> {
     let token = stored_token(&app)?;
     let client = net::client_for_request(&app)?;
     check_with(&client, &token).await
@@ -216,9 +211,7 @@ pub async fn animori_cloud_check(
 
 /// Сведения о файле копии.
 #[tauri::command]
-pub async fn animori_cloud_stat(
-    app: AppHandle,
-) -> Result<CloudStep, String> {
+pub async fn animori_cloud_stat(app: AppHandle) -> Result<CloudStep, String> {
     let token = stored_token(&app)?;
     let client = net::client_for_request(&app)?;
     let url = api_url("", &[("path", FILE_PATH), ("fields", FILE_FIELDS)])?;
@@ -227,10 +220,7 @@ pub async fn animori_cloud_stat(
 
 /// Кладёт копию с перезаписью. Тело уходит по одноразовому адресу без пропуска: доступ зашит в адрес.
 #[tauri::command]
-pub async fn animori_cloud_save(
-    app: AppHandle,
-    text: String,
-) -> Result<CloudStep, String> {
+pub async fn animori_cloud_save(app: AppHandle, text: String) -> Result<CloudStep, String> {
     if text.len() > MAX_COPY_BYTES {
         return Err("request: копия больше допустимого".to_string());
     }
@@ -260,9 +250,7 @@ pub async fn animori_cloud_save(
 
 /// Забирает текст копии. Пропуск на втором шаге обязателен и уходит только на хосты BODY_HOSTS.
 #[tauri::command]
-pub async fn animori_cloud_restore(
-    app: AppHandle,
-) -> Result<CloudStep, String> {
+pub async fn animori_cloud_restore(app: AppHandle) -> Result<CloudStep, String> {
     let token = stored_token(&app)?;
     let client = net::client_for_request(&app)?;
 
@@ -282,9 +270,7 @@ pub async fn animori_cloud_restore(
 
 /// Публикует копию. Ссылку yandex-disk.ts берёт следующим вызовом stat.
 #[tauri::command]
-pub async fn animori_cloud_share(
-    app: AppHandle,
-) -> Result<CloudStep, String> {
+pub async fn animori_cloud_share(app: AppHandle) -> Result<CloudStep, String> {
     let token = stored_token(&app)?;
     let client = net::client_for_request(&app)?;
     let url = api_url("/publish", &[("path", FILE_PATH)])?;
@@ -293,9 +279,7 @@ pub async fn animori_cloud_share(
 
 /// Снимает публикацию; файл остаётся.
 #[tauri::command]
-pub async fn animori_cloud_unshare(
-    app: AppHandle,
-) -> Result<CloudStep, String> {
+pub async fn animori_cloud_unshare(app: AppHandle) -> Result<CloudStep, String> {
     let token = stored_token(&app)?;
     let client = net::client_for_request(&app)?;
     let url = api_url("/unpublish", &[("path", FILE_PATH)])?;

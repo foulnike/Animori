@@ -12,7 +12,8 @@ import { selectEntries } from '@/core/collection-view'
 import {
   notOutYet,
   partsCeiling,
-  peekLook, peekRegulated,
+  peekLook,
+  peekRegulated,
   rememberBrief,
   SOON_STATUS,
   warmLooks,
@@ -27,7 +28,14 @@ import {
   type PlayAsk,
   type PlayState,
 } from '@/core/playable'
-import { distributeShelves, feedMore, hideRec, newFeed, shelfFill, type ShelfName } from '@/core/recs'
+import {
+  distributeShelves,
+  feedMore,
+  hideRec,
+  newFeed,
+  shelfFill,
+  type ShelfName,
+} from '@/core/recs'
 import type { SnapshotEntry } from '@/core/snapshot'
 import { Logger } from '@/utils/logger'
 
@@ -348,7 +356,11 @@ function redrawOwn(): void {
  * набранное лента держит дольше, чем живёт настройка показа. */
 function drawFeed(): void {
   const reserved = new Set(recs.value.flatMap((shelf) => shelf.rows.map((row) => row.mediaId)))
-  feedRows.value = keepAllowed(feedKeep.items, (item) => item.isAdult, (item) => item.tags)
+  feedRows.value = keepAllowed(
+    feedKeep.items,
+    (item) => item.isAdult,
+    (item) => item.tags,
+  )
     .filter((item) => !reserved.has(item.mediaId))
     .map(toTileRow)
 }
@@ -459,7 +471,16 @@ function publish(): void {
   const out: Shelf[] = []
   const distributed = distributeShelves(
     activeDefs.map((def) => def.key as ShelfName),
-    new Map([...staged].map(([key, items]) => [key as ShelfName, keepAllowed(items, (brief) => brief.isAdult, (brief) => brief.tags)])),
+    new Map(
+      [...staged].map(([key, items]) => [
+        key as ShelfName,
+        keepAllowed(
+          items,
+          (brief) => brief.isAdult,
+          (brief) => brief.tags,
+        ),
+      ]),
+    ),
     SHELF_SIZE,
   )
 

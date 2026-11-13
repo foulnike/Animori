@@ -4,7 +4,14 @@
 import { onScopeDispose, ref, type Ref } from 'vue'
 
 import { setupVideoSources } from '@/api/video-sources'
-import { notOutYet, partsCeiling, peekLook, peekRegulated, warmLooks, type MediaLook } from '@/core/media-looks'
+import {
+  notOutYet,
+  partsCeiling,
+  peekLook,
+  peekRegulated,
+  warmLooks,
+  type MediaLook,
+} from '@/core/media-looks'
 import { peekRussianName, prefetchRussianNames } from '@/core/media-title'
 import {
   onPlayableChange,

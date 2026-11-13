@@ -132,7 +132,10 @@ fn user_agent() -> String {
 }
 
 /// Клиент на один запрос: прокси читается каждый раз, и смена настройки действует сразу — в отличие от окна, где адрес живёт до перезапуска.
-pub(crate) fn build_client(proxy: Option<(String, String, String)>, use_system_proxy: bool) -> Result<reqwest::Client, String> {
+pub(crate) fn build_client(
+    proxy: Option<(String, String, String)>,
+    use_system_proxy: bool,
+) -> Result<reqwest::Client, String> {
     let mut builder = reqwest::Client::builder()
         .timeout(Duration::from_secs(TIMEOUT_SECS))
         .connect_timeout(Duration::from_secs(CONNECT_TIMEOUT_SECS));

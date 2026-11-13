@@ -182,7 +182,10 @@ function lovedIds(): number[] {
 }
 
 /** Что не показываем: своё, скрытое и взрослое при выключенном показе. */
-async function visible(briefs: MediaBrief[], excluded: ReadonlySet<number> = new Set()): Promise<MediaBrief[]> {
+async function visible(
+  briefs: MediaBrief[],
+  excluded: ReadonlySet<number> = new Set(),
+): Promise<MediaBrief[]> {
   const hiddenSet = await loadHidden()
   return keepAllowed(
     briefs.filter(

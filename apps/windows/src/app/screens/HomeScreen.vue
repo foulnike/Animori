@@ -27,7 +27,14 @@ import {
   type PlayAsk,
   type PlayState,
 } from '@/core/playable'
-import { distributeShelves, feedMore, hideRec, newFeed, shelfFill, type ShelfName } from '@/core/recs'
+import {
+  distributeShelves,
+  feedMore,
+  hideRec,
+  newFeed,
+  shelfFill,
+  type ShelfName,
+} from '@/core/recs'
 import type { SnapshotEntry } from '@/core/snapshot'
 import { Logger } from '@/utils/logger'
 
@@ -210,7 +217,8 @@ const editParts = computed<number | null>(() =>
 const editOngoing = computed<boolean>(() =>
   editLook.value !== null
     ? editLook.value.airingEpisode !== null
-    : editLookDraft.value?.airingEpisode !== null && editLookDraft.value?.airingEpisode !== undefined,
+    : editLookDraft.value?.airingEpisode !== null &&
+      editLookDraft.value?.airingEpisode !== undefined,
 )
 
 /** Календарь выхода. Всё считает home-calendar, здесь только разметка. */
@@ -405,7 +413,11 @@ function redrawOwn(): void {
 /** Пересобирает плитки ленты; взрослое отсеивается при отрисовке: набранное живёт дольше настройки. */
 function drawFeed(): void {
   const reserved = new Set(recs.value.flatMap((shelf) => shelf.rows.map((row) => row.mediaId)))
-  feedRows.value = keepAllowed(feedKeep.items, (item) => item.isAdult, (item) => item.tags)
+  feedRows.value = keepAllowed(
+    feedKeep.items,
+    (item) => item.isAdult,
+    (item) => item.tags,
+  )
     .filter((item) => !reserved.has(item.mediaId))
     .map(toTileRow)
 }
@@ -518,7 +530,16 @@ function publish(): void {
   const out: Shelf[] = []
   const distributed = distributeShelves(
     activeDefs.map((def) => def.key),
-    new Map([...staged].map(([key, items]) => [key, keepAllowed(items, (brief) => brief.isAdult, (brief) => brief.tags)])),
+    new Map(
+      [...staged].map(([key, items]) => [
+        key,
+        keepAllowed(
+          items,
+          (brief) => brief.isAdult,
+          (brief) => brief.tags,
+        ),
+      ]),
+    ),
     SHELF_SIZE,
   )
 

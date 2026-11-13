@@ -138,7 +138,11 @@ const shownTab = computed<Tab>(() => {
 
 /** Видимые работы: отбор 18+ на слое показа, а не в запросе. */
 function shownWorks(): readonly StaffWork[] {
-  return keepAllowed(works.value, (work) => work.isAdult, (work) => work.regulated ? [{ name: 'regulated', rank: 100 }] : null)
+  return keepAllowed(
+    works.value,
+    (work) => work.isAdult,
+    (work) => (work.regulated ? [{ name: 'regulated', rank: 100 }] : null),
+  )
 }
 
 /** Название работы: русское, когда фон уже добыл, иначе как пришло. */

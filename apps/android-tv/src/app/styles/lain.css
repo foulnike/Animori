@@ -1,45 +1,146 @@
 /* Android TV Lain skin. The TV layout remains intact; this file only changes the signal palette. */
 html[data-am-family='lain'] {
-  --am-r-s: 3px; --am-r-m: 5px; --am-r-l: 7px; --am-r-xl: 9px;
-  --am-r-leaf: 3px 8px 3px 3px; --am-r-drop: 8px 3px 8px 3px;
+  --am-r-s: 3px;
+  --am-r-m: 5px;
+  --am-r-l: 7px;
+  --am-r-xl: 9px;
+  --am-r-leaf: 3px 8px 3px 3px;
+  --am-r-drop: 8px 3px 8px 3px;
   --am-font-tech: 'Lucida Console', 'Cascadia Mono', ui-monospace, monospace;
-  --am-accent: #8ee9ff; --am-accent-rgb: 142 233 255;
-  --am-accent-2: #ff405f; --am-accent-2-rgb: 255 64 95;
-  --am-sakura: #ff405f; --am-sakura-rgb: 255 64 95;
+  --am-accent: #8ee9ff;
+  --am-accent-rgb: 142 233 255;
+  --am-accent-2: #ff405f;
+  --am-accent-2-rgb: 255 64 95;
+  --am-sakura: #ff405f;
+  --am-sakura-rgb: 255 64 95;
   --am-on-accent: #05070b;
 }
 html[data-am-family='lain'][data-am-skin='dark'] {
-  --am-bg:#05070b; --am-bg-2:#080d12; --am-panel:#0a1016; --am-panel-2:#0d161d;
-  --am-hover:#101e25; --am-glass:rgb(7 14 19 / .94); --am-glass-2:rgb(12 24 29 / .96);
-  --am-text:#d9f5f7; --am-dim:#8aafb7; --am-faint:#62838c;
-  --am-line:rgb(142 233 255 / .28); --am-line-soft:rgb(142 233 255 / .2);
-  --am-fill-1:rgb(142 233 255 / .04); --am-fill-2:rgb(142 233 255 / .08); --am-fill-3:rgb(142 233 255 / .14);
+  --am-bg: #05070b;
+  --am-bg-2: #080d12;
+  --am-panel: #0a1016;
+  --am-panel-2: #0d161d;
+  --am-hover: #101e25;
+  --am-glass: rgb(7 14 19 / 0.94);
+  --am-glass-2: rgb(12 24 29 / 0.96);
+  --am-text: #d9f5f7;
+  --am-dim: #8aafb7;
+  --am-faint: #62838c;
+  --am-line: rgb(142 233 255 / 0.28);
+  --am-line-soft: rgb(142 233 255 / 0.2);
+  --am-fill-1: rgb(142 233 255 / 0.04);
+  --am-fill-2: rgb(142 233 255 / 0.08);
+  --am-fill-3: rgb(142 233 255 / 0.14);
 }
 html[data-am-family='lain'][data-am-skin='amoled'] {
-  --am-bg:#000; --am-bg-2:#000; --am-panel:#000; --am-panel-2:#000; --am-hover:rgb(142 233 255 / .08);
-  --am-glass:#000; --am-glass-2:#000; --am-text:#e4f8fa; --am-dim:#91b5bd; --am-faint:#6b8d95;
-  --am-line:rgb(142 233 255 / .3); --am-line-soft:rgb(142 233 255 / .2);
-  --am-fill-1:transparent; --am-fill-2:rgb(142 233 255 / .07); --am-fill-3:rgb(142 233 255 / .14);
+  --am-bg: #000;
+  --am-bg-2: #000;
+  --am-panel: #000;
+  --am-panel-2: #000;
+  --am-hover: rgb(142 233 255 / 0.08);
+  --am-glass: #000;
+  --am-glass-2: #000;
+  --am-text: #e4f8fa;
+  --am-dim: #91b5bd;
+  --am-faint: #6b8d95;
+  --am-line: rgb(142 233 255 / 0.3);
+  --am-line-soft: rgb(142 233 255 / 0.2);
+  --am-fill-1: transparent;
+  --am-fill-2: rgb(142 233 255 / 0.07);
+  --am-fill-3: rgb(142 233 255 / 0.14);
 }
 html[data-am-family='lain'][data-am-skin='light'] {
-  --am-bg:#cbd9da; --am-bg-2:#b9ccce; --am-panel:#f3f8f8; --am-panel-2:#e5eeee; --am-hover:#d8e7e8;
-  --am-glass:rgb(247 252 252 / .96); --am-glass-2:#fff; --am-text:#0a171b; --am-dim:#2b4a50; --am-faint:#45656b;
-  --am-line:rgb(10 23 27 / .34); --am-line-soft:rgb(10 23 27 / .24);
-  --am-fill-1:rgb(10 23 27 / .06); --am-fill-2:rgb(10 23 27 / .1); --am-fill-3:rgb(10 23 27 / .16); --am-on-accent:#fff;
+  --am-bg: #cbd9da;
+  --am-bg-2: #b9ccce;
+  --am-panel: #f3f8f8;
+  --am-panel-2: #e5eeee;
+  --am-hover: #d8e7e8;
+  --am-glass: rgb(247 252 252 / 0.96);
+  --am-glass-2: #fff;
+  --am-text: #0a171b;
+  --am-dim: #2b4a50;
+  --am-faint: #45656b;
+  --am-line: rgb(10 23 27 / 0.34);
+  --am-line-soft: rgb(10 23 27 / 0.24);
+  --am-fill-1: rgb(10 23 27 / 0.06);
+  --am-fill-2: rgb(10 23 27 / 0.1);
+  --am-fill-3: rgb(10 23 27 / 0.16);
+  --am-on-accent: #fff;
 }
-html[data-am-family='lain'] body { font-family:var(--am-font-tech); }
-html[data-am-family='lain'] .am-family { display:grid; grid-template-columns:1fr 1fr; gap:6px; padding:5px; background:var(--am-glass); border:1px solid var(--am-line-soft); border-radius:var(--am-r-s); }
-html[data-am-family='lain'] .am-family__btn { min-height:44px; padding:0 16px; font:inherit; font-size:13px; color:var(--am-dim); background:transparent; border:0; border-radius:var(--am-r-s); }
-html[data-am-family='lain'] .am-family__btn--on { color:var(--am-on-accent); background:var(--am-accent); box-shadow:4px 4px 0 rgb(var(--am-accent-2-rgb) / .5); }
+html[data-am-family='lain'] body {
+  font-family: var(--am-font-tech);
+}
+html[data-am-family='lain'] .am-family {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 5px;
+  background: var(--am-glass);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-s);
+}
+html[data-am-family='lain'] .am-family__btn {
+  min-height: 44px;
+  padding: 0 16px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--am-dim);
+  background: transparent;
+  border: 0;
+  border-radius: var(--am-r-s);
+}
+html[data-am-family='lain'] .am-family__btn--on {
+  color: var(--am-on-accent);
+  background: var(--am-accent);
+  box-shadow: 4px 4px 0 rgb(var(--am-accent-2-rgb) / 0.5);
+}
 html[data-am-family='lain'] .am-door,
 html[data-am-family='lain'] .am-panel,
 html[data-am-family='lain'] .am-box,
-html[data-am-family='lain'] .am-tile__art { border-color:var(--am-line); border-radius:var(--am-r-s); }
-html[data-am-family='lain'] .am-door__mark { width:32px; height:32px; }
-html[data-am-family='lain'] .am-adult-heading .am-setmark { width:24px; height:24px; flex:none; }
-html[data-am-family='lain'] .am-tile__sheen { inset:0; transform:none; opacity:0; background:repeating-linear-gradient(0deg,transparent 0 3px,rgb(var(--am-accent-rgb) / .2) 4px,transparent 5px); mix-blend-mode:screen; }
+html[data-am-family='lain'] .am-tile__art {
+  border-color: var(--am-line);
+  border-radius: var(--am-r-s);
+}
+html[data-am-family='lain'] .am-door__mark {
+  width: 32px;
+  height: 32px;
+}
+html[data-am-family='lain'] .am-adult-heading .am-setmark {
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+html[data-am-family='lain'] .am-tile__sheen {
+  inset: 0;
+  transform: none;
+  opacity: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 3px,
+    rgb(var(--am-accent-rgb) / 0.2) 4px,
+    transparent 5px
+  );
+  mix-blend-mode: screen;
+}
 html[data-am-family='lain'] .am-tile:hover .am-tile__sheen,
-html[data-am-family='lain'] .am-tile:has(:focus-visible) .am-tile__sheen { opacity:.8; animation:am-lain-tv-crt .65s steps(6,end) both; }
-html[data-am-family='lain'] .am-skins__btn--on { border-color:var(--am-accent); box-shadow:4px 4px 0 rgb(var(--am-accent-2-rgb) / .45); }
-@keyframes am-lain-tv-crt { from { background-position:0 100%; } to { background-position:0 -100%; } }
-@media (prefers-reduced-motion: reduce) { html[data-am-family='lain'] .am-tile__sheen { animation:none; } }
+html[data-am-family='lain'] .am-tile:has(:focus-visible) .am-tile__sheen {
+  opacity: 0.8;
+  animation: am-lain-tv-crt 0.65s steps(6, end) both;
+}
+html[data-am-family='lain'] .am-skins__btn--on {
+  border-color: var(--am-accent);
+  box-shadow: 4px 4px 0 rgb(var(--am-accent-2-rgb) / 0.45);
+}
+@keyframes am-lain-tv-crt {
+  from {
+    background-position: 0 100%;
+  }
+  to {
+    background-position: 0 -100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-am-family='lain'] .am-tile__sheen {
+    animation: none;
+  }
+}

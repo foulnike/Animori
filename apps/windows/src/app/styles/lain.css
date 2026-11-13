@@ -29,7 +29,10 @@
   background: transparent;
   border: 0;
   border-radius: var(--am-r-cap);
-  transition: color var(--am-fast) var(--am-ease), background-color var(--am-fast) var(--am-ease), box-shadow var(--am-fast) var(--am-ease);
+  transition:
+    color var(--am-fast) var(--am-ease),
+    background-color var(--am-fast) var(--am-ease),
+    box-shadow var(--am-fast) var(--am-ease);
 }
 
 .am-family__btn:hover,
@@ -47,7 +50,6 @@
 .am-family__btn:disabled {
   cursor: default;
 }
-
 
 html[data-am-family='lain'] {
   --am-r-s: 2px;
@@ -178,7 +180,10 @@ html[data-am-family='lain'] .am-hey {
   background: linear-gradient(125deg, var(--am-glass-deep), var(--am-panel-2));
   border-color: rgb(var(--am-accent-rgb) / 0.42);
   border-radius: var(--am-r-s);
-  box-shadow: 6px 6px 0 rgb(var(--am-accent-2-rgb) / 0.22), inset 0 0 0 1px rgb(255 255 255 / 0.04), 0 0 30px rgb(var(--am-accent-rgb) / 0.1);
+  box-shadow:
+    6px 6px 0 rgb(var(--am-accent-2-rgb) / 0.22),
+    inset 0 0 0 1px rgb(255 255 255 / 0.04),
+    0 0 30px rgb(var(--am-accent-rgb) / 0.1);
 }
 
 html[data-am-family='lain'] .am-hey::after {
@@ -187,7 +192,12 @@ html[data-am-family='lain'] .am-hey::after {
   z-index: 0;
   content: '';
   pointer-events: none;
-  background: repeating-linear-gradient(0deg, transparent 0 3px, rgb(var(--am-accent-rgb) / 0.04) 4px, transparent 5px);
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 3px,
+    rgb(var(--am-accent-rgb) / 0.04) 4px,
+    transparent 5px
+  );
 }
 
 html[data-am-family='lain'] .am-hey__glow,
@@ -283,7 +293,13 @@ html[data-am-family='lain'] .am-hey__glow {
 }
 
 html[data-am-family='lain'] .am-hey__beam {
-  background: linear-gradient(104deg, transparent 34%, rgb(var(--am-accent-rgb) / 0.12) 48%, rgb(var(--am-accent-2-rgb) / 0.22) 56%, transparent 70%);
+  background: linear-gradient(
+    104deg,
+    transparent 34%,
+    rgb(var(--am-accent-rgb) / 0.12) 48%,
+    rgb(var(--am-accent-2-rgb) / 0.22) 56%,
+    transparent 70%
+  );
 }
 
 html[data-am-family='lain'] .am-shelf,
@@ -300,7 +316,9 @@ html[data-am-family='lain'] .am-tile {
 
 html[data-am-family='lain'] .am-tile:hover,
 html[data-am-family='lain'] .am-tile:focus-within {
-  box-shadow: 4px 4px 0 rgb(var(--am-accent-2-rgb) / 0.32), 0 0 18px rgb(var(--am-accent-rgb) / 0.14);
+  box-shadow:
+    4px 4px 0 rgb(var(--am-accent-2-rgb) / 0.32),
+    0 0 18px rgb(var(--am-accent-rgb) / 0.14);
 }
 
 /* A contained scanline roll replaces the standard glossy sweep. It never clips
@@ -310,7 +328,12 @@ html[data-am-family='lain'] .am-tile__sheen {
   opacity: 0;
   transform: none;
   pointer-events: none;
-  background: repeating-linear-gradient(0deg, transparent 0 3px, rgb(var(--am-accent-rgb) / 0.2) 4px, transparent 5px);
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 3px,
+    rgb(var(--am-accent-rgb) / 0.2) 4px,
+    transparent 5px
+  );
   mix-blend-mode: screen;
   transition: opacity var(--am-fast) var(--am-ease);
 }
@@ -322,8 +345,12 @@ html[data-am-family='lain'] .am-tile:has(:focus-visible) .am-tile__sheen {
 }
 
 @keyframes am-lain-crt-ripple {
-  from { background-position: 0 100%; }
-  to { background-position: 0 -100%; }
+  from {
+    background-position: 0 100%;
+  }
+  to {
+    background-position: 0 -100%;
+  }
 }
 
 html[data-am-family='lain'] .am-family {

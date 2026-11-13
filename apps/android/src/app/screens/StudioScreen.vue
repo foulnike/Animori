@@ -102,7 +102,11 @@ const stopPlayWatch = onPlayableChange(redraw)
 
 /** Сколько работ из набора видно после отбора 18+. */
 function shownCount(pool: readonly MediaBrief[]): number {
-  return keepAllowed(pool, (brief) => brief.isAdult, (brief) => brief.tags).length
+  return keepAllowed(
+    pool,
+    (brief) => brief.isAdult,
+    (brief) => brief.tags,
+  ).length
 }
 
 /** Делит добытое на порцию показа и остаток. Считаются только видимые работы: норма
@@ -113,7 +117,12 @@ function splitBatch(pool: readonly MediaBrief[]): { take: MediaBrief[]; rest: Me
   let shown = 0
 
   for (const brief of pool) {
-    const visible = keepAllowed([brief], (item) => item.isAdult, (item) => item.tags).length === 1
+    const visible =
+      keepAllowed(
+        [brief],
+        (item) => item.isAdult,
+        (item) => item.tags,
+      ).length === 1
 
     if (rest.length > 0 || (visible && shown >= WANT)) {
       rest.push(brief)
@@ -298,8 +307,16 @@ async function load(add = false): Promise<void> {
     spare = rest
     raw = [...raw, ...take]
 
-    hidden.value = hiddenCount(raw, (brief) => brief.isAdult, (brief) => brief.tags)
-    briefs = keepAllowed(raw, (brief) => brief.isAdult, (brief) => brief.tags)
+    hidden.value = hiddenCount(
+      raw,
+      (brief) => brief.isAdult,
+      (brief) => brief.tags,
+    )
+    briefs = keepAllowed(
+      raw,
+      (brief) => brief.isAdult,
+      (brief) => brief.tags,
+    )
     hasNext.value = sourceMore || spare.length > 0
     redraw()
     void loadMarks()
