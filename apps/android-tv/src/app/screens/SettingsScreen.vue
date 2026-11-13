@@ -18,7 +18,7 @@ import { adultByBirth } from '@/core/adult'
 import { clearHidden } from '@/core/recs'
 import { saveSetting, settings } from '@/core/settings'
 
-import { APPEARANCES, appearance, setAppearance } from '../appearance'
+import { APPEARANCES, appearance, setAppearance, setVisualTheme, visualTheme } from '../appearance'
 import { checkUpdate, installUpdate, updateOffer } from '../update'
 import BrandMark from '../components/BrandMark.vue'
 import CloudBox from '../components/CloudBox.vue'
@@ -376,6 +376,18 @@ function updateAdultTagRule(name: string, field: 'threshold' | 'hideInPartial', 
   saveAdultTagRules()
 }
 
+/** На телевизоре ползунок не даёт надёжного управления с D-pad: шаг и положение ручки
+ * трудно поймать с расстояния. Крупные кнопки меняют порог фиксированным шагом. */
+function adjustAdultTagThreshold(name: string, delta: number): void {
+  const current = adultTagRules.value[name] ?? { threshold: 70, hideInPartial: false }
+  updateAdultTagRule(name, 'threshold', current.threshold + delta)
+}
+
+function toggleAdultTagRule(name: string): void {
+  const current = adultTagRules.value[name] ?? { threshold: 70, hideInPartial: false }
+  updateAdultTagRule(name, 'hideInPartial', !current.hideInPartial)
+}
+
 /** Отказ от вопроса: тумблер остаётся выключенным, и это его настоящее состояние. */
 function closeAge(): void {
   askingAge.value = false
@@ -612,6 +624,12 @@ onMounted(() => {
           </button>
         </div>
 
+        <h3 class="am-h3 am-family-heading">Семейство интерфейса</h3>
+        <div class="am-family" role="group" aria-label="Семейство интерфейса">
+          <button class="am-family__btn" :class="{ 'am-family__btn--on': visualTheme === 'standard' }" type="button" :aria-pressed="visualTheme === 'standard'" @click="setVisualTheme('standard')">Стандартная</button>
+          <button class="am-family__btn" :class="{ 'am-family__btn--on': visualTheme === 'lain' }" type="button" :aria-pressed="visualTheme === 'lain'" @click="setVisualTheme('lain')">Lain</button>
+        </div>
+
         <h3 class="am-h3 am-adult-heading"><SettingMark name="adult" /> Взрослое</h3>
 
 <div class="am-adult-control" role="radiogroup" aria-label="Фильтрация контента 18+">
@@ -633,7 +651,26 @@ onMounted(() => {
   <p><span class="am-adult-chip am-adult-chip--red">18+</span> — Хентай и сексуальный контент по версии AniList.</p>
   <p><span class="am-adult-chip am-adult-chip--blue">18+</span> — Теги, которые могут содержать потенциально неприемлемый контент. Порог скрытия определяется долей тега в тайтле. Можно настроить.</p>
 </div>
-<div v-if="adultMode === 'partial' && ageVerified" class="am-adult-options"><p class="am-adult-options__title">Синие теги</p><p class="am-adult-options__hint">Выберите, какие категории скрывать, и задайте порог для каждой.</p><label v-for="(rule, name) in adultTagRules" :key="name" class="am-adult-tag"><input type="checkbox" :checked="rule.hideInPartial" @change="updateAdultTagRule(name, 'hideInPartial', ($event.target as HTMLInputElement).checked)" /><span class="am-adult-tag__name">{{ tagWord(name) }}</span><input class="am-adult-tag__range" type="range" min="0" max="100" :value="rule.threshold" @input="updateAdultTagRule(name, 'threshold', ($event.target as HTMLInputElement).valueAsNumber)" /><output>{{ rule.threshold }}%</output></label></div>
+<div v-if="adultMode === 'partial' && ageVerified" class="am-adult-options">
+  <p class="am-adult-options__title">Настройка тегов</p>
+  <p class="am-adult-options__hint">Для каждого тега выберите показ и настройте порог.</p>
+  <div v-for="(rule, name) in adultTagRules" :key="name" class="am-adult-tag">
+    <span class="am-adult-tag__name">{{ tagWord(name) }}</span>
+    <button
+      class="am-adult-tag__toggle"
+      :class="{ 'am-adult-tag__toggle--on': rule.hideInPartial }"
+      type="button"
+      :aria-pressed="rule.hideInPartial"
+      @click="toggleAdultTagRule(name)"
+    >
+      {{ rule.hideInPartial ? 'Скрывается' : 'Показывается' }}
+    </button>
+    <span class="am-adult-tag__threshold-label">Порог</span>
+    <button class="am-adult-tag__step" type="button" :aria-label="`Уменьшить порог: ${tagWord(name)}`" @click="adjustAdultTagThreshold(name, -5)">−</button>
+    <output class="am-adult-tag__value">{{ rule.threshold }}%</output>
+    <button class="am-adult-tag__step" type="button" :aria-label="`Увеличить порог: ${tagWord(name)}`" @click="adjustAdultTagThreshold(name, 5)">+</button>
+  </div>
+</div>
 
         <div v-if="askingAge" class="am-age">
           <p class="am-age__ask">Укажите ваш возраст</p>

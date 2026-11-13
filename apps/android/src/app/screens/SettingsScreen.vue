@@ -25,7 +25,7 @@ import { clearHidden } from '@/core/recs'
 import { saveSetting, settings } from '@/core/settings'
 
 import { cloudPathText } from '@/core/cloud'
-import { APPEARANCES, appearance, setAppearance } from '../appearance'
+import { APPEARANCES, appearance, setAppearance, setVisualTheme, visualTheme } from '../appearance'
 import {
   authStatus,
   logout,
@@ -1003,6 +1003,16 @@ onMounted(() => {
           >
             <span class="am-skins__mark" aria-hidden="true">{{ item.mark }}</span>
             <span class="am-skins__name">{{ item.title }}</span>
+          </button>
+        </div>
+
+        <h3 class="am-h3 am-family-heading">Семейство интерфейса</h3>
+        <div class="am-family" role="group" aria-label="Семейство интерфейса">
+          <button class="am-family__btn" :class="{ 'am-family__btn--on': visualTheme === 'standard' }" type="button" :aria-pressed="visualTheme === 'standard'" @click="setVisualTheme('standard')">
+            Стандартная
+          </button>
+          <button class="am-family__btn" :class="{ 'am-family__btn--on': visualTheme === 'lain' }" type="button" :aria-pressed="visualTheme === 'lain'" @click="setVisualTheme('lain')">
+            Lain
           </button>
         </div>
 

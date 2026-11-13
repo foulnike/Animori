@@ -1109,3 +1109,137 @@ code {
 .am-adult-heading{margin:16px 0 0;font-size:14px;font-weight:750;color:var(--am-text)}.am-adult-mode__chip{position:relative;overflow:hidden;color:#fff!important;text-shadow:0 1px 1px rgb(0 0 0 / 0.28)}.am-adult-mode__chip--muted{color:#f8fafc!important;background:#667085;border-color:#98a2b3;text-decoration:none}.am-adult-mode__chip--muted::after{position:absolute;inset:-50% -12%;content:'';background:linear-gradient(135deg,transparent 47%,#f8fafc 48%,#f8fafc 53%,transparent 54%);pointer-events:none}.am-adult-mode__chip--blue{color:#fff!important;background:#2785f5}.am-adult-mode__chip--red{color:#fff!important;background:#e94b58}.am-adult-chip{color:#fff!important;text-shadow:0 1px 1px rgb(0 0 0 / 0.28)}.am-adult-chip--blue{background:#2785f5}.am-adult-chip--red{background:#e94b58}
 
 .am-adult-heading{margin-top:0!important;margin-bottom:0!important;font-size:inherit!important}.am-adult-heading .am-tile-mark,.am-adult-heading .am-setmark{color:var(--am-faint)}
+
+.am-family-heading {
+  margin: 4px 0 -4px;
+  font-size: 13px;
+  color: var(--am-text);
+}
+
+.am-family {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 5px;
+  background: var(--am-fill-1);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-l);
+}
+
+.am-family__btn {
+  min-height: 44px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--am-dim);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--am-r-m);
+}
+
+.am-family__btn:active,
+.am-family__btn:focus-visible {
+  color: var(--am-text);
+  background: var(--am-fill-2);
+}
+
+.am-family__btn--on {
+  color: var(--am-text);
+  background: var(--am-fill-3);
+  border-color: var(--am-line-soft);
+  box-shadow: var(--am-sh-1);
+}
+
+/* Mobile adult settings: keep the heading compact and make every threshold row
+   fit the sheet width without horizontal scrolling. */
+@media (max-width: 640px) {
+  .am-adult-heading {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    min-height: 28px;
+    margin-top: 2px !important;
+    font-size: 18px !important;
+  }
+
+  .am-adult-heading .am-setmark {
+    flex: none;
+    width: 24px;
+    height: 24px;
+  }
+
+  .am-adult-control {
+    gap: 7px;
+    margin-top: 8px;
+    padding: 7px;
+  }
+
+  .am-adult-mode {
+    min-height: 50px;
+    gap: 10px;
+    padding: 10px 11px;
+  }
+
+  .am-adult-mode strong {
+    font-size: 14px;
+  }
+
+  .am-adult-mode small {
+    font-size: 11px;
+  }
+
+  .am-adult-note,
+  .am-adult-options {
+    margin-top: 8px;
+    padding: 11px 12px;
+    font-size: 12px;
+  }
+
+  .am-adult-options {
+    max-height: 310px;
+  }
+
+  .am-adult-options__hint {
+    line-height: 1.4;
+  }
+
+  .am-adult-tag {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'check name'
+      'range output';
+    gap: 6px 8px;
+    padding: 10px 0;
+  }
+
+  .am-adult-tag input[type='checkbox'] {
+    grid-area: check;
+    justify-self: start;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+  }
+
+  .am-adult-tag__name {
+    grid-area: name;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 13px;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .am-adult-tag__range {
+    grid-area: range;
+    min-width: 0;
+  }
+
+  .am-adult-tag output {
+    grid-area: output;
+    min-width: 42px;
+    font-size: 12px;
+  }
+}

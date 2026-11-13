@@ -97,6 +97,20 @@
   transition: color var(--am-fast) var(--am-ease);
 }
 
+/* The adult heading owns a small inline icon; never let the SVG inherit the
+   heading's line box and stretch to the full settings sheet. */
+.am-adult-heading {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.am-adult-heading .am-setmark {
+  flex: none;
+  width: 24px;
+  height: 24px;
+}
+
 .am-door:hover:where(:not(.am-lite *)) .am-door__mark {
   color: var(--am-accent);
 }
@@ -295,6 +309,50 @@
 .am-skins__name {
   font-size: 12.5px;
   font-weight: 600;
+}
+
+/* Family switcher is visible in every palette; Lain only overrides its colors. */
+.am-family-heading {
+  margin: 4px 0 -4px;
+  font-size: 14px;
+  color: var(--am-text);
+}
+
+.am-family {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 6px;
+  background: var(--am-fill-1);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-l);
+}
+
+.am-family__btn {
+  min-height: 48px;
+  padding: 0 18px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--am-dim);
+  cursor: pointer;
+  background: var(--am-fill-2);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-m);
+}
+
+.am-family__btn:focus-visible,
+.am-family__btn:hover:where(:not(.am-lite *)) {
+  color: var(--am-text);
+  background: var(--am-hover);
+  border-color: rgb(var(--am-accent-rgb) / 0.5);
+}
+
+.am-family__btn--on {
+  color: var(--am-text);
+  background: var(--am-accent-soft);
+  border-color: rgb(var(--am-accent-rgb) / 0.65);
+  box-shadow: var(--am-sh-ring);
 }
 
 /* Вопрос перед переносом списка: отделён рамкой, но без крика.
@@ -779,3 +837,99 @@ code {
 .am-adult-heading{margin:16px 0 0;font-size:14px;font-weight:750;color:var(--am-text)}.am-adult-mode__chip{position:relative;overflow:hidden;color:#fff!important;text-shadow:0 1px 1px rgb(0 0 0 / 0.28)}.am-adult-mode__chip--muted{color:#f8fafc!important;background:#667085;border-color:#98a2b3;text-decoration:none}.am-adult-mode__chip--muted::after{position:absolute;inset:-50% -12%;content:'';background:linear-gradient(135deg,transparent 47%,#f8fafc 48%,#f8fafc 53%,transparent 54%);pointer-events:none}.am-adult-mode__chip--blue{color:#fff!important;background:#2785f5}.am-adult-mode__chip--red{color:#fff!important;background:#e94b58}.am-adult-chip{color:#fff!important;text-shadow:0 1px 1px rgb(0 0 0 / 0.28)}.am-adult-chip--blue{background:#2785f5}.am-adult-chip--red{background:#e94b58}
 
 .am-adult-heading{margin-top:0!important;margin-bottom:0!important;font-size:inherit!important}.am-adult-heading .am-tile-mark,.am-adult-heading .am-setmark{color:var(--am-faint)}
+
+/* TV adult-tag editor: every value is a real D-pad target. The old native range
+   was too small to aim at from a sofa and did not expose a reliable step. */
+.am-adult-tag__toggle,
+.am-adult-tag__step {
+  min-height: 46px;
+  padding: 8px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--am-dim);
+  cursor: pointer;
+  background: var(--am-fill-2);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-m);
+}
+
+.am-adult-tag__toggle {
+  min-width: 126px;
+}
+
+.am-adult-tag__toggle--on {
+  color: var(--am-text);
+  background: var(--am-accent-soft);
+  border-color: rgb(var(--am-accent-rgb) / 0.65);
+}
+
+.am-adult-tag__step {
+  display: grid;
+  width: 48px;
+  padding: 0;
+  place-items: center;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.am-adult-tag__toggle:hover,
+.am-adult-tag__toggle:focus-visible,
+.am-adult-tag__step:hover,
+.am-adult-tag__step:focus-visible {
+  color: var(--am-text);
+  background: var(--am-hover);
+  border-color: rgb(var(--am-accent-rgb) / 0.7);
+}
+
+.am-adult-tag__threshold-label {
+  color: var(--am-faint);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.am-adult-tag__value {
+  min-width: 52px;
+  color: var(--am-text);
+  font-size: 16px;
+  font-weight: 750;
+  text-align: center;
+}
+
+/* The list itself remains a short viewport; D-pad focus moves to the next row
+   and the existing spatial navigator scrolls this overflow container into view. */
+.am-lite .am-adult-options {
+  max-height: min(46vh, 430px);
+  padding: 14px;
+  gap: 8px;
+  scrollbar-width: auto;
+}
+
+.am-lite .am-adult-tag {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(126px, auto) auto 48px 54px 48px;
+  gap: 10px;
+  align-items: center;
+  min-height: 58px;
+  padding: 8px 0;
+}
+
+.am-lite .am-adult-tag__name {
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.am-lite .am-adult-tag__toggle,
+.am-lite .am-adult-tag__step {
+  min-height: 52px;
+}
+
+@media (max-width: 760px) {
+  .am-lite .am-adult-tag {
+    grid-template-columns: minmax(130px, 1fr) minmax(112px, auto) 42px 52px 42px;
+  }
+
+  .am-lite .am-adult-tag__threshold-label {
+    display: none;
+  }
+}

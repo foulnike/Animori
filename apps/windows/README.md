@@ -6,7 +6,7 @@
 
 **Настольный клиент [AniList](https://anilist.co) для Windows со своим интерфейсом: списки, поиск, страницы с названиями и студий, встроенный плеер. Всё на русском, без браузера и менеджера скриптов.**
 
-[![Версия](https://img.shields.io/badge/%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%8F-3.1.2-02A9FF?style=flat-square&labelColor=0B1622)](https://github.com/foulnike/Animori/releases/latest)
+[![Версия](https://img.shields.io/badge/%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%8F-3.2.0-02A9FF?style=flat-square&labelColor=0B1622)](https://github.com/foulnike/Animori/releases/latest)
 [![Лицензия](https://img.shields.io/badge/%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-MIT-02A9FF?style=flat-square&labelColor=0B1622)](../../LICENSE)
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
@@ -35,7 +35,7 @@ AniMori — неофициальный проект, он не связан с �
 
 ## Состояние
 
-Текущая версия — 3.1.2. В разделе [Releases](https://github.com/foulnike/Animori/releases) есть установщик, портативный архив и манифест обновлений.
+Текущая версия — 3.2.0. В разделе [Releases](https://github.com/foulnike/Animori/releases) есть установщик, портативный архив и манифест обновлений.
 
 > [!IMPORTANT]
 > **Портативному архиву нужен WebView2 Runtime.** Установщик тянет его сам, а
@@ -120,7 +120,7 @@ npm test               # тесты с заглушкой вместо мост�
 
 ## Выпуск
 
-Релиз запускается тегом вида `windows-v3.1.2`. Сборка на `windows-latest` сверяет номер версии в теге с `package.json`, компилирует Rust, собирает установщик, подписывает обновление и публикует рядом `latest.json`. Описание релиза берётся из верхнего раздела `CHANGELOG.md`.
+Релиз запускается тегом вида `windows-v3.2.0`. Сборка на `windows-latest` сверяет номер версии в теге с `package.json`, компилирует Rust, собирает установщик, подписывает обновление и публикует рядом `latest.json`. Описание релиза берётся из верхнего раздела `CHANGELOG.md`.
 
 ## Документация
 

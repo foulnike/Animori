@@ -17,7 +17,7 @@ on:
       tag:
         description: 'Тег выпуска'
         required: true
-        default: 'windows-v3.1.2'
+        default: 'windows-v3.2.0'
       dry:
         description: 'Пробный прогон: собрать и подписать, но релиз не публиковать'
         type: boolean

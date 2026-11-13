@@ -1,6 +1,6 @@
 [package]
 name = "animori"
-version = "3.1.2"
+version = "3.2.0"
 description = "AniMori — Toolkit for AniList, shell for Android TV"
 authors = ["foulnike"]
 license = "MIT"
@@ -27,7 +27,7 @@ tauri-plugin-log = "2"
 # Плагин по умолчанию выбрасывает Referer, потому что спецификация fetch держит его запрещённым.
 # Kodik без него не работает: страница серии отдаёт заглушку без подписей.
 tauri-plugin-http = { version = "2", default-features = false, features = [
-  "rustls-tls-native-roots",
+  "rustls-tls",
   "system-proxy",
   "http2",
   "charset",
