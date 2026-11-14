@@ -61,7 +61,6 @@ const KEPT_IN_SYNC = [
   'src-tauri/cloud.rs',
   'src-tauri/files.rs',
   'src-tauri/main.rs',
-  'src-tauri/net.rs',
   'src-tauri/secrets.rs',
   'src-tauri/storage.rs',
   'star.ts',
