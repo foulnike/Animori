@@ -113,6 +113,7 @@ interface PersonDetails {
   japanese?: string | null
   russian?: string | null
   description?: string | null
+  description_html?: string | null
   url?: string | null
   animes?: Array<{ id?: number } | null>
   mangas?: Array<{ id?: number } | null>
@@ -312,7 +313,7 @@ export async function fetchShikiPersonREST(
               name: detailsRes.name ?? item.name ?? null,
               japanese: detailsRes.japanese ?? item.japanese ?? null,
               russian: detailsRes.russian ?? item.russian ?? null,
-              description: detailsRes.description ?? null,
+              description: detailsRes.description_html ?? detailsRes.description ?? null,
               url: detailsRes.url ?? null,
               domain,
             },
@@ -536,7 +537,7 @@ export async function fetchShikiPersonDetails(
         name: d.name ?? null,
         japanese: d.japanese ?? null,
         russian: d.russian ?? null,
-        description: d.description ?? null,
+        description: d.description_html ?? d.description ?? null,
         url: d.url ?? null,
         domain,
       }

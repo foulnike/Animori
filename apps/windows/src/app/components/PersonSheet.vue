@@ -5,6 +5,7 @@ import { computed, onBeforeUnmount, onMounted, ref, shallowReactive, watch } fro
 import {
   fetchCharacterCard,
   fetchStaffCard,
+  fetchStaffCharacters,
   type CharacterCard,
   type PersonTarget,
   type StaffCard,
@@ -41,6 +42,13 @@ const WORK_CHUNK = 10
 
 /** Сэйю из карточки персонажа. */
 type VoiceActor = NonNullable<CharacterCard['media']>['edges'][number]['voiceActors'][number]
+type Tab = 'desc' | 'works' | 'characters' | 'voices'
+const TAB_WORDS: Record<Tab, string> = {
+  desc: 'Описание',
+  works: 'Работы',
+  characters: 'Персонажи',
+  voices: 'Голоса',
+}
 
 /** Кто показан сейчас: из окна персонажа можно шагнуть в карточку сэйю. */
 const current = ref<PersonTarget>(props.start)
@@ -55,6 +63,7 @@ const charCard = ref<CharacterCard | null>(null)
 const staffCard = ref<StaffCard | null>(null)
 const busy = ref(true)
 const expanded = ref(false)
+const tab = ref<Tab>('desc')
 
 /** Карточка не доехала даже с повтором: прежде это выглядело как «карточки нет», лечила перезагрузка. */
 const cardFailed = ref(false)
@@ -151,6 +160,35 @@ function shownWorks(): readonly StaffWork[] {
 /** Название работы: русское, когда фон уже добыл, иначе как пришло. */
 function workName(work: StaffWork): string {
   return ruWorks.get(work.mediaId) ?? work.name
+}
+
+function staffCharacters(): StaffCard['characters'] {
+  return current.value.kind === 'staff' ? (staffCard.value?.characters ?? []) : []
+}
+
+function characterName(item: StaffCard['characters'][number]): string {
+  return item.node.name.full
+}
+
+function characterWork(item: StaffCard['characters'][number]): string {
+  const media = item.media[0]
+  return media?.title.romaji ?? media?.title.english ?? ''
+}
+
+function shownTabs(): Tab[] {
+  const out: Tab[] = []
+  if (rawDesc() !== '') out.push('desc')
+  if (current.value.kind === 'staff') {
+    if (staffCharacters().length > 0) out.push('characters')
+    if (shownWorks().length > 0) out.push('works')
+  }
+  if (current.value.kind === 'character' && voiceActors().length > 0) out.push('voices')
+  return out
+}
+
+function shownTab(): Tab {
+  const tabs = shownTabs()
+  return tabs.includes(tab.value) ? tab.value : (tabs[0] ?? 'desc')
 }
 
 function fullName(): string {
@@ -319,6 +357,7 @@ async function load(target: PersonTarget): Promise<void> {
   ruWorks.clear()
   ruVoices.clear()
   expanded.value = false
+  tab.value = 'desc'
   busy.value = true
   cardFailed.value = false
   ruFailed.value = false
@@ -353,6 +392,13 @@ async function load(target: PersonTarget): Promise<void> {
     const ask = await fetchStaffCard(target.personId)
     if (!alive || mine !== run) return
     staffCard.value = ask.card
+    if (staffCard.value && staffCard.value.characters.length === 0) {
+      try {
+        staffCard.value.characters = await fetchStaffCharacters(staffCard.value.name.full)
+      } catch (e) {
+        Logger('WARN', 'Карточка персоны: персонажи сэйю не доехали', e)
+      }
+    }
     cardFailed.value = ask.state === 'fail'
   }
   if (!alive || mine !== run) return
@@ -385,6 +431,19 @@ function openVoice(va: VoiceActor): void {
     native: va.name.native,
     image: va.image?.large ?? va.image?.medium ?? null,
     siteUrl: va.siteUrl,
+  })
+}
+
+function openCharacter(item: StaffCard['characters'][number]): void {
+  history.push(current.value)
+  depth.value = history.length
+  void load({
+    kind: 'character',
+    personId: item.node.id,
+    name: item.node.name.full,
+    native: item.node.name.native,
+    image: item.node.image?.large ?? item.node.image?.medium ?? null,
+    siteUrl: item.node.siteUrl,
   })
 }
 
@@ -552,8 +611,23 @@ onBeforeUnmount(() => {
             <button class="am-btn am-btn--ghost" type="button" @click="retry">Повторить</button>
           </div>
 
+          <div v-if="!busy && shownTabs().length > 1" class="am-ps-tabs" role="tablist">
+            <button
+              v-for="one in shownTabs()"
+              :key="one"
+              class="am-ps-tab"
+              :class="{ 'am-ps-tab--on': shownTab() === one }"
+              type="button"
+              role="tab"
+              :aria-selected="shownTab() === one"
+              @click="tab = one"
+            >
+              {{ TAB_WORDS[one] }}
+            </button>
+          </div>
+
           <div
-            v-if="rawDesc()"
+            v-if="shownTab() === 'desc' && rawDesc()"
             class="am-ps-desc"
             :class="{ 'am-ps-desc--fold': longDesc() && !expanded }"
           >
@@ -562,7 +636,7 @@ onBeforeUnmount(() => {
             <RichText :text="rawDesc()" @inside="emit('close')" />
           </div>
           <button
-            v-if="longDesc() && !expanded"
+            v-if="shownTab() === 'desc' && longDesc() && !expanded"
             class="am-btn am-btn--ghost am-ps-wide"
             type="button"
             @click="expanded = true"
@@ -572,7 +646,7 @@ onBeforeUnmount(() => {
 
           <!-- Откуда взят текст и где лежит сама карточка. Без хвоста текст выглядит нашим,
                а по источнику это не так: описание и имя приходят с Шикимори. -->
-          <p v-if="descLinks.length > 0" class="am-ps-tail">
+          <p v-if="shownTab() === 'desc' && descLinks.length > 0" class="am-ps-tail">
             <template v-for="(link, at) in descLinks" :key="link.key">
               <span v-if="at > 0" class="am-ps-tail__dot" aria-hidden="true">·</span>
               <a
@@ -586,8 +660,9 @@ onBeforeUnmount(() => {
           </p>
 
           <!-- Работы (только для авторов): полка постеров с переходом внутрь -->
-          <template v-if="current.kind === 'staff' && shownWorks().length">
-            <h4 class="am-ps-sub">Работы</h4>
+          <template
+            v-if="shownTab() === 'works' && current.kind === 'staff' && shownWorks().length"
+          >
             <div class="am-rail am-ps-works">
               <button
                 v-for="work in shownWorks()"
@@ -614,9 +689,34 @@ onBeforeUnmount(() => {
             </div>
           </template>
 
+          <div v-else-if="shownTab() === 'characters'" class="am-ps-voices">
+            <button
+              v-for="item in staffCharacters()"
+              :key="item.node.id"
+              class="am-ps-va"
+              type="button"
+              @click="openCharacter(item)"
+            >
+              <img
+                v-if="item.node.image?.medium || item.node.image?.large"
+                class="am-ps-va__art"
+                :src="item.node.image?.medium ?? item.node.image?.large ?? undefined"
+                :alt="characterName(item)"
+              />
+              <span v-else class="am-ps-va__art am-ps-va__art--empty" aria-hidden="true">{{
+                characterName(item).slice(0, 1)
+              }}</span>
+              <span class="am-ps-va__name">{{ characterName(item) }}</span>
+              <small v-if="characterWork(item)" class="am-ps-va__role">{{
+                characterWork(item)
+              }}</small>
+            </button>
+          </div>
+
           <!-- Сэйю (только для персонажей): строка кликабельна, окно то же -->
-          <template v-if="current.kind === 'character' && voiceActors().length">
-            <h4 class="am-ps-sub">Голоса</h4>
+          <template
+            v-if="shownTab() === 'voices' && current.kind === 'character' && voiceActors().length"
+          >
             <div class="am-ps-voices">
               <button
                 v-for="va in voiceActors()"
@@ -714,6 +814,36 @@ onBeforeUnmount(() => {
   gap: 12px;
   padding-right: 4px;
   overflow-y: auto;
+}
+
+.am-ps-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.am-ps-tab {
+  height: var(--am-ctl);
+  padding: 0 15px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--am-dim);
+  cursor: pointer;
+  background: var(--am-fill-1);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-cap);
+}
+
+.am-ps-tab:hover,
+.am-ps-tab:focus-visible {
+  color: var(--am-text);
+  background: var(--am-fill-2);
+}
+
+.am-ps-tab--on {
+  color: var(--am-text);
+  background: rgb(var(--am-accent-rgb) / 0.16);
+  border-color: rgb(var(--am-accent-rgb) / 0.55);
 }
 
 /* Управление окном одной группой в правом углу шапки:
@@ -1098,6 +1228,15 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   transition: color var(--am-fast) var(--am-ease);
+}
+
+.am-ps-va__role {
+  margin-left: auto;
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--am-faint);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Стрелка говорит, что строка ведёт дальше: без неё клик не угадать. Свой кружок не для красоты:

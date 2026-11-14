@@ -43,7 +43,7 @@ export async function resolveTitle(malId: number | null): Promise<ResolvedTitle 
   const rawScore = Number(data.score)
   return {
     russian,
-    description: textOrNull(data.description),
+    description: textOrNull(data.description_html ?? data.description),
     url: 'https://' + (shiki.domain ?? '') + (data.url ?? ''),
     sourceName: 'Shikimori',
     score: Number.isFinite(rawScore) && rawScore > 0 ? rawScore : null,

@@ -17,8 +17,8 @@ import type { MediaCacheRecord } from './types'
 /** Чем человек является в карточке тайтла: героем или автором. */
 export type PersonKind = 'character' | 'staff'
 
-/** Префиксы склада; цифра — версия формы (CHR3/STF4 — описание с разметкой, хранение бессрочное). */
-const KEY_PREFIX: Record<PersonKind, string> = { character: 'CHR3_', staff: 'STF4_' }
+/** Префиксы склада; цифра — версия формы (описание теперь сохраняет HTML-ссылки Shikimori). */
+const KEY_PREFIX: Record<PersonKind, string> = { character: 'CHR4_', staff: 'STF5_' }
 
 /** Префикс отказов отдельным ключом: карточки читаются на каждый показ, мешать в них записи без имени нельзя. */
 const MISS_PREFIX = 'NOPERSON1_'

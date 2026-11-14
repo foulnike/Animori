@@ -236,6 +236,24 @@
   --am-scroll-on: #2b3646;
 }
 
+/* The family selector is a neutral control in the Standard family. In AMOLED
+   its panel must remain black so it does not read as a bright capsule. */
+html[data-am-family='standard'][data-am-skin='amoled'] .am-family {
+  background: #000;
+  border-color: rgb(255 255 255 / 0.14);
+}
+
+html[data-am-family='standard'][data-am-skin='amoled'] .am-family__btn {
+  color: var(--am-dim);
+  background: #000;
+}
+
+html[data-am-family='standard'][data-am-skin='amoled'] .am-family__btn--on {
+  color: var(--am-text);
+  background: rgb(255 255 255 / 0.09);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.16);
+}
+
 * {
   box-sizing: border-box;
 }

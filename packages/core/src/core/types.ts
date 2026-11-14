@@ -123,6 +123,7 @@ export interface ShikiMedia {
   /** Зеркало Shikimori, с которого пришёл ответ. */
   domain?: string | null
   description?: string | null
+  description_html?: string | null
   /** Шкала 0..10. */
   score?: number | null
   /** Гистограмма оценок. */

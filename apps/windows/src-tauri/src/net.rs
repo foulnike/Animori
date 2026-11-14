@@ -377,6 +377,8 @@ const ALLOWED_EXTERNAL: &[&str] = &[
     "https://graphql.anilist.co/*",
     "https://shikimori.one/*",
     "https://shikimori.me/*",
+    "https://shikimori.io/*",
+    "https://shikimori.rip/*",
     "https://*.shikimori.org/*",
     "https://moe.shikimori.one/*",
     "https://desu.shikimori.one/*",
@@ -513,6 +515,8 @@ mod tests {
     fn external_https_allowed_host() {
         assert!(validate_external_url("https://github.com/foulnike/Animori").is_ok());
         assert!(validate_external_url("https://anilist.co/user/test").is_ok());
+        assert!(validate_external_url("https://shikimori.io/animes/5114").is_ok());
+        assert!(validate_external_url("https://shikimori.rip/characters/1").is_ok());
     }
 
     #[test]

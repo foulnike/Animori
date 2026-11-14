@@ -111,9 +111,10 @@ function textOrNull(value: string | null): string | null {
   return clean === '' ? null : clean
 }
 
-/** Похоже ли на адрес наружу. */
+/** Похоже ли на внешний веб-адрес. Только HTTPS: локальные HTTP-ссылки,
+ * которые некоторые источники вставляют в markdown, должны остаться текстом. */
 function isWeb(url: string): boolean {
-  return /^https?:\/\//i.test(url)
+  return /^https:\/\//i.test(url)
 }
 
 /** Номер MAL из адреса тайтла: /animes/5114-… и /animes/z5114-…. */
@@ -171,6 +172,14 @@ function entityAim(path: string, arg: string | null): RichAim | null {
   return who === undefined ? { kind: 'web', url } : { kind: 'person', who, shikiId: id, url }
 }
 
+/** Подпись самозакрывающейся сущности: Shikimori ставит её после ID,
+ * например `[character=299240 ди]`. Слаг после дефиса подписью не является. */
+function entityLabel(arg: string | null): string {
+  const value = (arg ?? '').trim()
+  const match = /^\d+(?:-[^\s]+)?\s+(.+)$/.exec(value)
+  return match?.[1]?.trim() ?? ''
+}
+
 function newFrame(kind: Frame['kind'], label = '', who: string | null = null): Frame {
   return { kind, label, who, blocks: [], items: [] }
 }
@@ -179,6 +188,10 @@ function newFrame(kind: Frame['kind'], label = '', who: string | null = null): F
 function toBbcode(text: string): string {
   return (
     text
+      // Shikimori REST can return rich HTML while the plain field loses all
+      // character links. Preserve href targets and visible labels before
+      // removing the remaining HTML.
+      .replace(/<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, '[url=$1]$2[/url]')
       // Переносы AniList приезжают тегом даже при asHtml: false.
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<(?:i|em)>/gi, '[i]')
@@ -193,7 +206,8 @@ function toBbcode(text: string): string {
       .replace(/<[^>]+>/g, '')
       // Спойлер AniList: ~!скрытое!~
       .replace(/~!([\s\S]*?)!~/g, '[spoiler]$1[/spoiler]')
-      // Ссылка маркдауном: [подпись](адрес)
+      // Ссылка маркдауном: [подпись](адрес). Декодируем обе схемы, чтобы
+      // служебные http-ссылки не оставались в исходном markdown-виде.
       .replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, '[url=$2]$1[/url]')
       // Картинка AniList: img(адрес) и img250(адрес)
       .replace(/\bimg\d*\((https?:\/\/[^)\s]+)\)/gi, '[img]$1[/img]')
@@ -291,13 +305,13 @@ export function parseRich(raw: string | null | undefined): RichBlock[] {
   }
 
   /** Ссылка без подписи: текст за тегом остаётся текстом, чужой адрес подписывает сам себя. */
-  function bareLink(next: RichAim | null): void {
+  function bareLink(next: RichAim | null, text = ''): void {
     closeLink()
     if (next === null) return
 
     parts.push({
       kind: 'link',
-      text: next.kind === 'web' ? next.url : '',
+      text: text || (next.kind === 'web' ? next.url : ''),
       face: face(),
       aim: next,
     })
@@ -432,7 +446,7 @@ export function parseRich(raw: string | null | undefined): RichBlock[] {
     if (path !== undefined) {
       if (tag.close) closeLink()
       else if (hasPair(tag.name, after)) openLink(entityAim(path, tag.arg))
-      else bareLink(entityAim(path, tag.arg))
+      else bareLink(entityAim(path, tag.arg), entityLabel(tag.arg))
       return
     }
 

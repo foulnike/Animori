@@ -554,6 +554,44 @@ function onReload(): void {
   flex: 1;
 }
 
+/* Family selector remains part of the standard header; Lain only changes its
+   visual tokens in styles/lain.css. */
+.am-family {
+  display: inline-flex;
+  flex: none;
+  gap: 3px;
+  align-items: center;
+  padding: 3px;
+  background: var(--am-fill-1);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-cap);
+}
+
+.am-family__btn {
+  min-width: 96px;
+  min-height: 34px;
+  padding: 0 13px;
+  font: inherit;
+  font-size: 11px;
+  color: var(--am-dim);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: var(--am-r-cap);
+}
+
+.am-family__btn:hover,
+.am-family__btn:focus-visible {
+  color: var(--am-text);
+  background: var(--am-fill-2);
+}
+
+.am-family__btn--on {
+  color: var(--am-text);
+  background: var(--am-fill-3);
+  box-shadow: inset 0 0 0 1px var(--am-line-soft);
+}
+
 /* Переключатель тем: три знака в одной капсуле. Подписи живут в подсказке:
    три слова в шапке шумели бы громче заголовка экрана. */
 .am-skin {

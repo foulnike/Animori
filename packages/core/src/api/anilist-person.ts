@@ -52,6 +52,49 @@ const STAFF_CARD_QUERY = `
       dateOfDeath { year month day }
       homeTown
       siteUrl
+      characters(page: 1, perPage: 24, sort: [ROLE, RELEVANCE, ID]) {
+        edges {
+          role
+          node {
+            id
+            name { full native }
+            image { large medium }
+            siteUrl
+          }
+          media {
+            id
+            title { romaji english }
+            coverImage { medium }
+          }
+        }
+      }
+    }
+  }
+`
+
+const STAFF_CHARACTERS_QUERY = `
+  query ($search: String!) {
+    Page(perPage: 5) {
+      staff(search: $search) {
+        id
+        name { full }
+        characters(page: 1, perPage: 24, sort: [ROLE, RELEVANCE, ID]) {
+          edges {
+            role
+            node {
+              id
+              name { full native }
+              image { large medium }
+              siteUrl
+            }
+            media {
+              id
+              title { romaji english }
+              coverImage { medium }
+            }
+          }
+        }
+      }
     }
   }
 `
@@ -96,6 +139,20 @@ export interface StaffCard {
   dateOfDeath: { year: number | null; month: number | null; day: number | null } | null
   homeTown: string | null
   siteUrl: string
+  characters: Array<{
+    role: string | null
+    node: {
+      id: number
+      name: { full: string; native: string | null }
+      image: { large: string | null; medium: string | null } | null
+      siteUrl: string
+    }
+    media: Array<{
+      id: number
+      title: { romaji: string | null; english: string | null }
+      coverImage: { medium: string | null } | null
+    }>
+  }>
 }
 
 /** Исход вопроса о карточке: `none` — «такого нет», `fail` — запрос не доехал. */
@@ -148,4 +205,25 @@ export async function fetchStaffCard(id: number): Promise<PersonAsk<StaffCard>> 
     Logger('API', `Автор ${id}: ${data?.name.full ?? 'нет данных'}`)
     return data
   })
+}
+
+/** AniList occasionally returns an empty characters connection for a staff ID
+ * that came from another source. Resolve the credits by the displayed name. */
+export async function fetchStaffCharacters(name: string): Promise<StaffCard['characters']> {
+  const search = name.trim()
+  if (search === '') return []
+
+  const reply = await anilistQuery<{
+    Page?: {
+      staff?: Array<{
+        id?: number
+        name?: { full?: string | null } | null
+        characters?: { edges?: StaffCard['characters'] } | null
+      } | null>
+    }
+  }>(STAFF_CHARACTERS_QUERY, { search }, false)
+
+  const candidates = reply.data?.Page?.staff ?? []
+  const exact = candidates.find((item) => item?.name?.full?.toLowerCase() === search.toLowerCase())
+  return exact?.characters?.edges ?? candidates[0]?.characters?.edges ?? []
 }

@@ -37,6 +37,14 @@ describe('разбор описаний', () => {
     expect(link?.aim).toMatchObject({ kind: 'media', malId: 5114 })
   })
 
+  it('сохраняет подпись самозакрывающейся ссылки Shikimori', () => {
+    const blocks = parseRich('Давняя подруга [character=299240 ди] и одна из выживших')
+    const link = links(firstPara(blocks))[0]
+
+    expect(link?.text).toBe('ди')
+    expect(link?.aim).toMatchObject({ kind: 'person', who: 'character', shikiId: 299240 })
+  })
+
   it('спойлер становится своим блоком с заголовком', () => {
     const blocks = parseRich('До [spoiler=Финал]он умирает[/spoiler] после')
     const spoiler = blocks[1]
@@ -53,6 +61,25 @@ describe('разбор описаний', () => {
     expect(blocks.map((block) => block.kind)).toEqual(['para', 'spoiler', 'para'])
     expect(line(firstPara(blocks))).toBe('Строка\nважно и')
     expect(tail?.kind === 'para' ? line(tail.parts) : '').toBe('и подпись')
+  })
+
+  it('не показывает служебную HTTP-ссылку WebView как markdown', () => {
+    const blocks = parseRich('Давняя подруга [персонаж](http://tauri.localhost/#) и одна из выживших')
+    const parts = firstPara(blocks)
+
+    expect(line(parts)).toBe('Давняя подруга персонаж и одна из выживших')
+    expect(links(parts)).toHaveLength(0)
+  })
+
+  it('восстанавливает ссылки персонажей из HTML-описания Shikimori', () => {
+    const blocks = parseRich(
+      '<div>Вот <a href="/characters/10421-mai-minakami">Май Минаками</a> и <a href="https://shikimori.io/characters/41055-hakase-shinonome">Профессор</a>.</div>',
+    )
+    const found = links(firstPara(blocks))
+
+    expect(found.map((link) => link.text)).toEqual(['Май Минаками', 'Профессор'])
+    expect(found[0]?.aim).toMatchObject({ kind: 'person', who: 'character', shikiId: 10421 })
+    expect(found[1]?.aim).toMatchObject({ kind: 'person', who: 'character', shikiId: 41055 })
   })
 
   it('список собирается пунктами', () => {
