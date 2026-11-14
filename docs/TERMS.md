@@ -1,6 +1,6 @@
 # Условия использования
 
-**Редакция от 11 ноября 2026 года.**
+**Редакция от 14 ноября 2026 года.**
 
 ## Русская версия
 
@@ -68,9 +68,12 @@ foulnike@protonmail.com. В обращении укажите материал, 
 
 ### 8. Возрастные ограничения
 
-Материалы возрастного ограничения по умолчанию скрыты. Их отображение включается
-настройкой «Взрослое содержимое». Использование этой настройки возлагает на
-пользователя ответственность за соответствие законодательству его юрисдикции.
+Материалы возрастного ограничения по умолчанию скрыты. В настройке «Взрослое»
+доступны режимы «Скрыто», «Частично» и «Показано». Частичный режим скрывает
+красные категории и позволяет задавать пороги для регулируемых тегов. Переход
+из полной фильтрации требует проверки даты рождения; дата не сохраняется.
+Использование режимов, показывающих взрослые материалы, возлагает на пользователя
+ответственность за соответствие законодательству его юрисдикции.
 
 ### 9. Применимое право
 
@@ -143,9 +146,11 @@ of third-party services or third-party materials.
 
 ### 8. Age restrictions
 
-Age-restricted materials are hidden by default. Their display is enabled by the
-"Adult content" setting. Enabling this setting makes the user responsible for
-compliance with the law of their jurisdiction.
+Age-restricted materials are hidden by default. The "Adult" setting provides
+"Hidden", "Partial" and "Shown" modes. Partial mode hides red categories and
+allows thresholds for regulated tags. Leaving full filtering requires an age check;
+the date is not stored. Using modes that show adult material makes the user
+responsible for compliance with the law of their jurisdiction.
 
 ### 9. Governing law
 

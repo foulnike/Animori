@@ -4,6 +4,12 @@
 Оболочка — Tauri 2 (Rust), интерфейс — Vue 3, общее ядро — TypeScript без DOM.
 Проект неофициальный и с командой AniList не связан.
 
+Текущая версия — `3.2.0`. APK выпускаются с тегом `android-v3.2.0` для ABI
+`arm64` и `armv7`.
+
+В настройках доступны семейства Standard и Lain с тёмной, светлой и AMOLED-палитрами,
+а также режимы фильтрации 18+ с индивидуальными порогами тегов.
+
 Каталог — `apps/android` в общем репозитории `foulnike/Animori`.
 
 ## Команды
@@ -14,7 +20,7 @@ npm run build:app       # проверка типов и сборка интер
 npm run typecheck:all   # ядро отдельно, затем всё вместе
 npm test                # vitest, проверки чистых модулей ядра
 npm run tauri -- android dev            # запуск на подключённом устройстве
-npm run tauri -- android build -t arm64 # APK
+npm run tauri -- android build -t aarch64 # APK arm64
 ```
 
 ## Отладка на устройстве

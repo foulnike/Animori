@@ -1,6 +1,6 @@
 # Политика обработки персональных данных
 
-**Редакция от 11 ноября 2026 года.**
+**Редакция от 14 ноября 2026 года.**
 
 ## Русская версия
 
@@ -23,9 +23,9 @@ Issues публичны: если обращение касается ваших
   Аналитики и телеметрии нет.
 - **Данные хранятся на вашем устройстве.**
 - **Программа сама обращается к внешним сервисам**, когда вы пользуетесь их
-  функциями: каталогу, видео, облаку. Эти запросы идут с вашего устройства
-  напрямую к сервису, без посредников. Что сервис делает с полученным, решает он
-  сам по своей политике конфиденциальности.
+функциями: каталогу, видео, облаку. Эти запросы идут с вашего устройства к сервису;
+для запросов приложения может использоваться настроенный вами прокси. Что сервис
+делает с полученным, решает он сам по своей политике конфиденциальности.
 
 ### 3. Что хранится на устройстве
 
@@ -56,7 +56,7 @@ Issues публичны: если обращение касается ваших
 | AniList (`graphql.anilist.co`, `s4.anilist.co`, вход на `anilist.co`) | каталог, расписание; вход в аккаунт по вашему желанию | при входе — ваш токен. Программа только читает список и ничего не меняет в аккаунте |
 | Shikimori (`shikimori.io`, `shikimori.rip`) | русские названия и описания; перенос списка | при переносе — введённый вами ник |
 | Kodik, Anilibria и их сети доставки (`kodik-api.com`, `kodikplayer.com`, `*.kodik-cdn.com`, `*.solodcdn.com`, `i.kodikres.com`, `anilibria.top`) | поиск и воспроизведение видео | номер тайтла, который вы открыли |
-| AnimeThemes (`api.animethemes.moe`, `*.animethemes.moe`) | опенинги и эндинги; только настольное приложение | номер тайтла |
+| AnimeThemes (`api.animethemes.moe`, `*.animethemes.moe`) | опенинги и эндинги; функция доступна в настольном интерфейсе | номер тайтла |
 | YouTube, Dailymotion | трейлер, если вы его открыли; не на ТВ | — |
 | Яндекс Диск (`cloud-api.yandex.net`, `*.disk.yandex.*`, `*.dst.yandex.*`) | сохранение и загрузка копии списка по вашей команде | ваш токен и файл копии списка |
 | GitHub (`github.com`, `api.github.com`, `raw.githubusercontent.com`, `objects.githubusercontent.com`) | проверка обновлений, загрузка датасета названий | — |
@@ -139,7 +139,7 @@ Issues публичны: если обращение касается ваших
 
 ## English version
 
-**Effective date: November 11, 2026.**
+**Effective date: November 14, 2026.**
 
 ### 1. Author and contact
 
@@ -160,9 +160,9 @@ public: for requests concerning your own data, please use email.
   There is no analytics or telemetry.
 - **Your data is stored on your device.**
 - **The application contacts third-party services itself** when you use their
-  features: the catalog, video, cloud backup. These requests go from your device
-  directly to the service, with no intermediary. What the service does with what it
-  receives is governed by its own privacy policy.
+features: the catalog, video, cloud backup. These requests go from your device to
+the service; application requests may use a proxy configured by you. What the
+service does with what it receives is governed by its own privacy policy.
 
 ### 3. Data stored on the device
 
@@ -193,7 +193,7 @@ only the application's own requests do, while images and video load directly.
 | AniList (`graphql.anilist.co`, `s4.anilist.co`, sign-in at `anilist.co`) | catalog, schedule; sign-in if you choose to | after sign-in, your token. The application only reads your list and never changes your account |
 | Shikimori (`shikimori.io`, `shikimori.rip`) | Russian titles and descriptions; list import | during import, the nickname you enter |
 | Kodik, Anilibria and their delivery networks (`kodik-api.com`, `kodikplayer.com`, `*.kodik-cdn.com`, `*.solodcdn.com`, `i.kodikres.com`, `anilibria.top`) | finding and playing video | the ID of the title you opened |
-| AnimeThemes (`api.animethemes.moe`, `*.animethemes.moe`) | openings and endings; desktop application only | the title ID |
+| AnimeThemes (`api.animethemes.moe`, `*.animethemes.moe`) | openings and endings; available in the desktop interface | the title ID |
 | YouTube, Dailymotion | a trailer, if you open one; not on TV | — |
 | Yandex Disk (`cloud-api.yandex.net`, `*.disk.yandex.*`, `*.dst.yandex.*`) | saving and loading a copy of your list on your command | your token and the list file |
 | GitHub (`github.com`, `api.github.com`, `raw.githubusercontent.com`, `objects.githubusercontent.com`) | update checks, title dataset download | — |

@@ -20,7 +20,7 @@ npm run build:app       # проверка типов и сборка интер
 npm run typecheck:all   # ядро отдельно, затем всё вместе
 npm test                # vitest, проверки чистых модулей ядра
 npm run tauri -- android dev            # запуск на подключённом устройстве
-npm run tauri -- android build -t arm64 # APK
+npm run tauri -- android build -t aarch64 # APK arm64
 ```
 
 `tauri android dev` горячей подстановки не даёт: `beforeDevCommand` собирает `dist/app` статически, и правки доходят только с перезапуском.

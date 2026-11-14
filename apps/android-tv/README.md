@@ -6,8 +6,8 @@
 
 **Плеер, русские названия и списки AniList на приставке. Без рекламы, телеметрии и своих серверов.**
 
-[![Версия](https://img.shields.io/badge/%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%8F-3.2.0-02A9FF?style=flat-square&labelColor=0B1622)](https://github.com/foulnike/Animori/releases/latest)
-[![Загрузка](https://img.shields.io/badge/APK-3.2.0-02A9FF?style=flat-square&labelColor=0B1622)](https://github.com/foulnike/Animori/releases/latest)
+[![Версия](https://img.shields.io/badge/%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%8F-3.2.0-02A9FF?style=flat-square&labelColor=0B1622)](https://github.com/foulnike/Animori/releases/tag/android-tv-v3.2.0)
+[![Загрузка](https://img.shields.io/badge/APK-3.2.0-02A9FF?style=flat-square&labelColor=0B1622)](https://github.com/foulnike/Animori/releases/tag/android-tv-v3.2.0)
 [![Лицензия](https://img.shields.io/badge/%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-MIT-02A9FF?style=flat-square&labelColor=0B1622)](../../LICENSE)
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
@@ -48,7 +48,7 @@
 
 ## Установка
 
-Файл — на [странице выпусков](https://github.com/foulnike/Animori/releases/latest):
+Файл — на [странице выпуска Android TV](https://github.com/foulnike/Animori/releases/tag/android-tv-v3.2.0):
 `AniMori_3.2.0_armv7.apk` для 32-разрядных приставок, `AniMori_3.2.0_arm64.apk`
 для 64-разрядных. Разрядность — `adb shell getprop ro.product.cpu.abi`.
 
@@ -81,10 +81,11 @@ Anilibria и Kodik. История помнит, где вы остановил�
 выхода: что и когда выйдет у того, что вы смотрите. Поиск — по названиям,
 персонажам и персоналу, тоже на русском.
 
-**Настроить под себя.** Темы и акцент, источник русских названий, прокси для
-AniList с живой проверкой, обновление по кнопке в меню. Входа в AniList на
-приставке нет: он открывает страницу в отдельном окне, а на телевизоре это не
-поддерживается.
+**Настроить под себя.** Семейства интерфейса Standard и Lain, каждое с тёмной,
+светлой и AMOLED-палитрой, источник русских названий, прокси для AniList с живой
+проверкой, трёхрежимная фильтрация 18+ с индивидуальными порогами тегов и
+обновление по кнопке в меню. Входа в AniList на приставке нет: он открывает
+страницу в отдельном окне, а на телевизоре это не поддерживается.
 
 **Управлять с пульта.** Фокус ходит стрелками, рельс вынесен отдельной полосой,
 окна поверх экрана закрываются «Назад» — [`docs/dev/android-tv/ARCHITECTURE.md`](../../docs/dev/android-tv/ARCHITECTURE.md), раздел «Интерфейс».
