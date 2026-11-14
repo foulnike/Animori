@@ -6,8 +6,8 @@
 
 **Плеер, русские названия и списки AniList на приставке. Без рекламы, телеметрии и своих серверов.**
 
-[![Версия](https://img.shields.io/badge/%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%8F-3.2.0-02A9FF?style=flat-square&labelColor=0B1622)](https://github.com/foulnike/Animori/releases/tag/android-tv-v3.2.0)
-[![Загрузка](https://img.shields.io/badge/APK-3.2.0-02A9FF?style=flat-square&labelColor=0B1622)](https://github.com/foulnike/Animori/releases/tag/android-tv-v3.2.0)
+[![Версия](https://img.shields.io/badge/%D0%B2%D0%B5%D1%80%D1%81%D0%B8%D1%8F-3.2.1-02A9FF?style=flat-square&labelColor=0B1622)](https://github.com/foulnike/Animori/releases/tag/android-tv-v3.2.1)
+[![Загрузка](https://img.shields.io/badge/APK-3.2.1-02A9FF?style=flat-square&labelColor=0B1622)](https://github.com/foulnike/Animori/releases/tag/android-tv-v3.2.1)
 [![Лицензия](https://img.shields.io/badge/%D0%BB%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-MIT-02A9FF?style=flat-square&labelColor=0B1622)](../../LICENSE)
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)
@@ -48,8 +48,8 @@
 
 ## Установка
 
-Файл — на [странице выпуска Android TV](https://github.com/foulnike/Animori/releases/tag/android-tv-v3.2.0):
-`AniMori_3.2.0_armv7.apk` для 32-разрядных приставок, `AniMori_3.2.0_arm64.apk`
+Файл — на [странице выпуска Android TV](https://github.com/foulnike/Animori/releases/tag/android-tv-v3.2.1):
+`AniMori_3.2.1_armv7.apk` для 32-разрядных приставок, `AniMori_3.2.1_arm64.apk`
 для 64-разрядных. Разрядность — `adb shell getprop ro.product.cpu.abi`.
 
 Ставится как обычное приложение: с флешки проводником или командой

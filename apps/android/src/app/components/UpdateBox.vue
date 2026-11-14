@@ -196,7 +196,9 @@ onBeforeUnmount(() => {
   position: relative;
   display: flex;
   flex-direction: column;
+  min-width: 0;
   width: min(560px, 100%);
+  max-width: 100%;
   max-height: min(640px, 88vh);
   background: var(--am-panel-2);
   border: 1px solid var(--am-line);
@@ -266,6 +268,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
+  min-width: 0;
   gap: 11px;
   min-height: 0;
   padding: 16px 18px;
@@ -292,9 +295,12 @@ onBeforeUnmount(() => {
 
 /* Описание выпуска — как его написали: переносы сохранены, шрифт ровный, без моноширинной сетки. */
 .am-up__notes {
+  min-width: 0;
   padding: 11px 13px;
   color: var(--am-dim);
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   background: var(--am-fill-1);
   border: 1px solid var(--am-line-soft);
   border-radius: var(--am-r-m);
@@ -335,7 +341,8 @@ onBeforeUnmount(() => {
 
   .am-modal__box {
     width: 100%;
-    max-height: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - var(--am-modal-top) - var(--am-modal-bottom));
     overflow: hidden;
   }
 

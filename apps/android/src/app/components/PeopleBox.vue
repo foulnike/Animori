@@ -381,9 +381,11 @@ watch(crew, () => {
 }
 
 @media (max-width: 640px) {
-  /* Свёрнутая сетка прокручивается внутри плитки: показано много, а место занято одно. */
-  .am-crew--capped {
-    max-height: 320px;
+  /* Контейнер всегда вмещает ровно три строки. Раскрытие добавляет остальные
+     карточки в этот же scroll-box и не увеличивает высоту блока. */
+  .am-crew {
+    height: 210px;
+    max-height: 210px;
     overflow-y: auto;
     overscroll-behavior: contain;
   }
