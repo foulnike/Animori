@@ -6,7 +6,7 @@
 
 ### Смотрите аниме и ведите списки — на ПК, ТВ и телефоне
 
-Неофициальный клиент AniList для Windows, Android TV и телефона. Перевод контента — Shikimori.
+Неофициальный клиент AniList для Windows, Android TV и телефона.
 
 [![Лицензия](https://img.shields.io/badge/Лицензия-MIT-02A9FF?style=flat-square&labelColor=0B1622)](LICENSE)
 [![Windows](https://img.shields.io/badge/Windows%2010%2F11-0078D4?style=flat-square&logo=windows&logoColor=white)](apps/windows)
@@ -38,8 +38,8 @@
 
 ## Связь с разработчиком
 
-Почта: foulnike@protonmail.com — вопросы, предложения, обращения правообладателей.
-Ошибки и пожелания можно оставить и в [Issues](https://github.com/foulnike/Animori/issues).
+Почта: foulnike@protonmail.com — вопросы, предложения, обращения.
+Также ошибки и пожелания можно оставить в [Issues](https://github.com/foulnike/Animori/issues).
 
 ---
 
@@ -59,7 +59,7 @@
 <table>
   <tr>
     <td width="50%"><img src="apps/windows/assets/screenshots/lists.jpg" alt="Моё: списки по статусам"><br><sub><b>Список.</b> Хранится на устройстве, открывается без сети.</sub></td>
-    <td width="50%"><img src="apps/windows/assets/screenshots/media.jpg" alt="Карточка тайтла"><br><sub><b>Тайтл.</b> Русское описание, кадры, трейлер, персонажи, опенинги.</sub></td>
+    <td width="50%"><img src="apps/windows/assets/screenshots/media.jpg" alt="Карточка аниме"><br><sub><b>Тайтл.</b> Описание, кадры, трейлер, персонажи, опенинги.</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="apps/windows/assets/screenshots/stats.png" alt="Статистика"><br><sub><b>Статистика.</b> Время просмотра, ваши оценки против оценок сообщества.</sub></td>
@@ -83,7 +83,7 @@
   </tr>
   <tr>
     <td width="50%"><img src="apps/android-tv/screens/preview-lists.png" alt="Мои списки"><br><sub><b>Списки.</b> Статусы, оценки и поиск по своему списку.</sub></td>
-    <td width="50%"><img src="apps/android-tv/screens/preview-card.png" alt="Карточка тайтла"><br><sub><b>Карточка.</b> Русское описание, кадры, персонажи.</sub></td>
+    <td width="50%"><img src="apps/android-tv/screens/preview-card.png" alt="Карточка тайтла"><br><sub><b>Карточка.</b> Описание, кадры, персонажи.</sub></td>
   </tr>
 </table>
 
@@ -100,7 +100,7 @@ APK в [выпусках](https://github.com/foulnike/Animori/releases):
   <tr>
     <td width="33%"><img src="apps/android/screens/phone-home.jpg" alt="Главная: календарь выхода, продолжение просмотра, полки"><br><sub><b>Главная.</b> Календарь выхода, продолжение просмотра, полки.</sub></td>
     <td width="33%"><img src="apps/android/screens/phone-lists.jpg" alt="Моё: списки по статусам"><br><sub><b>Списки.</b> Статусы, оценки и поиск по своему списку.</sub></td>
-    <td width="33%"><img src="apps/android/screens/phone-card.jpg" alt="Карточка тайтла"><br><sub><b>Карточка.</b> Русское описание, кадры, персонажи.</sub></td>
+    <td width="33%"><img src="apps/android/screens/phone-card.jpg" alt="Карточка тайтла"><br><sub><b>Карточка.</b> Описание, кадры, персонажи.</sub></td>
   </tr>
 </table>
 
@@ -149,7 +149,7 @@ cd apps/android   && npm run tauri -- android dev   # туннель adb: см. 
 неофициальный и с командой AniList не связан.
 
 > [!WARNING]
-> В разработке приложения принимали участие нейросети.
+> В разработке приложения использовались нейросети.
 
 ## Правовые документы
 
