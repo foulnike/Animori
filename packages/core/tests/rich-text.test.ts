@@ -82,6 +82,18 @@ describe('разбор описаний', () => {
     expect(found[1]?.aim).toMatchObject({ kind: 'person', who: 'character', shikiId: 41055 })
   })
 
+  it('сохраняет HTML-спойлер Shikimori вместе со ссылками внутри', () => {
+    const blocks = parseRich(
+      '<div class="b-text_with_paragraphs">До<br><div class="b-spoiler_block is-opened"><span>спойлер</span><div>Скрытый текст, <a href="/characters/305248-avida-yang">Авида Ян</a>.</div></div></div>',
+    )
+    const spoiler = blocks.find((block) => block.kind === 'spoiler')
+    const inner = spoiler?.kind === 'spoiler' ? firstPara(spoiler.blocks) : []
+
+    expect(spoiler?.kind === 'spoiler' ? spoiler.label : '').toBe('спойлер')
+    expect(line(inner)).toBe('Скрытый текст, Авида Ян.')
+    expect(links(inner)[0]?.aim).toMatchObject({ kind: 'person', who: 'character', shikiId: 305248 })
+  })
+
   it('список собирается пунктами', () => {
     const blocks = parseRich('[list][*]раз[*]два[/list]')
     const list = blocks[0]

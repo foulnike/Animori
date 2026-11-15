@@ -1,7 +1,7 @@
 {
   "name": "@animori/android",
   "private": true,
-  "version": "3.2.1",
+  "version": "3.2.2",
   "type": "module",
   "description": "AniMori — Toolkit for AniList. Мобильное приложение для Android.",
   "license": "MIT",

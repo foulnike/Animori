@@ -15,7 +15,7 @@ on:
       tag:
         description: 'Тег выпуска'
         required: true
-        default: 'android-tv-v3.2.1'
+        default: 'android-tv-v3.2.2'
       dry:
         description: 'Пробный прогон: собрать и подписать, но релиз не публиковать'
         type: boolean

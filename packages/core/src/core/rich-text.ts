@@ -192,6 +192,12 @@ function toBbcode(text: string): string {
       // character links. Preserve href targets and visible labels before
       // removing the remaining HTML.
       .replace(/<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, '[url=$1]$2[/url]')
+      // Shikimori wraps spoilers in a labeled block instead of BBCode. Convert
+      // the complete block before stripping the surrounding HTML elements.
+      .replace(
+        /<div\b(?=[^>]*\bclass=["'][^"']*\bb-spoiler_block\b[^"']*["'])[^>]*>\s*<span\b[^>]*>([\s\S]*?)<\/span>\s*<div\b[^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi,
+        '[spoiler=$1]$2[/spoiler]',
+      )
       // Переносы AniList приезжают тегом даже при asHtml: false.
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<(?:i|em)>/gi, '[i]')
