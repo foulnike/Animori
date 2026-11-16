@@ -81,7 +81,7 @@ const needsRestart = computed(
 /** SOCKS5 с логином окно не принимает, запросы программы — да; сказать, что сломано не всё. */
 const socksWithAuth = computed(() => kind.value === 'socks5' && login.value.trim().length > 0)
 
-/** Строка состояния теми же словами, что были у карточки в юзерскрипте. */
+/** Строка состояния с теми же статусами, что и карточка. */
 const statusText = computed(() => {
   const s = status.value
   if (s === null) return 'читаем…'

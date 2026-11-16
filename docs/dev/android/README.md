@@ -1,26 +1,9 @@
-# Документация AniMori для телефона
+# Документация Android
 
-Клиент AniList под Android-телефоны, управление пальцем. Оболочка — Tauri 2 (Rust), интерфейс — Vue 3, общее ядро — TypeScript без DOM.
-
-| Файл | О чём |
+| Документ | Содержание |
 | --- | --- |
-| `ARCHITECTURE.md` | слои, мост, экраны, вход, обновление, источники данных |
-| `STORAGE.md` | настройки, снимок, склад, датасет, облако, выгрузка |
-| `CONVENTIONS.md` | правила кода и документации |
+| `ARCHITECTURE.md` | слои, мост, экраны, ввод и выпуск |
+| `STORAGE.md` | список, снимок, кэш, датасет, XML и облако |
 
-Репозиторий один — `foulnike/Animori`, ветка `main`. Общее ядро лежит в `packages/core`; дубликаты файлов с приставкой намерены и контролируются `npm run drift` — см. `docs/dev/DUPLICATES.md`.
-
-Описание продукта и порядок установки — в `README.md` в корне репозитория.
-
-## Команды
-
-```bash
-npm run dev:app         # интерфейс в браузере, без оболочки
-npm run build:app       # проверка типов и сборка интерфейса в dist/app
-npm run typecheck:all   # ядро отдельно, затем всё вместе
-npm test                # vitest, проверки чистых модулей ядра
-npm run tauri -- android dev            # запуск на подключённом устройстве
-npm run tauri -- android build -t aarch64 # APK arm64
-```
-
-`tauri android dev` горячей подстановки не даёт: `beforeDevCommand` собирает `dist/app` статически, и правки доходят только с перезапуском.
+Общее ядро расположено в `packages/core`; исходный код приложения — в `apps/android`.
+Описание продукта: [`apps/android/README.md`](../../../apps/android/README.md). Общие документы: [`docs/README.md`](../../README.md).
