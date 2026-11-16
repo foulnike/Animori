@@ -676,26 +676,28 @@ mod tests {
 
     #[test]
     fn authorize_url_passes_state() {
-        let url = authorize_url("nonce123");
+        let url = authorize_url("test-state");
         assert!(url.starts_with("https://anilist.co/api/v2/oauth/authorize?"));
         assert!(url.contains("client_id=48513"));
         assert!(url.contains("response_type=token"));
-        assert!(url.ends_with("&state=nonce123"));
+        assert!(url.ends_with("&state=test-state"));
     }
 
     #[test]
     fn nonce_lifecycle() {
         // Один тест на весь цикл: NONCE — состояние модуля, другие тесты его не трогают.
         assert!(!state_matches(Some("рано")));
-        remember_nonce("nonce1").expect("мьютекс доступен");
-        assert!(state_matches(Some("nonce1")));
+        let nonce = fresh_nonce().expect("случайность доступна");
+        remember_nonce(&nonce).expect("мьютекс доступен");
+        assert!(state_matches(Some(&nonce)));
         assert!(!state_matches(Some("чужой")));
         assert!(!state_matches(None));
         forget_nonce();
-        assert!(!state_matches(Some("nonce1")));
+        assert!(!state_matches(Some(&nonce)));
     }
 
     #[test]
+    #[allow(clippy::assertions_on_constants)]
     fn fresh_nonce_is_lowercase_hex() {
         let nonce = fresh_nonce().expect("случайность доступна");
         assert_eq!(nonce.len(), 32);
