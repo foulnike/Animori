@@ -355,7 +355,7 @@ jobs:
       # Черновик, в отличие от предварительного, в анонимном списке не виден вовсе,
       # поэтому draft остаётся выключенным.
       - name: Релиз
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3
         with:
           tag_name: ${{ inputs.tag || github.ref_name }}
           # Платформа в названии: оба продукта живут в одном репозитории, и без неё
