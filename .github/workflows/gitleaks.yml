@@ -26,7 +26,7 @@ jobs:
 
       # Закреплено по коммиту, не по тегу — так принято во всех workflow проекта.
       - name: Секреты
-        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           # Без токена действие спрашивает владельца анонимно и упирается в общий лимит API,
           # не распознаёт личный аккаунт, включает проверку лицензии и падает без GITLEAKS_LICENSE.
