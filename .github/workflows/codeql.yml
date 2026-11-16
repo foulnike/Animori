@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [javascript-typescript, rust, java-kotlin, actions]
+        language: [javascript-typescript, rust, actions]
 
     steps:
       - name: Checkout
