@@ -56,7 +56,7 @@ tauri-plugin-window-state = "2"
 # DPAPI для secrets.rs. cfg(windows) обязателен: крейтов нет под другими ОС. CI гоняет и этот крейт
 # на windows-latest, поэтому windows-ветка шифра компилируется и здесь. Фича криптографии — как у windows.
 [target.'cfg(windows)'.dependencies]
-windows = { version = "0.61", features = [
+windows = { version = "0.62", features = [
   "Win32_Foundation",
   "Win32_Security_Cryptography",
 ] }
