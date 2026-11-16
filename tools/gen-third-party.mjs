@@ -23,6 +23,14 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const DOC = join(ROOT, 'docs', 'THIRD-PARTY.md')
 const TEXTS_NAME = 'THIRD-PARTY-LICENSES.txt'
 
+function stripAuthorEmail(author) {
+  const end = author.trimEnd()
+  if (!end.endsWith('>')) return author
+
+  const start = end.lastIndexOf('<')
+  return start >= 0 ? end.slice(0, start).trimEnd() : author
+}
+
 /** Продукты и их выпуски. MSI, NSIS и портабл несут один и тот же AniMori.exe, поэтому
  *  набор у них один; APK arm64 и armv7 собираются из одного дерева — набор один на обе
  *  разрядности, а пакеты лишь одной из них помечаются. */
@@ -232,7 +240,7 @@ function cargoRuntime(app, triple) {
       license: p.license ?? undefined,
       licenseFile: p.license_file ? resolve(dirname(p.manifest_path), p.license_file) : undefined,
       dir: dirname(p.manifest_path),
-      authors: (p.authors ?? []).map((a) => a.replace(/\s*<[^>]*>/, '')),
+      authors: (p.authors ?? []).map(stripAuthorEmail),
     }
   })
 }

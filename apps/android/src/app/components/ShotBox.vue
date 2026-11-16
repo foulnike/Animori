@@ -34,6 +34,7 @@ const broken = ref(false)
 const look = ref(-1)
 
 const reel = ref(false)
+const reelFrame = ref<HTMLIFrameElement | null>(null)
 
 const gal = ref(false)
 
@@ -292,6 +293,19 @@ function onFsChange(): void {
  * плеера не бывает, и только это сообщение узнаёт разворот в обоих направлениях. */
 function onReelMsg(event: MessageEvent): void {
   if (!reel.value) return
+
+  const frame = reelFrame.value
+  const embed = reelTrailer.value?.embed
+  if (frame === null || embed === null || embed === undefined) return
+  if (event.source !== frame.contentWindow) return
+
+  let origin: string
+  try {
+    origin = new URL(embed).origin
+  } catch {
+    return
+  }
+  if (event.origin !== origin) return
 
   const data: unknown = event.data
   if (typeof data !== 'string' || !data.includes('onFullscreenChange')) return
@@ -613,6 +627,7 @@ watch(() => [props.mediaId, props.malId], load)
       <div class="am-reel__box" role="dialog" aria-modal="true" :aria-label="reelTrailer.title">
         <iframe
           v-if="reelTrailer.embed"
+          ref="reelFrame"
           class="am-reel__frame"
           :src="reelTrailer.embed"
           :title="reelTrailer.title"

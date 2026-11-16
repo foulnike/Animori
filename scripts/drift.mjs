@@ -128,7 +128,13 @@ for (const { name, left, right, prefix } of GROUPS) {
   }
 }
 
-const saved = existsSync(SNAPSHOT) ? JSON.parse(readFileSync(SNAPSHOT, 'utf8')) : { files: {} }
+let saved
+try {
+  saved = JSON.parse(readFileSync(SNAPSHOT, 'utf8'))
+} catch (error) {
+  if (error?.code !== 'ENOENT') throw error
+  saved = { files: {} }
+}
 
 if (process.argv.includes('--accept')) {
   const sorted = Object.fromEntries(Object.entries(current).sort(([a], [b]) => a.localeCompare(b)))

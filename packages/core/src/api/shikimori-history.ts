@@ -65,12 +65,27 @@ interface HistoryReply {
 }
 
 /** Разметку из подписи долой: «оценено на <b>7</b>» иначе не сравнить. */
+function stripTags(value: string): string {
+  let out = ''
+  let inTag = false
+
+  for (const char of value) {
+    if (char === '<') {
+      inTag = true
+      continue
+    }
+    if (char === '>' && inTag) {
+      inTag = false
+      continue
+    }
+    if (!inTag) out += char
+  }
+
+  return out
+}
+
 function plain(description: string): string {
-  return description
-    .replace(/<[^>]*>/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase()
+  return stripTags(description).replace(/\s+/g, ' ').trim().toLowerCase()
 }
 
 /**

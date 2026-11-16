@@ -184,9 +184,28 @@ function newFrame(kind: Frame['kind'], label = '', who: string | null = null): F
   return { kind, label, who, blocks: [], items: [] }
 }
 
+function stripHtmlTags(value: string): string {
+  let out = ''
+  let inTag = false
+
+  for (const char of value) {
+    if (char === '<') {
+      inTag = true
+      continue
+    }
+    if (char === '>' && inTag) {
+      inTag = false
+      continue
+    }
+    if (!inTag) out += char
+  }
+
+  return out
+}
+
 /** Приводит разметку AniList и остатки HTML к тому же BBcode: дальше работает один разбор. */
 function toBbcode(text: string): string {
-  return (
+  return stripHtmlTags(
     text
       // Shikimori REST can return rich HTML while the plain field loses all
       // character links. Preserve href targets and visible labels before
@@ -208,8 +227,7 @@ function toBbcode(text: string): string {
       .replace(/<\/u>/gi, '[/u]')
       .replace(/<(?:s|strike|del)>/gi, '[s]')
       .replace(/<\/(?:s|strike|del)>/gi, '[/s]')
-      // Прочая разметка HTML описанию не нужна: абзацы и списки у нас свои.
-      .replace(/<[^>]+>/g, '')
+      // Прочая разметка HTML удаляется единым проходом после преобразований.
       // Спойлер AniList: ~!скрытое!~
       .replace(/~!([\s\S]*?)!~/g, '[spoiler]$1[/spoiler]')
       // Ссылка маркдауном: [подпись](адрес). Декодируем обе схемы, чтобы
@@ -221,7 +239,7 @@ function toBbcode(text: string): string {
       .replace(/__([^\n_]+)__/g, '[b]$1[/b]')
       // Курсив подчёркиванием только по краям слова: иначе рвутся имена_файлов.
       .replace(/(^|[\s(«"])_([^\n_]+)_(?=$|[\s).,!?:;»"])/gm, '$1[i]$2[/i]')
-      .replace(/^[ \t]*(?:\*\*\*|---)[ \t]*$/gm, '[hr]')
+      .replace(/^[ \t]*(?:\*\*\*|---)[ \t]*$/gm, '[hr]'),
   )
 }
 
