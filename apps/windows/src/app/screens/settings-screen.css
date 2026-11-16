@@ -1043,8 +1043,8 @@ code {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--am-accent) 14%, transparent);
 }
 .am-adult-mode > span:last-child {
-  display: grid;
-  gap: 2px;
+  display: flex;
+  align-items: center;
   min-width: 0;
 }
 .am-adult-mode strong {

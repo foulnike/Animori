@@ -485,6 +485,12 @@ html[data-am-family='lain'] button.am-top__icon {
   font-size: 14px;
 }
 
+html[data-am-family='lain'] .am-side__icon--history {
+  font-family: 'Segoe UI Symbol', 'Segoe UI Emoji', sans-serif;
+  font-size: 16px;
+  line-height: 18px;
+}
+
 html[data-am-family='lain'] button.am-seg__btn {
   min-height: 30px;
 }

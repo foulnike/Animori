@@ -857,8 +857,7 @@ onBeforeUnmount(() => {
               </template>
             </div>
 
-            <!-- Шикимори. Знак тоже фирменный, из src/app/brand/shikimori.svg.
-               Вход не нужен: открытый профиль сайт отдаёт любому по нику. -->
+            <!-- Шикимори. Знак тоже фирменный, из src/app/brand/shikimori.svg. -->
             <div class="am-serv">
               <div class="am-serv__head">
                 <BrandMark class="am-serv__logo" name="shikimori" />
@@ -866,11 +865,6 @@ onBeforeUnmount(() => {
                 <span class="am-serv__text">
                   <span class="am-serv__name">Шикимори</span>
                   <span class="am-serv__note">Профиль на Шикимори должен быть открытым.</span>
-                </span>
-
-                <span class="am-flag">
-                  <span class="am-flag__dot" aria-hidden="true" />
-                  вход не нужен
                 </span>
               </div>
 
@@ -928,8 +922,8 @@ onBeforeUnmount(() => {
               <p v-if="shikiError" class="am-error">{{ shikiError }}</p>
             </div>
 
-            <!-- MyAnimeList: знак из src/app/brand/myanimelist.svg; входа нет и не будет: список
-               приезжает файлом выгрузки; тот же файл отдаёт Шикимори — формат MAL до тега. -->
+            <!-- MyAnimeList: знак из src/app/brand/myanimelist.svg; список приезжает файлом
+               выгрузки; тот же файл отдаёт Шикимори — формат MAL до тега. -->
             <div class="am-serv">
               <div class="am-serv__head">
                 <BrandMark class="am-serv__logo" name="myanimelist" />
@@ -941,11 +935,6 @@ onBeforeUnmount(() => {
                     <button class="am-link" type="button" @click="onMalExportLink">сюда</button>
                     → «Export my anime list».
                   </span>
-                </span>
-
-                <span class="am-flag">
-                  <span class="am-flag__dot" aria-hidden="true" />
-                  вход не нужен
                 </span>
               </div>
 
@@ -1053,6 +1042,17 @@ onBeforeUnmount(() => {
                 Удалить мой список
               </button>
 
+              <button
+                v-if="listCount > 0"
+                v-tip="'Сохранить список файлом XML для переноса в другой сервис'"
+                class="am-btn am-btn--ghost"
+                type="button"
+                :disabled="busy"
+                @click="onExport"
+              >
+                Выгрузить в XML
+              </button>
+
               <button v-if="cleared" class="am-btn am-btn--ghost" type="button" @click="onReload">
                 Перезагрузить
               </button>
@@ -1060,7 +1060,7 @@ onBeforeUnmount(() => {
 
             <!-- Выгрузка отдельным узлом: место и действие рядом, строка папки нажимается целиком.
                Класс свой, am-dir, а не am-pick: в styles/theme.css им одет нативный select. -->
-            <div v-if="canPickDir || listCount > 0" class="am-out">
+            <div v-if="canPickDir" class="am-out">
               <button
                 v-if="canPickDir"
                 v-tip="'Сменить папку, куда уходят выгрузки XML'"
@@ -1077,17 +1077,6 @@ onBeforeUnmount(() => {
                   </span>
                 </span>
                 <span class="am-dir__act">{{ exportDir ? 'Сменить' : 'Выбрать' }}</span>
-              </button>
-
-              <button
-                v-if="listCount > 0"
-                v-tip="'Сохранить список файлом XML для переноса в другой сервис'"
-                class="am-btn am-btn--ghost"
-                type="button"
-                :disabled="busy"
-                @click="onExport"
-              >
-                Выгрузить в XML
               </button>
             </div>
 
@@ -1199,7 +1188,7 @@ onBeforeUnmount(() => {
                 @click="setAdultMode('full')"
               >
                 <span class="am-adult-mode__chip am-adult-mode__chip--muted">18+</span>
-                <span><strong>Скрыто</strong><small>Скрывать весь 18+ контент</small></span>
+                <span><strong>Скрыто</strong></span>
               </button>
               <button
                 class="am-adult-mode"
@@ -1210,9 +1199,7 @@ onBeforeUnmount(() => {
                 @click="setAdultMode('partial')"
               >
                 <span class="am-adult-mode__chip am-adult-mode__chip--blue">18+</span>
-                <span
-                  ><strong>Частично</strong><small>Скрывать красные, настраивать синие</small></span
-                >
+                <span><strong>Частично</strong></span>
               </button>
               <button
                 class="am-adult-mode"
@@ -1223,7 +1210,7 @@ onBeforeUnmount(() => {
                 @click="setAdultMode('none')"
               >
                 <span class="am-adult-mode__chip am-adult-mode__chip--red">18+</span>
-                <span><strong>Показано</strong><small>Показывать весь контент</small></span>
+                <span><strong>Показано</strong></span>
               </button>
             </div>
 

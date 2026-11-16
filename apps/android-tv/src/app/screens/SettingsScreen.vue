@@ -676,7 +676,7 @@ onMounted(() => {
             @click="setAdultMode('full')"
           >
             <span class="am-adult-mode__chip am-adult-mode__chip--muted">18+</span>
-            <span><strong>Скрыто</strong><small>Скрывать весь 18+ контент</small></span>
+            <span><strong>Скрыто</strong></span>
           </button>
           <button
             class="am-adult-mode"
@@ -687,7 +687,7 @@ onMounted(() => {
             @click="setAdultMode('partial')"
           >
             <span class="am-adult-mode__chip am-adult-mode__chip--blue">18+</span>
-            <span><strong>Частично</strong><small>Скрывать красные, настраивать синие</small></span>
+            <span><strong>Частично</strong></span>
           </button>
           <button
             class="am-adult-mode"
@@ -698,7 +698,7 @@ onMounted(() => {
             @click="setAdultMode('none')"
           >
             <span class="am-adult-mode__chip am-adult-mode__chip--red">18+</span>
-            <span><strong>Показано</strong><small>Показывать весь контент</small></span>
+            <span><strong>Показано</strong></span>
           </button>
         </div>
 
