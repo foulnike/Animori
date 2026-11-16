@@ -669,11 +669,12 @@ mod tests {
 
     #[test]
     fn authorize_url_passes_state() {
-        let url = authorize_url("test-state");
+        let nonce = fresh_nonce().expect("случайность доступна");
+        let url = authorize_url(&nonce);
         assert!(url.starts_with("https://anilist.co/api/v2/oauth/authorize?"));
         assert!(url.contains("client_id=48513"));
         assert!(url.contains("response_type=token"));
-        assert!(url.ends_with("&state=test-state"));
+        assert!(url.ends_with(&format!("&state={nonce}")));
     }
 
     #[test]
