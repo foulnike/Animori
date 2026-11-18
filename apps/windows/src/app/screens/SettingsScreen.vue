@@ -55,6 +55,12 @@ const version = __ANIMORI_VERSION__
 
 const desktop = isDesktop()
 
+const openPanels = ref<Record<string, boolean>>({})
+
+function togglePanel(name: string): void {
+  openPanels.value[name] = !openPanels.value[name]
+}
+
 const system = systemName()
 
 /** Адрес датасета названий: ссылка осталась, но обязанностью не стала — CC0 атрибуции не требует. */
@@ -720,8 +726,18 @@ onBeforeUnmount(() => {
         <div class="am-set__col am-set__col--main">
           <!-- Импорт списка: две половины одного вида. У каждой знак сервиса,
              название, строка состояния, кнопки и свои ответы. -->
-          <div class="am-panel am-box">
-            <h3 class="am-h3"><TileMark name="import" /> Импорт списка</h3>
+          <div class="am-panel am-box" :class="{ 'am-panel--closed': !openPanels.import }">
+            <h3
+              class="am-h3 am-panel__title"
+              role="button"
+              tabindex="0"
+              :aria-expanded="Boolean(openPanels.import)"
+              @click="togglePanel('import')"
+              @keydown.enter.prevent="togglePanel('import')"
+              @keydown.space.prevent="togglePanel('import')"
+            >
+              <TileMark name="import" /> Импорт списка
+            </h3>
 
             <!-- AniList. Знак берёт components/BrandMark.vue из файла
                src/app/brand/anilist.svg: фирменный вектор, а не наш рисунок. -->
@@ -762,6 +778,15 @@ onBeforeUnmount(() => {
                     Подключить аккаунт
                   </button>
 
+                  <button
+                    v-if="!authStatus.authorized"
+                    class="am-btn am-btn--ghost"
+                    type="button"
+                    @click="manualOpen = !manualOpen"
+                  >
+                    Ввести токен
+                  </button>
+
                   <!-- Правовые документы рядом с входом: применение условий — до нажатия, а не после. -->
                   <p v-if="!authStatus.authorized" class="am-meta">
                     При входе применяются
@@ -793,15 +818,6 @@ onBeforeUnmount(() => {
                       Отключить
                     </button>
                   </template>
-
-                  <button
-                    v-if="!authStatus.authorized"
-                    class="am-btn am-btn--ghost"
-                    type="button"
-                    @click="manualOpen = !manualOpen"
-                  >
-                    Ввести токен
-                  </button>
                 </div>
 
                 <!-- Вопрос перед переносом: одно число и два способа рядом. Разницу говорят подписи
@@ -989,8 +1005,18 @@ onBeforeUnmount(() => {
           </div>
 
           <!-- Данные: что лежит на этом диске и что с этим можно сделать. -->
-          <div class="am-panel am-box">
-            <h3 class="am-h3"><TileMark name="data" /> Данные</h3>
+          <div class="am-panel am-box" :class="{ 'am-panel--closed': !openPanels.data }">
+            <h3
+              class="am-h3 am-panel__title"
+              role="button"
+              tabindex="0"
+              :aria-expanded="Boolean(openPanels.data)"
+              @click="togglePanel('data')"
+              @keydown.enter.prevent="togglePanel('data')"
+              @keydown.space.prevent="togglePanel('data')"
+            >
+              <TileMark name="data" /> Данные
+            </h3>
 
             <ul class="am-facts">
               <li class="am-fact">
@@ -1133,8 +1159,18 @@ onBeforeUnmount(() => {
 
         <!-- Оформление и справка: то, что смотрят, а не то, чем правят. -->
         <div class="am-set__col am-set__col--look">
-          <div class="am-panel am-box">
-            <h3 class="am-h3"><TileMark name="look" /> Оформление</h3>
+          <div class="am-panel am-box" :class="{ 'am-panel--closed': !openPanels.look }">
+            <h3
+              class="am-h3 am-panel__title"
+              role="button"
+              tabindex="0"
+              :aria-expanded="Boolean(openPanels.look)"
+              @click="togglePanel('look')"
+              @keydown.enter.prevent="togglePanel('look')"
+              @keydown.space.prevent="togglePanel('look')"
+            >
+              <TileMark name="look" /> Оформление и Взрослое
+            </h3>
 
             <div class="am-skins">
               <button
@@ -1285,8 +1321,18 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <div class="am-panel am-box">
-            <h3 class="am-h3"><TileMark name="about" /> О программе</h3>
+          <div class="am-panel am-box" :class="{ 'am-panel--closed': !openPanels.about }">
+            <h3
+              class="am-h3 am-panel__title"
+              role="button"
+              tabindex="0"
+              :aria-expanded="Boolean(openPanels.about)"
+              @click="togglePanel('about')"
+              @keydown.enter.prevent="togglePanel('about')"
+              @keydown.space.prevent="togglePanel('about')"
+            >
+              <TileMark name="about" /> О программе
+            </h3>
 
             <ul class="am-facts">
               <li class="am-fact">
@@ -1336,15 +1382,6 @@ onBeforeUnmount(() => {
               </span>
             </button>
 
-            <!-- Имя источника, лицензия и ссылка. Обязанностью строка быть перестала: CC0-1.0
-               атрибуции не требует, и это вежливость к единственному источнику кириллицы. -->
-            <p class="am-meta am-fine">
-              Русские названия поставляет датасет
-              <button class="am-link" type="button" @click="onDatasetLink">animori-data</button>
-              (лицензия CC0-1.0): номера и связки собраны перечислением каталога Шикимори, сами
-              названия — из открытого API Шикимори.
-            </p>
-
             <!-- Свежесть датасета — единственное, за чем человеку приходится следить
                руками, поэтому про просрочку говорим словами, а не одной цифрой выше. -->
             <p v-if="datasetStale" class="am-stale">
@@ -1372,8 +1409,18 @@ onBeforeUnmount(() => {
           плитка нужна и по раскладке: на узком окне стопки растворяются, и порядок плиток задаёт
           CSS по номерам детей.
         -->
-        <div class="am-panel am-box">
-          <h3 class="am-h3"><TileMark name="debug" /> Отладка</h3>
+        <div class="am-panel am-box" :class="{ 'am-panel--closed': !openPanels.debug }">
+          <h3
+            class="am-h3 am-panel__title"
+            role="button"
+            tabindex="0"
+            :aria-expanded="Boolean(openPanels.debug)"
+            @click="togglePanel('debug')"
+            @keydown.enter.prevent="togglePanel('debug')"
+            @keydown.space.prevent="togglePanel('debug')"
+          >
+            <TileMark name="debug" /> Отладка
+          </h3>
 
           <p class="am-meta am-fine">
             Журнал пишет ошибки, запросы и склад этого запуска. Когда что-то сломалось, пришлите

@@ -117,10 +117,6 @@ onBeforeUnmount(() => {
 </script>
 <template>
   <div class="am-credits">
-    <p class="am-credits__lead">
-      Откуда берутся названия и описания, и на каких условиях программа их показывает.
-    </p>
-
     <button class="am-credits__btn" type="button" @click="open = true">Источники и права</button>
 
     <Teleport to="body">

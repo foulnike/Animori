@@ -219,7 +219,10 @@ pub fn classify(error: reqwest::Error) -> String {
     }
 }
 
-fn build_client(proxy: Option<&ProxyConf>) -> Result<reqwest::Client, String> {
+fn build_client(
+    proxy: Option<&ProxyConf>,
+    use_system_proxy: bool,
+) -> Result<reqwest::Client, String> {
     let redirect = reqwest::redirect::Policy::custom(|attempt| {
         if attempt.previous().len() >= MAX_REDIRECTS {
             attempt.error("слишком много перенаправлений")
@@ -243,6 +246,10 @@ fn build_client(proxy: Option<&ProxyConf>) -> Result<reqwest::Client, String> {
         }
         proxy = proxy.no_proxy(reqwest::NoProxy::from_string(&conf.bypass));
         builder = builder.proxy(proxy);
+    } else if !use_system_proxy {
+        // Retry without VPN/proxy must be genuinely direct; otherwise a stale
+        // system proxy keeps failing even after the first attempt is retried.
+        builder = builder.no_proxy();
     }
 
     builder
@@ -253,7 +260,7 @@ fn build_client(proxy: Option<&ProxyConf>) -> Result<reqwest::Client, String> {
 /// Новый клиент на операцию: системный прокси и пул соединений не живут дольше запроса.
 pub fn client_for_request(app: &AppHandle) -> Result<reqwest::Client, String> {
     let proxy = read_proxy(app);
-    build_client(proxy.as_ref())
+    build_client(proxy.as_ref(), true)
 }
 
 fn compose_request(
@@ -309,7 +316,7 @@ pub async fn animori_http_request(app: AppHandle, request: NetRequest) -> Result
         .keys()
         .any(|name| name.eq_ignore_ascii_case("user-agent"));
     let explicit_proxy = read_proxy(&app);
-    let client = build_client(explicit_proxy.as_ref())?;
+    let client = build_client(explicit_proxy.as_ref(), true)?;
     let response = match compose_request(
         &client,
         &method,
@@ -325,7 +332,7 @@ pub async fn animori_http_request(app: AppHandle, request: NetRequest) -> Result
         Ok(response) => response,
         Err(error) if explicit_proxy.is_none() && (error.is_connect() || error.is_timeout()) => {
             log::warn!("Системный прокси не ответил, повторяем запрос напрямую");
-            let direct = build_client(None)?;
+            let direct = build_client(None, false)?;
             compose_request(
                 &direct,
                 &method,

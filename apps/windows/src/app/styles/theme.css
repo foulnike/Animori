@@ -27,9 +27,9 @@
 
   /* Движение. Одни и те же длительности на всё приложение: разнобой
      в 0.12s и 0.16s по файлам читался дёрганьем. */
-  --am-fast: 0.14s;
-  --am-mid: 0.28s;
-  --am-slow: 0.55s;
+  --am-fast: 0.18s;
+  --am-mid: 0.38s;
+  --am-slow: 0.72s;
   --am-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --am-ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
   --am-drift: 46s;
@@ -71,6 +71,7 @@
   --am-faint: #7486a1;
 
   --am-accent: #58a6ff;
+  --am-on-accent: #07111f;
   --am-accent-rgb: 88 166 255;
   --am-accent-2: #a486ff;
   --am-accent-2-rgb: 164 134 255;
@@ -134,6 +135,7 @@
   --am-faint: #606b7c;
 
   --am-accent: #2a60e5;
+  --am-on-accent: #fff;
   --am-accent-rgb: 42 96 229;
   --am-accent-2: #6d51e0;
   --am-accent-2-rgb: 109 81 224;
@@ -210,6 +212,7 @@
   --am-faint: #67788f;
 
   --am-accent: #63a8ff;
+  --am-on-accent: #07111f;
   --am-accent-rgb: 99 168 255;
   --am-accent-2: #a486ff;
   --am-accent-2-rgb: 164 134 255;

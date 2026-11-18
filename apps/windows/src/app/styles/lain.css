@@ -80,8 +80,8 @@ html[data-am-family='lain'] {
   --am-font-tech: 'Lucida Console', 'Cascadia Mono', ui-monospace, monospace;
   --am-blur: 5px;
   --am-blur-strong: 8px;
-  --am-fast: 0.08s;
-  --am-mid: 0.16s;
+  --am-fast: 0.12s;
+  --am-mid: 0.32s;
   --am-drift: 18s;
   --am-accent: #8ee9ff;
   --am-accent-rgb: 142 233 255;

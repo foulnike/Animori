@@ -404,7 +404,6 @@ onBeforeUnmount(() => {
     <div v-else-if="rows.length === 0" class="am-empty">
       <span class="am-empty__mark"><EmptyMark name="clock" /></span>
       <span>Здесь появится то, что вы смотрели.</span>
-      <span>История пишется сама: достаточно открыть серию в плеере.</span>
     </div>
 
     <template v-else>

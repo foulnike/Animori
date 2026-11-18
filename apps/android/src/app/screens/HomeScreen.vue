@@ -4,7 +4,8 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { emptyPick, pickIsSet, pickKey, type CatalogPick } from '@/api/anilist-catalog'
-import type { MediaBrief } from '@/api/anilist-media'
+import { type MediaBrief, type MediaCard } from '@/api/anilist-media'
+import { peekBanner, warmBanner } from '@/core/banner-cache'
 import { setupVideoSources } from '@/api/video-sources'
 import { genreAllowed, keepAllowed } from '@/core/adult'
 import { editEntry, getEntry, initCollection, type EntryLook } from '@/core/collection'
@@ -19,7 +20,7 @@ import {
   warmLooks,
   type MediaLook,
 } from '@/core/media-looks'
-import { peekRussianName, prefetchRussianNames } from '@/core/media-title'
+import { peekRussianName, prefetchRussianNames, type RussianTitle } from '@/core/media-title'
 import {
   onPlayableChange,
   peekPlayable,
@@ -54,7 +55,7 @@ import { tagWord } from '../tag-words'
 import { toPlayAsk, toTileRow, type TileRow } from '../tile-row'
 import { OWN_STATUSES, useHomeCalendar, type CalendarScope } from './home-calendar'
 import { dropFeed, feedKeep, homePick } from './home-keep'
-import { sprayGrains, type Grain, type KeepOut } from './home-spray'
+import { sprayGrains, type Grain } from './home-spray'
 
 /** Сколько постеров класть на свою полку. */
 const SHELF_SIZE = 14
@@ -67,19 +68,48 @@ const splash = splashLine()
 const ROSE_ASPECT = SAKURA_ROSETTE_ASPECT
 
 const heyPlate = ref<HTMLElement | null>(null)
-const heyText = ref<HTMLElement | null>(null)
-const heyRose = ref<HTMLElement | null>(null)
 const grains = ref<Grain[]>([])
+interface LightLine {
+  left: number
+  opacity: number
+  rotate: number
+  width: number
+  duration: number
+  flash: boolean
+}
+const lightLines = ref<LightLine[]>([])
+const lightTimers: ReturnType<typeof setTimeout>[] = []
+const LINE_POINTS = [-8, 14, 35, 57, 78, 103]
+function slowDuration(min = 5, max = 12) {
+  const v = Math.random()
+  return min + (max - min) * (1 - v * v)
+}
+function moveLightLine(i: number): void {
+  const l = lightLines.value[i]
+  if (!l) return
+  l.left = LINE_POINTS[Math.floor(Math.random() * LINE_POINTS.length)] ?? 35
+  l.opacity = 0.2 + Math.random() * 0.58
+  l.rotate = -42 + Math.random() * 84
+  l.duration = slowDuration(5, 12)
+  l.flash = Math.random() > 0.72
+  lightTimers[i] = setTimeout(() => moveLightLine(i), (l.duration + 4 + Math.random() * 6) * 1000)
+}
+function startLightLines(): void {
+  lightLines.value = Array.from({ length: 5 }, (_, i) => ({
+    left: LINE_POINTS[i + 1] ?? 35,
+    opacity: 0.3,
+    width: [46, 22, 58, 28, 40][i] ?? 34,
+    rotate: -42 + Math.random() * 84,
+    duration: slowDuration(),
+    flash: false,
+  }))
+  lightLines.value.forEach((_, i) => moveLightLine(i))
+}
 
 // Россыпь пересчитывается по размеру плашки; прежний размер запоминается, иначе расчёт шёл бы на каждый кадр.
 let heyWide = 0
 let heyHigh = 0
 let sprayEye: ResizeObserver | null = null
-
-function shutOf(node: HTMLElement, box: DOMRect): KeepOut {
-  const own = node.getBoundingClientRect()
-  return { x: own.left - box.left, y: own.top - box.top, w: own.width, h: own.height }
-}
 
 function layoutSpray(): void {
   const plate = heyPlate.value
@@ -92,12 +122,7 @@ function layoutSpray(): void {
   heyWide = wide
   heyHigh = high
 
-  const box = plate.getBoundingClientRect()
-  const shut: KeepOut[] = []
-  if (heyText.value !== null) shut.push(shutOf(heyText.value, box))
-  if (heyRose.value !== null) shut.push(shutOf(heyRose.value, box))
-
-  grains.value = sprayGrains(wide, high, shut)
+  grains.value = sprayGrains(wide, high, [])
 }
 
 /** Области показа календаря: подписи, подсказки и порядок. Второй пункт назван «Популярное» нарочно:
@@ -198,6 +223,144 @@ let calendarIds: number[] = []
 
 /** Приехавшие полки витрины и их порядок: плитки собираются на показ. */
 const staged = new Map<string, MediaBrief[]>()
+const heroIndex = ref(0)
+const heroCards = ref<Record<number, MediaCard>>({})
+const heroTitles = ref<Record<number, RussianTitle>>({})
+const heroReady = ref<Record<number, boolean>>({})
+const heroItems = computed(
+  () => (
+    void recs.value,
+    keepAllowed(
+      staged.get('trending') ?? [],
+      (item) => item.isAdult,
+      (item) => item.tags,
+    ).slice(0, 8)
+  ),
+)
+const heroBrief = computed(() => {
+  const item = heroItems.value.find((item) => item.mediaId === heroId.value)
+  return item && heroReady.value[item.mediaId] ? item : null
+})
+const heroAllReady = computed(
+  () =>
+    heroItems.value.length > 0 && heroItems.value.every((item) => heroReady.value[item.mediaId]),
+)
+const heroCard = computed(() => (heroBrief.value ? heroCards.value[heroBrief.value.mediaId] : null))
+const heroTitle = computed(() =>
+  heroBrief.value ? heroTitles.value[heroBrief.value.mediaId] : null,
+)
+let heroTimer: ReturnType<typeof setTimeout> | null = null
+const heroImages = ref<Record<number, string>>({})
+const heroId = ref<number | null>(null)
+const heroCurrentReady = computed(() => heroBrief.value !== null)
+
+function plainHeroDescription(raw: string | null | undefined): string {
+  if (typeof raw !== 'string') return ''
+  return raw
+    .replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, '$1')
+    .replace(/<br\s*\/?>(\s*)/gi, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\[url=[^\]]+\]([\s\S]*?)\[\/url\]/gi, '$1')
+    .replace(/\[(?:character|person|anime|manga)=[^\]]+\s+([^\]]+)\]/gi, '$1')
+    .replace(/\[[a-z][a-z0-9_-]*(?:=[^\]]*)?\]/gi, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+function heroTarget(direction: -1 | 1): number | null {
+  const items = heroItems.value
+  if (items.length < 2 || heroId.value === null) return null
+  const current = items.findIndex((item) => item.mediaId === heroId.value)
+  if (current < 0) return null
+  const index = (current + direction + items.length) % items.length
+  const candidate = items[index]
+  return candidate && heroReady.value[candidate.mediaId] ? index : null
+}
+
+function changeHero(direction: -1 | 1): void {
+  const index = heroTarget(direction)
+  const target = index === null ? undefined : heroItems.value[index]
+  if (index === null || !target) return
+  heroIndex.value = index
+  heroId.value = target.mediaId
+}
+
+let heroTouch: { x: number; y: number } | null = null
+let heroSuppressClickUntil = 0
+
+function startHeroSwipe(event: TouchEvent): void {
+  heroTouch = null
+  if (event.touches.length !== 1) return
+  const touch = event.touches[0]
+  if (touch) heroTouch = { x: touch.clientX, y: touch.clientY }
+}
+
+function endHeroSwipe(event: TouchEvent): void {
+  const start = heroTouch
+  heroTouch = null
+  const touch = event.changedTouches[0]
+  if (!start || !touch) return
+  const dx = touch.clientX - start.x
+  const dy = touch.clientY - start.y
+  if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+  // Suppress the synthetic tap even when the adjacent slide is still loading.
+  heroSuppressClickUntil = Date.now() + 700
+  changeHero(dx < 0 ? 1 : -1)
+}
+
+function openHero(): void {
+  if (Date.now() < heroSuppressClickUntil || !heroBrief.value) return
+  open(heroBrief.value.mediaId)
+}
+
+function nextHero(): void {
+  changeHero(1)
+}
+
+watch(
+  () => heroItems.value.map((item) => item.mediaId).join(','),
+  () => {
+    if (!heroItems.value.some((item) => item.mediaId === heroId.value)) heroId.value = null
+    for (const item of heroItems.value) {
+      const apply = (banner: NonNullable<ReturnType<typeof peekBanner>>) => {
+        heroCards.value[item.mediaId] = banner.card
+        if (banner.title) heroTitles.value[item.mediaId] = banner.title
+        heroImages.value[item.mediaId] = banner.image
+        heroReady.value[item.mediaId] = true
+        if (
+          heroId.value === null &&
+          heroItems.value.some((candidate) => candidate.mediaId === item.mediaId)
+        )
+          heroId.value = item.mediaId
+      }
+      const cached = peekBanner(item.mediaId)
+      if (cached) apply(cached)
+      else
+        void warmBanner(item.mediaId)
+          .then(apply)
+          .catch(() => {
+            Logger('WARN', `Banner ${item.mediaId}: warm-up incomplete`)
+          })
+    }
+  },
+  { immediate: true },
+)
+
+// A complete slide receives fifteen full seconds before the next ready slide.
+watch(
+  () =>
+    `${heroId.value}:${heroItems.value.map((item) => Number(heroReady.value[item.mediaId] === true)).join('')}:${heroAllReady.value}`,
+  () => {
+    if (heroTimer !== null) clearTimeout(heroTimer)
+    heroTimer = null
+    if (heroId.value !== null && heroItems.value.length > 1) heroTimer = setTimeout(nextHero, 15000)
+  },
+)
+
 let activeDefs: ShelfDef[] = []
 
 /** Номера идущих доборов: смена отбора гасит старую работу. */
@@ -977,6 +1140,7 @@ function toSettings(): void {
 }
 
 onMounted(() => {
+  startLightLines()
   // Россыпь считается по фактическому размеру плашки, а он известен только после первой отрисовки.
   void nextTick(() => {
     layoutSpray()
@@ -1002,6 +1166,10 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  lightTimers.forEach((timer) => clearTimeout(timer))
+  lightTimers.length = 0
+  if (heroTimer !== null) clearTimeout(heroTimer)
+  heroTimer = null
   window.clearTimeout(holdTimer)
   lookRun++
   titleRun++
@@ -1034,16 +1202,23 @@ watch(
 
 <template>
   <section class="am-page">
-    <p v-if="trouble" class="am-error">{{ trouble }}</p>
-
     <!-- Плашка приветствия с россыпью сакур: перенесена из ПК-версии. Календаря активности здесь нет —
      он занимал правую половину плашки и на приставке съел бы полосу целиком, а фраза с кнопками
      превратилась бы в лишние остановки для пульта: «Моё» и «Поиск» уже есть в рельсе. -->
     <div ref="heyPlate" class="am-hey">
-      <span class="am-hey__glow" aria-hidden="true" />
-      <span class="am-hey__beam" aria-hidden="true" />
-      <span ref="heyRose" class="am-hey__rose" aria-hidden="true">
-        <svg :viewBox="SAKURA_ROSETTE_BOX"><path :d="SAKURA_ROSETTE" /></svg>
+      <span class="am-hey__lines" aria-hidden="true">
+        <span
+          v-for="(line, index) in lightLines"
+          :key="index"
+          class="am-hey__line"
+          :style="{
+            left: `${line.left}%`,
+            width: `${line.width}px`,
+            opacity: line.opacity,
+            transform: `rotate(${line.rotate}deg)`,
+            transitionDuration: `${line.duration}s`,
+          }"
+        />
       </span>
 
       <!-- Россыпь: число цветков выходит из свободного места, поэтому их расставляет расчёт
@@ -1081,6 +1256,71 @@ watch(
         </h2>
       </div>
     </div>
+
+    <section
+      v-if="!picked"
+      :data-am-hero="true"
+      class="am-home-hero"
+      :role="heroCurrentReady ? 'button' : undefined"
+      :tabindex="heroCurrentReady ? 0 : -1"
+      @click="openHero"
+      @touchstart.passive="startHeroSwipe"
+      @touchend.passive="endHeroSwipe"
+      @touchcancel="heroTouch = null"
+      @keydown.enter.prevent="heroCurrentReady && heroBrief && open(heroBrief.mediaId)"
+    >
+      <div
+        v-if="!heroCurrentReady"
+        class="am-home-hero__loading"
+        role="status"
+        aria-label="Загрузка баннера"
+      >
+        <span class="am-home-hero__spinner" />
+      </div>
+      <template v-if="heroBrief">
+        <Transition name="am-home-hero-crossfade" mode="out-in" :duration="650">
+          <div
+            v-if="heroBrief"
+            :key="heroBrief.mediaId"
+            class="am-home-hero__art"
+            :style="{ backgroundImage: `url(${heroImages[heroBrief.mediaId] ?? ''})` }"
+          />
+        </Transition>
+        <div class="am-home-hero__veil" />
+        <div class="am-home-hero__body">
+          <h1
+            :class="{
+              'am-home-hero__title--long':
+                (heroTitle?.russian ?? heroBrief.romaji ?? '').length > 42,
+              'am-home-hero__title--xlong':
+                (heroTitle?.russian ?? heroBrief.romaji ?? '').length > 68,
+            }"
+          >
+            {{ heroTitle?.russian ?? peekRussianName(heroBrief.mediaId) ?? heroBrief.romaji }}
+          </h1>
+          <div class="am-home-hero__facts">
+            <b v-if="heroBrief.averageScore">★ {{ (heroBrief.averageScore / 10).toFixed(1) }}</b
+            ><span v-if="heroBrief.seasonYear">{{ heroBrief.seasonYear }}</span
+            ><span v-if="heroBrief.format">{{ formatWord(heroBrief.format) }}</span
+            ><span v-if="heroBrief.episodes">{{ heroBrief.episodes }} серий</span>
+          </div>
+          <p v-if="heroCard?.genres.length" class="am-home-hero__genres">
+            {{ heroCard.genres.map((genre) => genreWord(genre) ?? genre).join(' · ') }}
+          </p>
+          <p
+            v-if="heroTitle?.description ?? heroCard?.description"
+            class="am-home-hero__description"
+            :class="{
+              'am-home-hero__description--long':
+                plainHeroDescription(heroTitle?.description ?? heroCard?.description).length > 220,
+            }"
+          >
+            {{ plainHeroDescription(heroTitle?.description ?? heroCard?.description) }}
+          </p>
+        </div>
+      </template>
+    </section>
+    <p v-if="trouble" class="am-error">{{ trouble }}</p>
 
     <!-- Календарь выхода стоит под шапкой и выше отбора: он отвечает на вопрос, ради которого
      приложение открывают завтра. Полоса дней рисуется сразу — дни это календарь, а не данные. -->
@@ -1421,6 +1661,30 @@ watch(
 </template>
 
 <style scoped>
+.am-hero__loading,
+.am-home-hero__loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  background: var(--am-panel);
+}
+.am-hero__spinner,
+.am-home-hero__spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgb(var(--am-accent-rgb) / 0.22);
+  border-top-color: var(--am-accent);
+  border-radius: 50%;
+  animation: am-hero-spin 0.8s linear infinite;
+}
+@keyframes am-hero-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* ПЛАШКА ПРИВЕТСТВИЯ. Перенесена из ПК-версии вместе с россыпью сакур (screens/home-spray.ts).
    Отличия от оригинала ровно два, оба про телевизор: календаря активности нет (он в ПК занимал
    правую половину и здесь съел бы полосу целиком) и кнопок нет — «Моё» и «Поиск» уже стоят в
@@ -1439,6 +1703,193 @@ watch(
     var(--am-sh-2),
     inset 0 1px 0 var(--am-edge);
   backdrop-filter: blur(var(--am-blur)) saturate(1.4);
+}
+
+/* The focus target stays mounted; only its complete slide fades out and in. */
+.am-home-hero {
+  touch-action: pan-y;
+  position: relative;
+  height: 330px;
+  flex: none;
+  overflow: hidden;
+  isolation: isolate;
+  cursor: pointer;
+  background: var(--am-panel);
+  border: 1px solid var(--am-line);
+  border-radius: var(--am-r-l);
+}
+.am-home-hero:focus-visible {
+  outline: 2px solid var(--am-accent);
+  outline-offset: 3px;
+}
+.am-home-hero__art,
+.am-home-hero__veil {
+  position: absolute;
+  inset: 0;
+}
+.am-home-hero__art {
+  z-index: 0;
+  background: center / cover no-repeat;
+  opacity: 0.82;
+}
+.am-home-hero__veil {
+  z-index: 1;
+  background:
+    linear-gradient(
+      90deg,
+      var(--am-panel),
+      color-mix(in srgb, var(--am-panel) 78%, transparent) 48%,
+      transparent
+    ),
+    linear-gradient(0deg, var(--am-panel), transparent 65%);
+}
+.am-home-hero__body {
+  position: relative;
+  z-index: 2;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  width: 68%;
+  height: 100%;
+  padding: 28px;
+  min-width: 0;
+  overflow: hidden;
+}
+.am-home-hero__body > * {
+  flex: none;
+  min-width: 0;
+}
+.am-home-hero h1 {
+  margin: 0;
+  font-size: 32px;
+  line-height: 1.2;
+  max-height: 2.4em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.am-home-hero h1.am-home-hero__title--long {
+  font-size: 27px;
+}
+.am-home-hero h1.am-home-hero__title--xlong {
+  font-size: 23px;
+}
+.am-home-hero__facts {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 30px;
+  white-space: nowrap;
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--am-dim);
+}
+.am-home-hero__facts b {
+  flex: none;
+  padding: 4px 8px;
+  color: #07111f;
+  background: #75b8ff;
+  border-radius: var(--am-r-s);
+  line-height: 20px;
+}
+.am-home-hero p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  margin: 0;
+  color: var(--am-dim);
+}
+.am-home-hero__genres {
+  font-size: 12px;
+  line-height: 18px;
+  max-height: 36px;
+  -webkit-line-clamp: 2;
+}
+.am-home-hero__description {
+  font-size: 14px;
+  line-height: 21px;
+  max-height: 63px;
+  -webkit-line-clamp: 3;
+}
+.am-home-hero__description--long {
+  font-size: 13px;
+  line-height: 20px;
+  max-height: 60px;
+}
+.am-home-hero-crossfade-enter-active,
+.am-home-hero-crossfade-leave-active {
+  transition: opacity 0.65s ease-in-out !important;
+}
+.am-home-hero-crossfade-enter-from,
+.am-home-hero-crossfade-leave-to {
+  opacity: 0 !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .am-home-hero-crossfade-enter-active,
+  .am-home-hero-crossfade-leave-active {
+    transition: none !important;
+  }
+}
+
+/* Fixed picture and text zones, with room for every complete line at 320px. */
+.am-home-hero {
+  height: 480px;
+}
+.am-home-hero__art,
+.am-home-hero__veil {
+  bottom: auto;
+  height: 270px;
+}
+.am-home-hero__veil {
+  background: linear-gradient(
+    180deg,
+    transparent 28%,
+    color-mix(in srgb, var(--am-panel) 42%, transparent) 58%,
+    var(--am-panel) 100%
+  );
+}
+.am-home-hero__body {
+  position: absolute;
+  top: 245px;
+  bottom: 0;
+  height: auto;
+  width: 100%;
+  padding: 22px 22px 24px;
+  background: linear-gradient(180deg, transparent, var(--am-panel) 24%);
+  gap: 10px;
+}
+.am-home-hero h1 {
+  font-size: 25px;
+}
+.am-home-hero h1.am-home-hero__title--long {
+  font-size: 23px;
+}
+.am-home-hero h1.am-home-hero__title--xlong {
+  font-size: 21px;
+}
+@media (max-width: 360px) {
+  .am-home-hero__body {
+    padding: 16px;
+    gap: 9px;
+  }
+  .am-home-hero h1 {
+    font-size: 23px;
+  }
+  .am-home-hero h1.am-home-hero__title--long {
+    font-size: 21px;
+  }
+  .am-home-hero h1.am-home-hero__title--xlong {
+    font-size: 19px;
+  }
+  .am-home-hero__facts {
+    font-size: 11px;
+    gap: 7px;
+  }
 }
 
 /* Слева приветствие столбцом: фраза занимает строку, кнопок под ней нет. */
@@ -1462,6 +1913,59 @@ watch(
   filter: blur(42px);
   pointer-events: none;
   animation: am-hey-float calc(var(--am-drift) * 1.4) var(--am-ease-soft) infinite alternate-reverse;
+}
+.am-hey__lines {
+  position: absolute;
+  inset: -20% -12%;
+  z-index: 0;
+  pointer-events: none;
+}
+.am-hey__line {
+  position: absolute;
+  top: -12%;
+  bottom: -12%;
+  width: 34px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgb(var(--am-accent-rgb) / 0.85) 38%,
+    rgb(var(--am-accent-2-rgb) / 0.48) 62%,
+    transparent
+  );
+  filter: blur(8px);
+  transition:
+    left 5s ease,
+    opacity 5s ease,
+    transform 5s ease;
+}
+.am-hey__line:nth-child(1) {
+  left: 5%;
+  width: 46px;
+  opacity: 0.32;
+}
+.am-hey__line:nth-child(2) {
+  left: 28%;
+  width: 22px;
+  opacity: 0.68;
+  transform: rotate(-20deg);
+}
+.am-hey__line:nth-child(3) {
+  left: 50%;
+  width: 58px;
+  opacity: 0.24;
+  transform: rotate(28deg);
+}
+.am-hey__line:nth-child(4) {
+  left: 72%;
+  width: 28px;
+  opacity: 0.55;
+  transform: rotate(-25deg);
+}
+.am-hey__line:nth-child(5) {
+  left: 92%;
+  width: 40px;
+  opacity: 0.38;
+  transform: rotate(18deg);
 }
 
 @keyframes am-hey-float {
@@ -1811,6 +2315,90 @@ watch(
   flex-direction: column;
   gap: 12px;
   animation: am-shelf-in var(--am-slow) var(--am-ease) both;
+}
+
+.am-hey__lines {
+  position: absolute;
+  inset: -20% -12%;
+  z-index: 0;
+  pointer-events: none;
+}
+.am-hey__line {
+  position: absolute;
+  top: -12%;
+  bottom: -12%;
+  width: 30px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgb(var(--am-accent-rgb) / 0.7) 40%,
+    rgb(var(--am-accent-2-rgb) / 0.4) 60%,
+    transparent
+  );
+  filter: blur(8px);
+  animation: am-hey-mobile-line 9s ease-in-out infinite alternate;
+}
+.am-hey__line:nth-child(1) {
+  left: 8%;
+  opacity: 0.3;
+  animation-duration: 13s;
+}
+.am-hey__line:nth-child(2) {
+  left: 28%;
+  width: 18px;
+  opacity: 0.65;
+  transform: rotate(-12deg);
+  animation-duration: 8s;
+}
+.am-hey__line:nth-child(3) {
+  left: 50%;
+  width: 44px;
+  opacity: 0.24;
+  transform: rotate(18deg);
+  animation-duration: 15s;
+}
+.am-hey__line:nth-child(4) {
+  left: 72%;
+  width: 22px;
+  opacity: 0.5;
+  transform: rotate(-16deg);
+  animation-duration: 10s;
+}
+.am-hey__line:nth-child(5) {
+  left: 91%;
+  opacity: 0.32;
+  animation-duration: 12s;
+}
+@keyframes am-hey-mobile-line {
+  from {
+    translate: -35% 0;
+    opacity: 0.18;
+  }
+  to {
+    translate: 35% 0;
+    opacity: 0.72;
+  }
+}
+.am-hey__line::before {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: inherit;
+  opacity: 0;
+  animation: am-hey-mobile-flash 9s ease-in-out infinite;
+}
+@keyframes am-hey-mobile-flash {
+  0%,
+  78%,
+  100% {
+    opacity: 0;
+  }
+  82% {
+    opacity: 0.8;
+  }
+  86% {
+    opacity: 0.12;
+  }
 }
 
 @keyframes am-shelf-in {

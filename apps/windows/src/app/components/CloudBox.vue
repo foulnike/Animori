@@ -83,6 +83,11 @@ const strangerAsk = ref<CloudStranger | null>(null)
 
 /** Где человек берёт пропуск к Яндекс Диску. Своего приложения у сборки нет. */
 const YANDEX_OAUTH_URL = 'https://oauth.yandex.com/client/new/'
+const panelOpen = ref(false)
+
+function togglePanel(): void {
+  panelOpen.value = !panelOpen.value
+}
 
 function describe(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
@@ -471,8 +476,16 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="am-panel am-box">
-    <div class="am-bar">
+  <div class="am-panel am-box" :class="{ 'am-panel--closed': !panelOpen }">
+    <div
+      class="am-bar am-panel__title"
+      role="button"
+      tabindex="0"
+      :aria-expanded="panelOpen"
+      @click="togglePanel"
+      @keydown.enter.prevent="togglePanel"
+      @keydown.space.prevent="togglePanel"
+    >
       <h3 class="am-h3"><TileMark name="cloud" /> Облачная копия</h3>
       <span class="am-bar__gap" />
       <span class="am-flag" :class="{ 'am-flag--on': cloudOn() }">
@@ -560,10 +573,9 @@ onMounted(() => {
          живёт в справке под «i», здесь только адрес и поле. -->
     <template v-if="tokenNeeded()">
       <p class="am-meta">
-        Пропуск выдаёт сам Яндекс: заведите приложение с правом «Приложения на Диске» на
-        <button class="am-link" type="button" @click="onCloudHelp">oauth.yandex.com</button>
-        и вставьте выданный токен сюда. Он останется на этом устройстве. Порядок по шагам — под
-        кнопкой «i». Копия уходит на серверы Яндекса только по кнопке; условия обработки — в
+        Создайте приложение с правом «Приложения на Диске» на
+        <button class="am-link" type="button" @click="onCloudHelp">oauth.yandex.com</button>,
+        вставьте токен и сохраните; условия — в
         <button class="am-link" type="button" @click="onPrivacy">
           Политике обработки персональных данных</button
         >.

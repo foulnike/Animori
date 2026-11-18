@@ -94,6 +94,81 @@
   border-color: var(--am-edge);
 }
 
+.am-panel__title {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--am-fast) var(--am-ease);
+}
+
+.am-panel__title:not(.am-bar) {
+  width: 100%;
+}
+
+.am-box > .am-panel__title {
+  margin-bottom: 0;
+}
+
+.am-panel__title::after {
+  flex: none;
+  margin-left: auto;
+  color: var(--am-dim);
+  font-size: 18px;
+  line-height: 1;
+  content: '⌄';
+  transform: translateY(-1px);
+  transition:
+    transform var(--am-mid) var(--am-ease),
+    color var(--am-fast) var(--am-ease);
+}
+
+.am-panel:not(.am-panel--closed) > .am-panel__title::after {
+  color: var(--am-text);
+  transform: rotate(180deg) translateY(-1px);
+}
+
+.am-panel__title:focus-visible {
+  outline: 2px solid rgb(var(--am-accent-rgb) / 0.7);
+  outline-offset: 4px;
+  border-radius: var(--am-r-cap);
+}
+
+.am-panel--closed {
+  max-height: 70px;
+}
+
+.am-panel:not(.am-panel--closed) {
+  max-height: 2200px;
+}
+
+.am-panel {
+  overflow: hidden;
+  transition:
+    max-height var(--am-mid) var(--am-ease),
+    border-color var(--am-mid) var(--am-ease);
+}
+
+.am-panel > :not(.am-panel__title):not(.am-bar) {
+  max-height: 2200px;
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    max-height var(--am-mid) var(--am-ease),
+    opacity var(--am-fast) var(--am-ease),
+    transform var(--am-mid) var(--am-ease);
+}
+
+.am-panel--closed > :not(.am-panel__title):not(.am-bar) {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+}
+
 /* Заголовок панели без засечки: панель и так в коробке, веса шрифта достаточно.
    Отделение «активных» разделов вернётся отдельным маркером статуса, если понадобится. */
 .am-row {

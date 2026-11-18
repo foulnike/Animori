@@ -489,7 +489,7 @@ onBeforeUnmount(() => {
     <div v-else-if="total === 0 && hidden === 0" class="am-empty">
       <span class="am-empty__mark"><EmptyMark name="tray" /></span>
       <span>Записей пока нет.</span>
-      <span>Добавьте аниме из поиска или перенесите список с AniList в настройках.</span>
+      <span>Добавьте аниме из поиска или импортируйте список.</span>
     </div>
 
     <div v-else-if="total === 0" class="am-empty">

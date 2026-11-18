@@ -3,7 +3,8 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { emptyPick, pickIsSet, pickKey, type CatalogPick } from '@/api/anilist-catalog'
-import type { MediaBrief } from '@/api/anilist-media'
+import { type MediaBrief, type MediaCard } from '@/api/anilist-media'
+import { peekBanner, warmBanner } from '@/core/banner-cache'
 import { setupVideoSources } from '@/api/video-sources'
 import { genreAllowed, keepAllowed } from '@/core/adult'
 import { blankEntry, editEntry, getEntry, initCollection, type EntryLook } from '@/core/collection'
@@ -18,7 +19,7 @@ import {
   warmLooks,
   type MediaLook,
 } from '@/core/media-looks'
-import { peekRussianName, prefetchRussianNames } from '@/core/media-title'
+import { peekRussianName, prefetchRussianNames, type RussianTitle } from '@/core/media-title'
 import {
   onPlayableChange,
   peekPlayable,
@@ -47,11 +48,11 @@ import { formatWord, GENRE_CHOICES, genreWord, partsShort } from '../labels'
 import { navigate } from '../router'
 import SakuraMark from '../components/SakuraMark.vue'
 import ActivityYear from './ActivityYear.vue'
-import { SAKURA_ROSETTE, SAKURA_ROSETTE_ASPECT, SAKURA_ROSETTE_BOX } from '../sakura'
+import { SAKURA_ROSETTE, SAKURA_ROSETTE_BOX } from '../sakura'
 import { splashLine } from '../splash'
 import { tagWord } from '../tag-words'
 import { toPlayAsk, toTileRow, type TileRow } from '../tile-row'
-import { sprayGrains, type Grain, type KeepOut } from './home-spray'
+import { sprayGrains, type Grain } from './home-spray'
 import { OWN_STATUSES, useHomeCalendar, type CalendarScope } from './home-calendar'
 import { dropFeed, feedKeep, homePick } from './home-keep'
 
@@ -62,23 +63,78 @@ const SHELF_FETCH = SHELF_SIZE * 3
 // Плашка приветствия: фраза запуска — из колоды, круг которой лежит в хранилище (см. splash.ts).
 const splash = splashLine()
 
-// Пропорция розетки для CSS: кадр задан в sakura.ts, и число нельзя расходиться с ним тут.
-const ROSE_ASPECT = SAKURA_ROSETTE_ASPECT
-
 const heyPlate = ref<HTMLElement | null>(null)
-const heyText = ref<HTMLElement | null>(null)
-const heyRose = ref<HTMLElement | null>(null)
 const grains = ref<Grain[]>([])
+interface LightLine {
+  left: number
+  opacity: number
+  rotate: number
+  width: number
+  duration: number
+  pause: number
+  layer: 'slow' | 'mid' | 'accent'
+  flash: boolean
+}
+
+const lightLines = ref<LightLine[]>([])
+const lightTimers: ReturnType<typeof setTimeout>[] = []
+const deviationTimer = ref<number | null>(null)
+const deviation = ref<{ key: number; action: 'fly' | 'shake' | 'spin' } | null>(null)
+
+function randomBetween(min: number, max: number): number {
+  return min + Math.random() * (max - min)
+}
+
+/** Смещает скорость к медленной стороне: быстрые переходы остаются редкими вспышками. */
+function slowDuration(min = 5, max = 12): number {
+  const value = Math.random()
+  return min + (max - min) * (1 - value * value)
+}
+
+const LINE_POINTS = [-8, 14, 35, 57, 78, 103]
+
+function moveLightLine(index: number): void {
+  const line = lightLines.value[index]
+  if (!line) return
+
+  line.left = LINE_POINTS[Math.floor(Math.random() * LINE_POINTS.length)] ?? 35
+  line.opacity = randomBetween(0.2, 0.78)
+  line.rotate = randomBetween(-42, 42)
+  line.duration =
+    line.layer === 'slow'
+      ? slowDuration(8, 15)
+      : line.layer === 'mid'
+        ? slowDuration(6, 11)
+        : slowDuration(4, 8)
+  line.pause = randomBetween(4, 10)
+  line.flash = Math.random() > 0.72
+
+  lightTimers[index] = setTimeout(() => moveLightLine(index), (line.duration + line.pause) * 1000)
+}
+
+function startLightLines(): void {
+  lightLines.value = Array.from({ length: 5 }, (_, index) => ({
+    left: LINE_POINTS[index + 1] ?? 35,
+    opacity: randomBetween(0.2, 0.78),
+    rotate: randomBetween(-42, 42),
+    width: [46, 22, 58, 28, 40][index] ?? 34,
+    duration:
+      index === 0 || index === 2
+        ? slowDuration(8, 15)
+        : index === 4
+          ? slowDuration(4, 8)
+          : slowDuration(6, 11),
+    pause: randomBetween(4, 10),
+    layer: index === 0 || index === 2 ? 'slow' : index === 4 ? 'accent' : 'mid',
+    flash: false,
+  }))
+  lightLines.value.forEach((_, index) => moveLightLine(index))
+}
 
 // Россыпь пересчитывается по размеру плашки; прежний размер запоминается, иначе расчёт шёл бы на каждый кадр.
 let heyWide = 0
 let heyHigh = 0
 let sprayEye: ResizeObserver | null = null
-
-function shutOf(node: HTMLElement, box: DOMRect): KeepOut {
-  const own = node.getBoundingClientRect()
-  return { x: own.left - box.left, y: own.top - box.top, w: own.width, h: own.height }
-}
 
 function layoutSpray(): void {
   const plate = heyPlate.value
@@ -91,13 +147,22 @@ function layoutSpray(): void {
   heyWide = wide
   heyHigh = high
 
-  const box = plate.getBoundingClientRect()
-  const shut: KeepOut[] = []
-  if (heyText.value !== null) shut.push(shutOf(heyText.value, box))
-  if (heyRose.value !== null) shut.push(shutOf(heyRose.value, box))
-  // Календарик в запрет не входит: лепестки плывут и за ним. Лунка берёт их задним планом в размытие — под сеткой остаются мутные пятнышки, а не резкие цветки.
+  // Россыпь намеренно не исключает текст и календарь: цветки должны плавать по всей площади.
+  grains.value = sprayGrains(wide, high, [])
+}
 
-  grains.value = sprayGrains(wide, high, shut)
+function triggerSakuraDeviation(): void {
+  if (grains.value.length === 0 || deviation.value !== null) return
+  const grain = grains.value[Math.floor(Math.random() * grains.value.length)]
+  if (!grain) return
+  const actions = ['fly', 'shake', 'spin'] as const
+  deviation.value = {
+    key: grain.key,
+    action: actions[Math.floor(Math.random() * actions.length)] ?? 'shake',
+  }
+  window.setTimeout(() => {
+    deviation.value = null
+  }, 2600)
 }
 
 /** Области показа календаря. «Популярное», а не «Глобально»: глобального показа у AniList нет,
@@ -171,6 +236,35 @@ const sheetOpen = ref(false)
 const feedRows = ref<TileRow[]>([])
 const feedBusy = ref(false)
 const feedDone = ref(false)
+const heroIndex = ref(0)
+const heroCards = ref<Record<number, MediaCard>>({})
+const heroTitles = ref<Record<number, RussianTitle>>({})
+const heroReady = ref<Record<number, boolean>>({})
+let heroTimer: ReturnType<typeof setTimeout> | null = null
+const heroImages = ref<Record<number, string>>({})
+const heroId = ref<number | null>(null)
+const heroCurrentReady = computed(() => heroBrief.value !== null)
+
+/** Баннер показывает описание как короткий текст: ссылки и исходные теги здесь не интерактивны. */
+function plainHeroDescription(raw: string | null | undefined): string {
+  if (typeof raw !== 'string') return ''
+
+  return raw
+    .replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, '$1')
+    .replace(/<br\s*\/?>(\s*)/gi, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\[url=[^\]]+\]([\s\S]*?)\[\/url\]/gi, '$1')
+    .replace(/\[(?:character|person|anime|manga)=[^\]]+\s+([^\]]+)\]/gi, '$1')
+    .replace(/\[(?:spoiler|quote)(?:=[^\]]+)?\]/gi, '')
+    .replace(/\[\/(?:spoiler|quote)\]/gi, '')
+    .replace(/\[[a-z][a-z0-9_-]*(?:=[^\]]*)?\]/gi, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+}
 
 /** Виды правки, доступные с плитки. Удаление записи сюда не входит. */
 type EntryEdit = 'status' | 'score' | 'progress' | 'repeat' | 'startedAt' | 'completedAt' | 'notes'
@@ -269,6 +363,96 @@ let priming: Promise<void> = Promise.resolve()
 
 /** Стоит ли сейчас хоть одно условие отбора. */
 const picked = computed(() => pickIsSet(homePick.value))
+
+/** Кандидаты баннера берутся из той же полки, что и «В тренде», без отдельной выдачи. */
+const heroItems = computed(() => {
+  void recs.value
+  if (picked.value) return []
+
+  return keepAllowed(
+    staged.get('trending') ?? [],
+    (brief) => brief.isAdult,
+    (brief) => brief.tags,
+  ).slice(0, SHELF_SIZE)
+})
+
+const heroBrief = computed(() => {
+  const item = heroItems.value.find((item) => item.mediaId === heroId.value)
+  return item && heroReady.value[item.mediaId] ? item : null
+})
+const heroAllReady = computed(
+  () =>
+    heroItems.value.length > 0 && heroItems.value.every((item) => heroReady.value[item.mediaId]),
+)
+const heroCard = computed(() =>
+  heroBrief.value === null ? null : (heroCards.value[heroBrief.value.mediaId] ?? null),
+)
+const heroTitle = computed(() =>
+  heroBrief.value === null ? null : (heroTitles.value[heroBrief.value.mediaId] ?? null),
+)
+const heroRow = computed(() => (heroBrief.value === null ? null : toTileRow(heroBrief.value)))
+
+function heroTarget(direction: -1 | 1): number | null {
+  const items = heroItems.value
+  if (items.length < 2 || heroId.value === null) return null
+  const current = items.findIndex((item) => item.mediaId === heroId.value)
+  if (current < 0) return null
+  const index = (current + direction + items.length) % items.length
+  const candidate = items[index]
+  return candidate && heroReady.value[candidate.mediaId] ? index : null
+}
+
+function changeHero(direction: -1 | 1): void {
+  const index = heroTarget(direction)
+  const target = index === null ? undefined : heroItems.value[index]
+  if (index === null || !target) return
+  heroIndex.value = index
+  heroId.value = target.mediaId
+}
+
+function nextHero(): void {
+  changeHero(1)
+}
+
+watch(
+  () => heroItems.value.map((item) => item.mediaId).join(','),
+  () => {
+    if (!heroItems.value.some((item) => item.mediaId === heroId.value)) heroId.value = null
+    for (const item of heroItems.value) {
+      const apply = (banner: NonNullable<ReturnType<typeof peekBanner>>) => {
+        heroCards.value[item.mediaId] = banner.card
+        if (banner.title) heroTitles.value[item.mediaId] = banner.title
+        heroImages.value[item.mediaId] = banner.image
+        heroReady.value[item.mediaId] = true
+        if (
+          heroId.value === null &&
+          heroItems.value.some((candidate) => candidate.mediaId === item.mediaId)
+        )
+          heroId.value = item.mediaId
+      }
+      const cached = peekBanner(item.mediaId)
+      if (cached) apply(cached)
+      else
+        void warmBanner(item.mediaId)
+          .then(apply)
+          .catch(() => {
+            Logger('WARN', `Banner ${item.mediaId}: warm-up incomplete`)
+          })
+    }
+  },
+  { immediate: true },
+)
+
+// A complete slide receives fifteen full seconds before the next ready slide.
+watch(
+  () =>
+    `${heroId.value}:${heroItems.value.map((item) => Number(heroReady.value[item.mediaId] === true)).join('')}:${heroAllReady.value}`,
+  () => {
+    if (heroTimer !== null) clearTimeout(heroTimer)
+    heroTimer = null
+    if (heroId.value !== null && heroItems.value.length > 1) heroTimer = setTimeout(nextHero, 15000)
+  },
+)
 
 /** Сколько условий в отборе: число на кнопке «Фильтры». */
 const pickCount = computed(
@@ -1041,6 +1225,8 @@ function toSettings(): void {
 }
 
 onMounted(() => {
+  startLightLines()
+  deviationTimer.value = window.setInterval(triggerSakuraDeviation, 30000)
   // Россыпь считается по месту, а не по числу: её ставит наблюдатель за размером плашки.
   layoutSpray()
   if (typeof ResizeObserver !== 'undefined' && heyPlate.value !== null) {
@@ -1066,6 +1252,10 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  if (deviationTimer.value !== null) window.clearInterval(deviationTimer.value)
+  deviationTimer.value = null
+  lightTimers.forEach((timer) => clearTimeout(timer))
+  lightTimers.length = 0
   sprayEye?.disconnect()
   sprayEye = null
   lookRun++
@@ -1073,6 +1263,8 @@ onBeforeUnmount(() => {
   playRun++
   recsRun++
   feedRun++
+  if (heroTimer !== null) clearTimeout(heroTimer)
+  heroTimer = null
   dropSeen()
 
   // Очередь живёт дольше экрана: неснятая подписка держала бы всю витрину в памяти и пересобирала её на каждый ответ чужого экрана.
@@ -1095,23 +1287,108 @@ watch(
 
 <template>
   <section class="am-page">
-    <div ref="heyPlate" class="am-hey">
-      <span class="am-hey__glow" aria-hidden="true" />
-      <span class="am-hey__beam" aria-hidden="true" />
-      <span ref="heyRose" class="am-hey__rose" aria-hidden="true">
-        <svg :viewBox="SAKURA_ROSETTE_BOX"><path :d="SAKURA_ROSETTE" /></svg>
-      </span>
+    <section
+      v-if="!picked"
+      class="am-hero"
+      :role="heroCurrentReady ? 'button' : undefined"
+      :tabindex="heroCurrentReady ? 0 : -1"
+      :style="{
+        '--am-hero-image': heroBrief ? `url(${heroImages[heroBrief.mediaId] ?? ''})` : 'none',
+      }"
+      @click="heroCurrentReady && heroBrief && open(heroBrief.mediaId)"
+      @keydown.enter.prevent="heroCurrentReady && heroBrief && open(heroBrief.mediaId)"
+      @keydown.space.prevent="heroCurrentReady && heroBrief && open(heroBrief.mediaId)"
+    >
+      <div v-if="!heroCurrentReady" class="am-hero__loading"><span class="am-hero__spinner" /></div>
+      <div v-else-if="heroBrief && heroRow" :key="heroBrief.mediaId" class="am-hero__body">
+        <h1
+          class="am-hero__title"
+          :class="{
+            'am-hero__title--long': (heroTitle?.russian ?? heroRow.title).length > 42,
+            'am-hero__title--xlong': (heroTitle?.russian ?? heroRow.title).length > 68,
+          }"
+        >
+          {{ heroTitle?.russian ?? peekRussianName(heroBrief.mediaId) ?? heroRow.title }}
+        </h1>
+        <div class="am-hero__facts">
+          <span v-if="heroBrief.averageScore !== null" class="am-hero__score">
+            ★ {{ (heroBrief.averageScore / 10).toFixed(1) }}
+          </span>
+          <span v-if="heroBrief.seasonYear">{{ heroBrief.seasonYear }}</span>
+          <span v-if="heroBrief.format">{{ formatWord(heroBrief.format) }}</span>
+          <span v-if="heroBrief.episodes">{{ heroBrief.episodes }} серий</span>
+          <span v-if="heroBrief.isAdult" class="am-hero__adult">18+</span>
+        </div>
+        <p v-if="heroCard?.genres.length" class="am-hero__genres">
+          {{ heroCard.genres.map((genre) => genreWord(genre) ?? genre).join(' · ') }}
+        </p>
+        <div v-if="heroTitle?.description ?? heroCard?.description" class="am-hero__description">
+          {{ plainHeroDescription(heroTitle?.description ?? heroCard?.description) }}
+        </div>
+      </div>
+      <div
+        class="am-hero__navigation"
+        role="group"
+        aria-label="Слайды баннера"
+        @click.stop
+        @keydown.stop
+      >
+        <button
+          class="am-hero__arrow"
+          type="button"
+          aria-label="Предыдущий слайд"
+          :disabled="heroTarget(-1) === null"
+          @click="changeHero(-1)"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6" /></svg>
+        </button>
+        <div class="am-hero__dots" aria-hidden="true">
+          <span
+            v-for="(item, index) in heroItems"
+            :key="item.mediaId"
+            :class="{ 'am-hero__dot--on': item.mediaId === heroId }"
+            :data-slide="index"
+          />
+        </div>
+        <button
+          class="am-hero__arrow"
+          type="button"
+          aria-label="Следующий слайд"
+          :disabled="heroTarget(1) === null"
+          @click="changeHero(1)"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6" /></svg>
+        </button>
+      </div>
+    </section>
 
-      <!-- Россыпь: число цветков выходит из свободного места, поэтому
-           их расставляет расчёт, а не разметка. Календарик в запрет не входит: лепестки
-           плывут и за ним, но лунка берёт их задним планом в размытие и оставляет
-           мутными пятнышками — резкого цветка под сеткой не видно. -->
+    <div ref="heyPlate" class="am-hey">
+      <span class="am-hey__lines" aria-hidden="true">
+        <span
+          v-for="(line, index) in lightLines"
+          :key="index"
+          class="am-hey__line"
+          :style="{
+            left: `${line.left}%`,
+            width: `${line.width}px`,
+            opacity: line.opacity,
+            transform: `rotate(${line.rotate}deg)`,
+            transitionDuration: `${line.duration}s`,
+            '--am-line-duration': `${line.duration}s`,
+            '--am-line-flash': line.flash ? '1' : '0',
+          }"
+        />
+      </span>
+      <!-- Россыпь занимает всю плашку и проходит за текстом и календарём. -->
       <span class="am-hey__spray" aria-hidden="true">
         <span
           v-for="grain in grains"
           :key="grain.key"
           class="am-hey__grain"
-          :class="`am-hey__grain--${grain.depth}`"
+          :class="[
+            `am-hey__grain--${grain.depth}`,
+            deviation?.key === grain.key ? `am-hey__grain--${deviation.action}` : '',
+          ]"
           :style="{
             left: `${grain.left}px`,
             top: `${grain.top}px`,
@@ -1131,7 +1408,7 @@ watch(
         </span>
       </span>
 
-      <div ref="heyText" class="am-hey__text">
+      <div class="am-hey__text">
         <h2 class="am-hey__title">
           <span class="am-hey__seed"><SakuraMark /></span>
           <span>{{ splash }}</span>
@@ -1418,7 +1695,7 @@ watch(
         class="am-empty"
       >
         <span class="am-empty__mark"><EmptyMark name="tray" /></span>
-        <span>Свой список пуст, а каталог не ответил.</span>
+        <span>Свой список пуст — добавьте тайтлы или импортируйте список.</span>
         <span>Когда сеть вернётся, здесь появятся рекомендации.</span>
 
         <div class="am-empty__acts">
@@ -1461,6 +1738,30 @@ watch(
 </template>
 
 <style scoped>
+.am-hero__loading,
+.am-home-hero__loading {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  background: var(--am-panel);
+}
+.am-hero__spinner,
+.am-home-hero__spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgb(var(--am-accent-rgb) / 0.22);
+  border-top-color: var(--am-accent);
+  border-radius: 50%;
+  animation: am-hero-spin 0.8s linear infinite;
+}
+@keyframes am-hero-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Приветствие: первое, что видно при запуске. Форма — лист, а не карточка:
    один угол срезан и полоса перестаёт быть прямоугольником среди прямоугольников.
    Половины две: слева приветствие, справа календарик активности. Высота сетки от ширины
@@ -1502,6 +1803,8 @@ watch(
 
 /* Слева приветствие столбцом: фраза сверху, кнопки под ней. */
 .am-hey__text {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -1513,6 +1816,8 @@ watch(
    плашку: высоту полосы задаёт самая высокая половина, и без растяжения календарик вставал бы
    по центру, оставляя под собой и над собой пустоту. */
 .am-hey__side {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -1520,70 +1825,58 @@ watch(
   min-width: 0;
 }
 
-/* Капля под стеклом: без неё размывать нечего, панель выглядела бы грязным прямоугольником. */
-.am-hey__glow {
+.am-hey__lines {
   position: absolute;
-  z-index: -1;
-  bottom: -80%;
-  left: 12%;
-  width: 34%;
-  height: 170%;
-  border-radius: var(--am-r-blob);
-  background: rgb(var(--am-accent-rgb) / 0.3);
-  filter: blur(42px);
+  inset: -20% -12%;
+  z-index: 0;
   pointer-events: none;
-  animation: am-hey-float calc(var(--am-drift) * 1.4) var(--am-ease-soft) infinite alternate-reverse;
 }
 
-@keyframes am-hey-float {
-  from {
-    transform: translate3d(-6%, -4%, 0) scale(1);
-  }
-  to {
-    transform: translate3d(7%, 5%, 0) scale(1.14);
-  }
-}
-
-/* Луч: диагональная полоса вместо второго пятна. Ездит медленно и едва
-   заметно — полоса собирает лист, а не спорит со строкой. */
-.am-hey__beam {
+.am-hey__line {
   position: absolute;
-  z-index: -1;
-  inset: -30% -20%;
+  top: -12%;
+  bottom: -12%;
+  width: 34px;
+  opacity: 0.42;
   background: linear-gradient(
-    104deg,
-    transparent 34%,
-    rgb(var(--am-accent-rgb) / 0.16) 48%,
-    rgb(var(--am-accent-2-rgb) / 0.22) 56%,
-    transparent 70%
+    180deg,
+    transparent,
+    rgb(var(--am-accent-rgb) / 0.9) 38%,
+    rgb(var(--am-accent-2-rgb) / 0.5) 62%,
+    transparent
   );
-  pointer-events: none;
-  animation: am-hey-sweep calc(var(--am-drift) * 1.2) var(--am-ease-soft) infinite alternate;
+  filter: blur(9px);
+  transform: rotate(14deg);
+  transition:
+    left var(--am-line-duration, 4s) cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity var(--am-line-duration, 4s) ease,
+    transform var(--am-line-duration, 4s) ease;
 }
 
-@keyframes am-hey-sweep {
-  from {
-    transform: translateX(-6%);
-  }
-  to {
-    transform: translateX(7%);
-  }
-}
-
-/* Крупная розетка в правом краю; высота — от высоты плашки, а не ширины: на широком окне знак
-   не влез бы. Свес сверху и снизу ровный. */
-.am-hey__rose {
+.am-hey__line::before {
   position: absolute;
-  z-index: -1;
-  top: -25%;
-  right: -4%;
-  height: 150%;
-  aspect-ratio: v-bind(ROSE_ASPECT);
-  color: rgb(var(--am-accent-2-rgb) / 0.3);
-  pointer-events: none;
+  inset: 0;
+  content: '';
+  background: inherit;
+  opacity: 0;
+  filter: blur(4px);
+  animation: am-hey-line-flash 9s ease-in-out infinite;
 }
 
-.am-hey__rose svg,
+@keyframes am-hey-line-flash {
+  0%,
+  78%,
+  100% {
+    opacity: 0;
+  }
+  82% {
+    opacity: var(--am-line-flash);
+  }
+  86% {
+    opacity: 0.18;
+  }
+}
+
 .am-hey__grain svg {
   display: block;
   width: 100%;
@@ -1596,13 +1889,14 @@ watch(
 .am-hey__spray {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
 }
 
 .am-hey__grain {
   position: absolute;
   color: rgb(var(--am-accent-2-rgb));
+  filter: drop-shadow(0 0 8px rgb(var(--am-accent-2-rgb) / 0.24));
   animation: am-hey-drift var(--am-hey-dur) var(--am-ease-soft) var(--am-hey-delay) infinite
     alternate;
 }
@@ -1610,7 +1904,7 @@ watch(
 /* Три глубины: крупные бледные сзади, мелкие плотные спереди. */
 .am-hey__grain--far {
   opacity: 0.1;
-  filter: blur(2px);
+  filter: blur(2px) drop-shadow(0 0 10px rgb(var(--am-accent-2-rgb) / 0.2));
 }
 
 .am-hey__grain--mid {
@@ -1619,6 +1913,120 @@ watch(
 
 .am-hey__grain--near {
   opacity: 0.26;
+}
+
+/* Редкая девиантность: один цветок на короткое время нарушает общий ритм. */
+.am-hey__grain--fly {
+  animation:
+    am-hey-drift 2.6s var(--am-ease) both,
+    am-hey-grain-fly 2.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.am-hey__grain--shake {
+  animation:
+    am-hey-drift 2.6s var(--am-ease) both,
+    am-hey-grain-shake 0.16s linear infinite;
+}
+
+.am-hey__grain--spin {
+  animation:
+    am-hey-drift 2.6s var(--am-ease) both,
+    am-hey-grain-spin 2.6s linear both;
+}
+
+@keyframes am-hey-grain-fly {
+  0% {
+    translate: 0 0;
+    opacity: 0.26;
+  }
+  38% {
+    translate: 80vw -10vh;
+    opacity: 0.08;
+  }
+  100% {
+    translate: 0 0;
+    opacity: 0;
+  }
+}
+
+@keyframes am-hey-grain-shake {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  25% {
+    translate: -3px 2px;
+  }
+  50% {
+    translate: 3px -2px;
+  }
+  75% {
+    translate: -2px -3px;
+  }
+}
+
+@keyframes am-hey-grain-spin {
+  to {
+    rotate: 540deg;
+  }
+}
+
+/* Lain получает слабый CRT-шум и редкие красные импульсы внутри световых линий. */
+html[data-am-family='lain'] .am-hey__line {
+  isolation: isolate;
+}
+
+html[data-am-family='lain'] .am-hey__line::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 3px, rgb(var(--am-accent-rgb) / 0.08) 4px),
+    repeating-linear-gradient(90deg, transparent 0 7px, rgb(var(--am-accent-2-rgb) / 0.05) 8px);
+  mix-blend-mode: screen;
+  animation: am-lain-spot-noise 2.8s steps(5, end) infinite;
+}
+
+html[data-am-family='lain'] .am-hey__line:nth-child(2)::after,
+html[data-am-family='lain'] .am-hey__line:nth-child(4)::after {
+  background:
+    radial-gradient(circle at 62% 44%, rgb(var(--am-accent-2-rgb) / 0.36), transparent 18%),
+    repeating-linear-gradient(0deg, transparent 0 3px, rgb(var(--am-accent-rgb) / 0.08) 4px);
+  animation: am-lain-spot-flare 7.5s steps(7, end) infinite;
+}
+
+@keyframes am-lain-spot-noise {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translate(0);
+  }
+  47% {
+    opacity: 0.6;
+    transform: translate(2px, -1px);
+  }
+  49% {
+    opacity: 0.2;
+    transform: translate(-1px, 1px);
+  }
+}
+
+@keyframes am-lain-spot-flare {
+  0%,
+  72%,
+  100% {
+    opacity: 0;
+  }
+  76% {
+    opacity: 0.85;
+  }
+  79% {
+    opacity: 0.18;
+  }
+  82% {
+    opacity: 0.55;
+  }
 }
 
 /* Цветок плывёт и покачивается: с поворотом смещение читается плывущим лепестком, а не пятном. */
@@ -1670,6 +2078,8 @@ watch(
   background: var(--am-glass);
   border: 1px solid var(--am-line-soft);
   border-radius: var(--am-r-xl);
+  outline: 1px solid var(--am-line);
+  outline-offset: -1px;
   box-shadow: inset 0 1px 0 var(--am-edge);
   backdrop-filter: blur(var(--am-blur)) saturate(1.4);
 }
@@ -2007,6 +2417,258 @@ watch(
   animation: am-shelf-in var(--am-slow) var(--am-ease) both;
 }
 
+/* Крупная карточка первого экрана: картинка остаётся фоном, текст читается на затемнённой левой части. */
+.am-hero {
+  position: relative;
+  height: 330px;
+  overflow: hidden;
+  cursor: pointer;
+  isolation: isolate;
+  background: var(--am-panel);
+  border: 1px solid var(--am-line);
+  border-radius: var(--am-r-xl);
+  box-shadow:
+    inset 0 1px 0 var(--am-edge),
+    var(--am-sh-1);
+  animation: am-hero-in 0.72s var(--am-ease) both;
+  transition:
+    border-color var(--am-mid) var(--am-ease),
+    transform var(--am-mid) var(--am-ease);
+}
+
+/* Фон и затемнение разнесены по слоям: прозрачные градиенты в background создавали заметный шов. */
+.am-hero::before,
+.am-hero::after {
+  position: absolute;
+  inset: 1px;
+  pointer-events: none;
+  content: '';
+}
+
+.am-hero::before {
+  z-index: 0;
+  background: var(--am-hero-image) center / cover no-repeat;
+  opacity: 0.82;
+}
+
+.am-hero::after {
+  z-index: 0;
+  background:
+    linear-gradient(
+      90deg,
+      var(--am-panel) 0%,
+      var(--am-panel) 22%,
+      color-mix(in srgb, var(--am-panel) 78%, transparent) 48%,
+      color-mix(in srgb, var(--am-panel) 30%, transparent) 72%,
+      transparent 100%
+    ),
+    linear-gradient(180deg, transparent 42%, var(--am-bg) 100%);
+}
+
+@keyframes am-hero-in {
+  from {
+    opacity: 0.35;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.am-hero:hover,
+.am-hero:focus-visible {
+  border-color: var(--am-accent);
+  transform: translateY(-2px);
+}
+
+.am-hero:focus-visible {
+  outline: 2px solid rgb(var(--am-accent-rgb) / 0.7);
+  outline-offset: 4px;
+}
+
+.am-hero__body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  width: min(58%, 700px);
+  height: 330px;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: 34px 38px;
+  animation: am-hero-copy-in 0.72s var(--am-ease) both;
+  transition:
+    opacity 0.42s var(--am-ease),
+    transform 0.42s var(--am-ease);
+}
+
+.am-hero__body--fade {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+@keyframes am-hero-copy-in {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.am-hero__eyebrow {
+  padding: 6px 10px;
+  color: var(--am-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--am-accent-soft);
+  border: 1px solid rgb(var(--am-accent-rgb) / 0.42);
+  border-radius: var(--am-r-s);
+}
+
+.am-hero__title {
+  max-width: 690px;
+  display: -webkit-box;
+  max-height: 2.16em;
+  margin: 10px 0 14px;
+  overflow: hidden;
+  color: var(--am-text);
+  font-size: clamp(26px, 3.2vw, 48px);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  text-overflow: ellipsis;
+}
+
+.am-hero__title--long {
+  font-size: clamp(24px, 2.6vw, 40px);
+}
+
+.am-hero__title--xlong {
+  font-size: clamp(21px, 2.1vw, 34px);
+}
+
+.am-hero__facts,
+.am-hero__genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 0;
+  color: var(--am-dim);
+  font-size: 13px;
+}
+
+.am-hero__score,
+.am-hero__adult {
+  padding: 3px 7px;
+  color: var(--am-on-accent);
+  font-weight: 700;
+  background: var(--am-accent);
+  border-radius: var(--am-r-s);
+}
+
+.am-hero__adult {
+  color: #fff;
+  background: var(--am-accent-2);
+}
+
+.am-hero__genres {
+  margin-top: 14px;
+}
+
+.am-hero__description {
+  display: -webkit-box;
+  max-width: 620px;
+  height: 65px;
+  margin: 14px 0 0;
+  overflow: hidden;
+  color: var(--am-dim);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  text-overflow: ellipsis;
+}
+
+.am-hero__navigation {
+  position: absolute;
+  right: 24px;
+  top: 20px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--am-mid) var(--am-ease);
+}
+
+.am-hero:hover .am-hero__navigation,
+.am-hero:focus-within .am-hero__navigation {
+  opacity: 1;
+  pointer-events: auto;
+}
+.am-hero__dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.am-hero__arrow {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  cursor: pointer;
+  color: var(--am-text);
+  background: var(--am-glass-deep);
+  border: 1px solid rgb(var(--am-accent-rgb) / 0.38);
+  border-radius: var(--am-r-cap);
+}
+.am-hero__arrow svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+}
+.am-hero__arrow:hover:not(:disabled) {
+  color: var(--am-accent);
+  border-color: var(--am-accent);
+}
+.am-hero__arrow:focus-visible {
+  outline: 2px solid var(--am-accent);
+  outline-offset: 3px;
+}
+.am-hero__arrow:disabled {
+  cursor: default;
+  opacity: 0.3;
+}
+
+.am-hero__dots span {
+  width: 6px;
+  height: 6px;
+  background: var(--am-faint);
+  border-radius: 50%;
+  transition:
+    transform var(--am-mid) var(--am-ease),
+    background-color var(--am-mid) var(--am-ease);
+}
+
+.am-hero__dots .am-hero__dot--on {
+  background: var(--am-accent);
+  transform: scale(1.45);
+}
+
 @keyframes am-shelf-in {
   from {
     opacity: 0;
@@ -2078,6 +2740,29 @@ watch(
 /* На узком экране кнопка отбора уходит над лентой жанров: рядом им тесно,
    и лента сжималась до двух чипов. */
 @media (max-width: 560px) {
+  .am-hero__body {
+    width: 100%;
+    height: 280px;
+    padding: 26px 22px;
+    background: linear-gradient(
+      90deg,
+      var(--am-panel),
+      color-mix(in srgb, var(--am-panel) 76%, transparent)
+    );
+  }
+
+  .am-hero {
+    height: 280px;
+  }
+
+  .am-hero__title {
+    font-size: 28px;
+  }
+
+  .am-hero__description {
+    -webkit-line-clamp: 2;
+  }
+
   .am-sift {
     flex-wrap: wrap;
   }

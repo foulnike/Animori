@@ -22,7 +22,7 @@ const GENRE_WORDS: Readonly<Record<string, string>> = {
   Fantasy: 'Фэнтези',
   Hentai: 'Хентай',
   Horror: 'Ужасы',
-  'Mahou Shoujo': 'Махо-сỏдзỏ',
+  'Mahou Shoujo': 'Махо-сёдзё',
   Mecha: 'Меха',
   Music: 'Музыка',
   Mystery: 'Детектив',

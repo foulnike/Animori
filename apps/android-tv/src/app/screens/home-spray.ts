@@ -6,8 +6,8 @@ import { SAKURA_ROSETTE_RATIO } from '../sakura'
 
 // Клетка, из которой выходит густота россыпи. На слабой платформе она вдвое крупнее: каждый лепесток там —
 // отдельная анимируемая подложка, и тридцать их съедали кадр. Движение и три глубины те же.
-const CELL_W = isWeakPlatform() ? 210 : 132
-const CELL_H = isWeakPlatform() ? 118 : 76
+const CELL_W = isWeakPlatform() ? 150 : 96
+const CELL_H = isWeakPlatform() ? 88 : 58
 
 /** Зазор от строки текста: цветок не должен липнуть к надписи. */
 const PAD = 18

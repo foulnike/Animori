@@ -33,6 +33,11 @@ const KINDS: ReadonlyArray<{ key: ProxyKind; title: string }> = [
 
 /** Значения на случай отсутствия ключа. До первого чтения поля не пустуют. */
 const enabled = ref(DEFAULT_PROXY.enabled)
+const panelOpen = ref(false)
+
+function togglePanel(): void {
+  panelOpen.value = !panelOpen.value
+}
 const kind = ref(DEFAULT_PROXY.kind)
 const host = ref(DEFAULT_PROXY.host)
 const login = ref(DEFAULT_PROXY.login)
@@ -260,8 +265,18 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="am-panel am-box">
-    <h3 class="am-h3"><TileMark name="proxy" /> Прокси</h3>
+  <div class="am-panel am-box" :class="{ 'am-panel--closed': !panelOpen }">
+    <h3
+      class="am-h3 am-panel__title"
+      role="button"
+      tabindex="0"
+      :aria-expanded="panelOpen"
+      @click="togglePanel"
+      @keydown.enter.prevent="togglePanel"
+      @keydown.space.prevent="togglePanel"
+    >
+      <TileMark name="proxy" /> Прокси
+    </h3>
 
     <label class="am-switch">
       <input v-model="enabled" type="checkbox" class="am-switch__box" @change="onEnabled" />

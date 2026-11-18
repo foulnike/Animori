@@ -553,10 +553,9 @@ onMounted(() => {
          в справке под «i», здесь только адрес и поле. -->
     <template v-if="tokenNeeded()">
       <p class="am-meta am-meta--text">
-        Пропуск выдаёт сам Яндекс: заведите приложение с правом «Приложения на Диске» на
-        <button class="am-link" type="button" @click="onCloudHelp">oauth.yandex.com</button>
-        и вставьте выданный токен сюда. Он останется на этом устройстве. Порядок по шагам — под
-        кнопкой «i». Копия уходит на серверы Яндекса только по кнопке; условия обработки — в
+        Создайте приложение с правом «Приложения на Диске» на
+        <button class="am-link" type="button" @click="onCloudHelp">oauth.yandex.com</button>,
+        вставьте токен и сохраните; условия — в
         <button class="am-link" type="button" @click="onPrivacy">
           Политике обработки персональных данных
         </button>
