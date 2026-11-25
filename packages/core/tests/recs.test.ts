@@ -102,6 +102,16 @@ describe('полка витрины', () => {
     expect(distributed.get('top')?.map((item) => item.mediaId)).toEqual([2, 4])
   })
 
+  it('не пропускает последнюю часть связной цепочки франшизы', () => {
+    const first = { ...brief(10), franchiseIds: [10, 11], franchiseKey: 10 }
+    const middle = { ...brief(11), franchiseIds: [11, 10, 12], franchiseKey: 10 }
+    const last = { ...brief(12), franchiseIds: [12, 11], franchiseKey: 11 }
+
+    const distributed = recs.distributeShelves(['top'], new Map([['top', [first, middle, last]]]), 3)
+
+    expect(distributed.get('top')?.map((item) => item.mediaId)).toEqual([10])
+  })
+
   it('добирает плитки из запаса страницы, не ходят в сеть', async () => {
     pages.top = [row(1, 30)]
 

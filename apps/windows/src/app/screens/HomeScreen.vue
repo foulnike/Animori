@@ -364,13 +364,17 @@ let priming: Promise<void> = Promise.resolve()
 /** Стоит ли сейчас хоть одно условие отбора. */
 const picked = computed(() => pickIsSet(homePick.value))
 
-/** Кандидаты баннера берутся из той же полки, что и «В тренде», без отдельной выдачи. */
+/** Кандидаты баннера берутся из уже опубликованной полки «Лучшее за всё время».
+ * Это сохраняет дедупликацию франшиз и порядок после распределения полок. */
 const heroItems = computed(() => {
   void recs.value
   if (picked.value) return []
 
+  const topShelf = recs.value.find((shelf) => shelf.key === 'top')
+  const briefs = new Map((staged.get('top') ?? []).map((brief) => [brief.mediaId, brief]))
   return keepAllowed(
-    staged.get('trending') ?? [],
+    topShelf?.rows.map((row) => briefs.get(row.mediaId)).filter((brief) => brief !== undefined) ??
+      [],
     (brief) => brief.isAdult,
     (brief) => brief.tags,
   ).slice(0, SHELF_SIZE)

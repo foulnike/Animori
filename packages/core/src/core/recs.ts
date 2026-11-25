@@ -348,7 +348,9 @@ export async function shelfFill(
 }
 
 /** Дедупликация уже набранных полок: порядок `names` задаёт, где тайтл подходит лучше.
- *  Внутри одной полки второй тайтл той же AniList-франшизы не вытесняет первый. */
+ *  Внутри одной полки второй тайтл той же AniList-франшизы не вытесняет первый.
+ *  Набор связей расширяется и у пропущенных частей, поэтому цепочка A→B→C
+ *  не позволяет C обойти ограничение, если в полке уже остался A. */
 export function distributeShelves(
   names: readonly ShelfName[],
   staged: ReadonlyMap<ShelfName, readonly MediaBrief[]>,
@@ -362,10 +364,19 @@ export function distributeShelves(
     const franchises = new Set<number>()
     for (const brief of staged.get(name) ?? []) {
       if (rows.length >= want || claimed.has(brief.mediaId)) continue
-      if (brief.franchiseKey !== null && brief.franchiseKey !== undefined) {
-        if (franchises.has(brief.franchiseKey)) continue
-        franchises.add(brief.franchiseKey)
+      const relationIds = Array.from(
+        new Set([
+          ...(brief.franchiseIds ?? []),
+          ...(brief.franchiseKey !== null && brief.franchiseKey !== undefined
+            ? [brief.franchiseKey]
+            : []),
+        ]),
+      )
+      if (relationIds.some((id) => franchises.has(id))) {
+        for (const id of relationIds) franchises.add(id)
+        continue
       }
+      for (const id of relationIds) franchises.add(id)
       rows.push(brief)
       claimed.add(brief.mediaId)
     }

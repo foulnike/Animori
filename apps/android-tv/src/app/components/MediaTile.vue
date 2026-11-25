@@ -43,6 +43,8 @@ interface Props {
   hidable?: boolean
   /** Кнопка правки записи: только там, где запись уже есть. */
   editable?: boolean
+  /** Стабильный ключ для восстановления D-pad-фокуса после возврата на экран. */
+  focusId?: number | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -63,6 +65,7 @@ const props = withDefaults(defineProps<Props>(), {
   stackTags: false,
   hidable: false,
   editable: false,
+  focusId: null,
 })
 
 const emit = defineEmits<{ (e: 'open'): void; (e: 'hide'): void; (e: 'edit'): void }>()
@@ -122,7 +125,13 @@ const hasStackTags = computed(() => props.mark !== null || props.soon || props.o
       'am-tile--stack': stackTags,
     }"
   >
-    <button v-tip="title" class="am-tile__hit" type="button" @click="emit('open')">
+    <button
+      v-tip="title"
+      class="am-tile__hit"
+      type="button"
+      :data-am-focus-id="focusId ?? undefined"
+      @click="emit('open')"
+    >
       <span class="am-tile__art" :style="artStyle">
         <img
           v-if="cover && !imageFailed"

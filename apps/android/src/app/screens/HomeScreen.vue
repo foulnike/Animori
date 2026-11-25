@@ -230,11 +230,16 @@ const heroReady = ref<Record<number, boolean>>({})
 const heroItems = computed(
   () => (
     void recs.value,
-    keepAllowed(
-      staged.get('trending') ?? [],
-      (item) => item.isAdult,
-      (item) => item.tags,
-    ).slice(0, 8)
+    (() => {
+      const topShelf = recs.value.find((shelf) => shelf.key === 'top')
+      const briefs = new Map((staged.get('top') ?? []).map((item) => [item.mediaId, item]))
+      return keepAllowed(
+        topShelf?.rows.map((row) => briefs.get(row.mediaId)).filter((item) => item !== undefined) ??
+          [],
+        (item) => item.isAdult,
+        (item) => item.tags,
+      ).slice(0, 8)
+    })()
   ),
 )
 const heroBrief = computed(() => {

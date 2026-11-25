@@ -1,7 +1,7 @@
 // Проверки обхода фокуса стрелками. Обход целиком живёт на геометрии и `activeElement`, поэтому проверяем
 // ровно те решения, что стоили человеку пульта: куда садится фокус и кого обход обходит стороной.
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { startDpad } from '../src/app/dpad'
 
@@ -35,6 +35,7 @@ function focused(): string {
 }
 
 beforeEach(() => {
+  window.history.replaceState(null, '', '#/home')
   document.body.innerHTML = ''
   stop = startDpad()
 })
@@ -42,6 +43,7 @@ beforeEach(() => {
 afterEach(() => {
   stop?.()
   stop = null
+  vi.useRealTimers()
 })
 
 describe('обход стрелками в окне', () => {
@@ -515,5 +517,69 @@ describe('посев без помеченного первого', () => {
     document.body.focus()
     press('ArrowDown')
     expect(focused()).toBe('tile')
+  })
+})
+
+describe('возврат к постеру главной', () => {
+  it('продолжает движение от восстановленного постера за пределами окна', () => {
+    document.body.innerHTML = `
+      <main class="am-view">
+        <button data-am-first data-test="banner"></button>
+        <ul data-am-row>
+          <li><button data-test="current"></button></li>
+          <li><button data-test="next"></button></li>
+        </ul>
+      </main>`
+    const current = document.querySelector<HTMLElement>('[data-test="current"]')!
+    const next = document.querySelector<HTMLElement>('[data-test="next"]')!
+    const banner = document.querySelector<HTMLElement>('[data-test="banner"]')!
+    const belowViewport = window.innerHeight * 3
+    place(banner, 100, 40)
+    place(current, 100, belowViewport, 120, 180)
+    place(next, 240, belowViewport, 120, 180)
+    current.focus()
+
+    press('ArrowRight')
+
+    expect(document.activeElement).toBe(next)
+  })
+
+  it('ждёт постер после возврата и продолжает обход по его соседям', async () => {
+    vi.useFakeTimers()
+    const go = (hash: string): void => {
+      window.history.replaceState(null, '', hash)
+      window.dispatchEvent(new HashChangeEvent('hashchange'))
+    }
+    document.body.innerHTML = '<button data-am-focus-id="42"></button>'
+    const old = document.querySelector<HTMLElement>('button')!
+    place(old, 100, 600)
+    old.focus()
+    old.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    go('#/media/42')
+    document.body.innerHTML = ''
+    go('#/home')
+    document.body.innerHTML =
+      '<main class="am-view"><button data-am-first>20 ноября</button></main>'
+    await vi.advanceTimersByTimeAsync(400)
+    expect(document.activeElement).toBe(document.body)
+
+    document.body.innerHTML = `
+      <main class="am-view">
+        <button data-am-first>20 ноября</button>
+        <ul data-am-row>
+          <li><button data-am-focus-id="42">Постер</button></li>
+          <li><button data-am-focus-id="43">Сосед</button></li>
+        </ul>
+      </main>`
+    const restored = document.querySelector<HTMLElement>('[data-am-focus-id="42"]')!
+    const next = document.querySelector<HTMLElement>('[data-am-focus-id="43"]')!
+    place(restored, 100, 600)
+    place(next, 340, 600)
+    restored.checkVisibility = () => true
+    next.checkVisibility = () => true
+    await vi.advanceTimersByTimeAsync(100)
+    expect(document.activeElement).toBe(restored)
+    press('ArrowRight')
+    expect(document.activeElement).toBe(next)
   })
 })

@@ -22,10 +22,11 @@ function seen(el: HTMLElement): boolean {
   return getComputedStyle(el).visibility !== 'hidden'
 }
 
-function candidates(scope: ParentNode): HTMLElement[] {
+function candidates(scope: ParentNode, origin?: HTMLElement): HTMLElement[] {
   const out: HTMLElement[] = []
   const w = window.innerWidth || 960
   const h = window.innerHeight || 540
+  const anchor = origin?.getBoundingClientRect()
 
   scope.querySelectorAll<HTMLElement>(FOCUSABLE).forEach(function (el) {
     if (el.hasAttribute('disabled')) return
@@ -35,8 +36,17 @@ function candidates(scope: ParentNode): HTMLElement[] {
     if (box.width <= 0 || box.height <= 0) return
 
     // Дальше двух экранов не смотрим: на главной фокусируемых под сотню, и мерить геометрию каждого на каждое нажатие для телевизора дорого — это заметно в кадре. Двух экранов запаса хватает до хвоста карусели.
-    if (box.bottom < -h || box.top > h * 2) return
-    if (box.right < -w || box.left > w * 2) return
+    const nearViewport =
+      box.bottom >= -h && box.top <= h * 2 && box.right >= -w && box.left <= w * 2
+    // Restored focus may precede scroll restoration. Include its neighbours too,
+    // so the next arrow continues from that tile rather than restarting the page.
+    const nearOrigin =
+      anchor !== undefined &&
+      box.bottom >= anchor.top - h &&
+      box.top <= anchor.bottom + h &&
+      box.right >= anchor.left - w &&
+      box.left <= anchor.right + w
+    if (!nearViewport && !nearOrigin) return
 
     if (!seen(el)) return
     out.push(el)
@@ -443,6 +453,13 @@ function seedDpad(): Seed {
 /// Кто держал фокус до открытия окна. Закрытое окно уносит фокус с собой (`activeElement` становится `body`), и сторож пустого фокуса сеял бы заново, уводя к началу экрана.
 let beforeDialog: HTMLElement | null = null
 
+/// DOM-узел постера может быть пересоздан после возврата с карточки. Запоминаем его
+/// стабильный номер, чтобы восстановить фокус на новой кнопке и не отдавать стрелку
+/// встроенной пространственной навигации WebView.
+let lastPageFocusId: string | null = null
+let restoreFocusTimer: ReturnType<typeof setTimeout> | null = null
+let restoreFocusPending = false
+
 /// Кто держал фокус внутри окна последним. Кнопку могли убрать из разметки (`v-if` вопроса) или сделать
 /// неактивной (`disabled`), и фокусу осталось бы стать ни на чём — а за занавесом его не видно.
 let lastInDialog: HTMLElement | null = null
@@ -456,7 +473,45 @@ function rememberFocus(e: FocusEvent): void {
     lastInDialog = el
     return
   }
+  const focusId = el.closest<HTMLElement>('[data-am-focus-id]')?.dataset.amFocusId
+  if (focusId !== undefined) lastPageFocusId = focusId
   beforeDialog = el
+}
+
+function restorePageFocus(): void {
+  if (!location.hash.startsWith('#/home') || lastPageFocusId === null) {
+    restoreFocusPending = false
+    return
+  }
+  restoreFocusPending = true
+  if (restoreFocusTimer !== null) clearTimeout(restoreFocusTimer)
+
+  let left = 50
+  const attempt = (): void => {
+    if (!location.hash.startsWith('#/home') || lastPageFocusId === null) return
+    const target = Array.from(document.querySelectorAll<HTMLElement>('[data-am-focus-id]')).find(
+      (el) => el.dataset.amFocusId === lastPageFocusId && !el.hasAttribute('disabled') && seen(el),
+    )
+    if (target) {
+      target.focus({ preventScroll: true })
+      if (document.activeElement === target) {
+        markTile(target)
+        restoreFocusTimer = null
+        restoreFocusPending = false
+        seedDone = true
+        seedTries = 0
+        syncRail()
+        return
+      }
+    }
+    if (--left > 0) restoreFocusTimer = setTimeout(attempt, 100)
+    else {
+      restoreFocusTimer = null
+      restoreFocusPending = false
+    }
+  }
+
+  restoreFocusTimer = setTimeout(attempt, 0)
 }
 
 /// Возврат фокуса туда, откуда открыли окно.
@@ -535,6 +590,10 @@ function watchFocus(): void {
     return
   }
 
+  // После возврата с карточки ждём сохранённый постер. Иначе помеченный
+  // календарём день успевает перехватить посев раньше восстановления.
+  if (restoreFocusPending) return
+
   if (backToBeforeDialog()) return
 
   if (seedDone || seedTries >= 5) return
@@ -555,6 +614,28 @@ function planRail(): void {
 
 /// Подключает вождение фокуса стрелками. Возвращает отключатель. Не вмешивается, когда стрелки нужны элементу: раскрытый список (`.am-pick`) листает свои пункты сам.
 export function startDpad(): () => void {
+  let previousHash = location.hash
+
+  function onHashChange(): void {
+    if (location.hash === previousHash) return
+    const fromCard = previousHash.startsWith('#/media/')
+    const toCard = location.hash.startsWith('#/media/')
+    previousHash = location.hash
+    if (restoreFocusTimer !== null) clearTimeout(restoreFocusTimer)
+    restoreFocusTimer = null
+    seedDone = false
+    seedTries = 0
+    seedSince = 0
+    beforeDialog = null
+    lastInDialog = null
+    planRail()
+    if (fromCard && !toCard) restorePageFocus()
+    else if (!toCard && !location.hash.startsWith('#/home')) {
+      lastPageFocusId = null
+      restoreFocusPending = false
+    }
+  }
+
   function onKey(e: KeyboardEvent): void {
     if (inPlayer()) return
     // Enter снимает блокировку поля — только тогда WebView поднимает экранную клавиатуру; на кнопке браузер кликает сам.
@@ -572,6 +653,18 @@ export function startDpad(): () => void {
     const dir = DIRS[e.key]
     if (!dir) return
     if (e.metaKey || e.ctrlKey || e.altKey) return
+
+    if (restoreFocusPending) {
+      e.preventDefault()
+      return
+    }
+
+    // Пользователь начал движение раньше, чем полка успела восстановиться:
+    // управление остаётся за пультом, отложенный автоповорот фокуса отменяется.
+    if (restoreFocusTimer !== null) {
+      clearTimeout(restoreFocusTimer)
+      restoreFocusTimer = null
+    }
 
     // Пульт взял управление: плашка, притащенная припаркованным указателем на чужой элемент, пусть уходит вместе с первым направлением. Свою фокусную подпись не трогаем.
     hideStaleTip()
@@ -599,7 +692,15 @@ export function startDpad(): () => void {
 
     const root = topDialog()
     const area: ParentNode = root ?? document
-    const items = candidates(area)
+    const restored =
+      now === document.body && lastPageFocusId !== null
+        ? Array.from(document.querySelectorAll<HTMLElement>('[data-am-focus-id]')).find(
+            (el) =>
+              el.dataset.amFocusId === lastPageFocusId && !el.hasAttribute('disabled') && seen(el),
+          )
+        : null
+    const source = restored ?? now
+    const items = candidates(area, source instanceof HTMLElement ? source : undefined)
     // Пусто — тоже отвечаем сами: отпущенная клавиша досталась бы оболочке WebView, и её пространственная навигация увела бы фокус куда угодно — за занавес окна или в рельс.
     if (items.length === 0) {
       e.preventDefault()
@@ -609,8 +710,8 @@ export function startDpad(): () => void {
     // Фокус ни на ком — экран только что открыли либо кнопку убрали из разметки. Берём первый элемент
     // содержимого, а не разметки: рельс идёт первым, в окне — крестик шапки, и оба предлагают уйти.
     let target: HTMLElement | null
-    if (now instanceof HTMLElement && now !== document.body && items.indexOf(now) >= 0) {
-      target = nearest(now, dir, items)
+    if (source instanceof HTMLElement && source !== document.body && items.indexOf(source) >= 0) {
+      target = nearest(source, dir, items)
 
       // Прыжок влево с полки встаёт на текущий раздел рельса, а не на ближайший по высоте пункт. Проверяем
       // именно `dir === 'left'` и нахождение цели в рельсе: прыжок вправо и шаги внутри рельса идут обходом.
@@ -621,7 +722,7 @@ export function startDpad(): () => void {
       // Переход между полками вверх-вниз — на крайнюю левую цель новой полки, а на чип по геометрии: зайти на
       // ряд отбора и встать надо на «Фильтры». Внутри одного блока правило молчит само (`rowStart`).
       if (target !== null && (dir === 'up' || dir === 'down')) {
-        target = rowStart(now, target, items) ?? target
+        target = rowStart(source, target, items) ?? target
       }
 
       // Из окна наверх выход есть всегда, и это крестик шапки. Панель стоит колонкой, верхние её строки узки
@@ -636,7 +737,7 @@ export function startDpad(): () => void {
       // Последний проход: в окне вбок идти больше нечем. Без него узкая строка посреди панели оставалась без
       // ответа на стрелку вверх или вниз.
       if (target === null && root !== null && (dir === 'up' || dir === 'down')) {
-        target = nearest(now, dir, items, true)
+        target = nearest(source, dir, items, true)
       }
     } else if (root !== null) {
       // Фокус в окне пуст — WebView его отпустил, панель перерисовалась. Сеем на первую живую цель: шагать
@@ -690,14 +791,7 @@ export function startDpad(): () => void {
   document.addEventListener('focusout', onFocusOut)
   document.addEventListener('click', planRail)
   document.addEventListener('pointerdown', onPointerDown)
-  window.addEventListener('hashchange', function () {
-    seedDone = false
-    seedTries = 0
-    seedSince = 0
-    beforeDialog = null
-    lastInDialog = null
-    planRail()
-  })
+  window.addEventListener('hashchange', onHashChange)
 
   return function () {
     window.clearInterval(watch)
@@ -707,6 +801,10 @@ export function startDpad(): () => void {
     document.removeEventListener('focusout', onFocusOut)
     document.removeEventListener('click', planRail)
     document.removeEventListener('pointerdown', onPointerDown)
-    window.removeEventListener('hashchange', planRail)
+    window.removeEventListener('hashchange', onHashChange)
+    if (restoreFocusTimer !== null) clearTimeout(restoreFocusTimer)
+    restoreFocusTimer = null
+    lastPageFocusId = null
+    restoreFocusPending = false
   }
 }

@@ -43,7 +43,7 @@ const FEED_SKIP_STATUS = 'NOT_YET_RELEASED'
 /**
  * Ключи склада; цифра — поколение формы: сменился состав полей — сменилась и она, прежние записи перестанут находиться.
  */
-const SHELF_PREFIX = 'SHELF3_'
+const SHELF_PREFIX = 'SHELF4_'
 const TAGS_KEY = 'TAGS1_all'
 const GENRE_PREFIX = 'GENRE1_'
 const RECS_PREFIX = 'RECS1_'
@@ -387,7 +387,8 @@ function toBrief(item: BriefReply | null | undefined): MediaBrief | null {
     )
     .map((edge) => edge?.node?.id)
     .filter((id): id is number => typeof id === 'number' && id > 0)
-  const franchiseKey = franchiseIds.length > 0 ? Math.min(item.id, ...franchiseIds) : null
+  const franchiseGraph = Array.from(new Set([item.id, ...franchiseIds]))
+  const franchiseKey = franchiseIds.length > 0 ? Math.min(...franchiseGraph) : null
 
   return {
     mediaId: item.id,
@@ -411,6 +412,7 @@ function toBrief(item: BriefReply | null | undefined): MediaBrief | null {
     airingAt: countOrNull(item.nextAiringEpisode?.airingAt),
     ownEntry: null,
     franchiseKey,
+    franchiseIds: franchiseGraph,
   }
 }
 

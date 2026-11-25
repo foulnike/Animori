@@ -415,6 +415,8 @@ export interface MediaBrief {
   ownEntry: ServerEntry | null
   /** Conservative AniList relation bucket used only to avoid franchise clusters on recommendation shelves. */
   franchiseKey?: number | null
+  /** Direct relation graph nodes used to keep connected franchise chains together. */
+  franchiseIds?: number[]
 }
 
 /**
