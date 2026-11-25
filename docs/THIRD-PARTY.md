@@ -172,13 +172,14 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | rustls | 0.23.46 |
 | rustls-native-certs | 0.8.5 |
 
-#### Apache-2.0 OR MIT (35)
+#### Apache-2.0 OR MIT (36)
 
 | Пакет | Версия | |
 | --- | --- | --- |
 | atomic-waker | 1.1.2 |
 | bit-set | 0.8.0 |
 | bit-vec | 0.8.0 |
+| const-oid | 0.10.3 |
 | ctor | 1.0.13 |
 | equivalent | 1.0.3 |
 | fastrand | 2.5.0 |
@@ -189,9 +190,9 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | multiversion_no_op | 1.0.0 |
 | pin-project-lite | 0.2.17 |
 | rustc-hash | 2.1.3 |
-| tauri | 2.12.5 |
-| tauri-codegen | 2.7.4 |
-| tauri-macros | 2.7.4 |
+| tauri | 2.12.7 |
+| tauri-codegen | 2.7.6 |
+| tauri-macros | 2.7.6 |
 | tauri-plugin-clipboard-manager | 2.5.0 |
 | tauri-plugin-dialog | 2.8.4 |
 | tauri-plugin-fs | 2.7.1 |
@@ -201,9 +202,9 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | tauri-plugin-store | 2.5.1 |
 | tauri-plugin-updater | 2.14.1 |
 | tauri-plugin-window-state | 2.5.0 |
-| tauri-runtime | 2.12.2 |
-| tauri-runtime-wry | 2.12.3 |
-| tauri-utils | 2.10.2 |
+| tauri-runtime | 2.12.4 |
+| tauri-runtime-wry | 2.12.5 |
+| tauri-utils | 2.10.4 |
 | utf_types | 1.0.0 |
 | utf8_iter | 1.1.0 |
 | uuid | 1.29.2 |
@@ -267,7 +268,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | rustls-webpki | 0.103.16 |
 | untrusted | 0.9.0 |
 
-#### MIT (60)
+#### MIT (59)
 
 | Пакет | Версия | |
 | --- | --- | --- |
@@ -282,7 +283,6 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | dom_query | 0.28.0 |
 | fax | 0.2.7 |
 | fern | 0.7.1 |
-| generic-array | 0.14.7 |
 | h2 | 0.4.20 |
 | http-body | 1.1.0 |
 | http-body-util | 0.1.5 |
@@ -341,22 +341,21 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | base64 | 0.22.1 |
 | base64 | 0.23.1 |
 | bitflags | 2.13.2 |
-| block-buffer | 0.10.4 |
+| block-buffer | 0.12.1 |
 | camino | 1.2.6 |
 | cargo-platform | 0.1.9 |
 | cfg-if | 1.0.5 |
 | chacha20 | 0.10.2 |
 | chrono | 0.4.45 |
-| cookie | 0.18.2 |
-| cpufeatures | 0.2.17 |
+| cookie | 0.18.3 |
 | cpufeatures | 0.3.1 |
 | crc32fast | 1.5.5 |
 | crossbeam-channel | 0.5.17 |
 | crossbeam-utils | 0.8.23 |
-| crypto-common | 0.1.7 |
+| crypto-common | 0.2.2 |
 | data-url | 0.3.2 |
 | deranged | 0.5.9 |
-| digest | 0.10.7 |
+| digest | 0.11.3 |
 | dirs | 7.0.0 |
 | dirs-sys | 0.5.0 |
 | displaydoc | 0.2.7 |
@@ -365,7 +364,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | erased-serde | 0.4.11 |
 | fdeflate | 0.3.7 |
 | flate2 | 1.1.11 |
-| form_urlencoded | 1.2.2 |
+| form_urlencoded | 1.2.3 |
 | futures-channel | 0.3.34 |
 | futures-core | 0.3.34 |
 | futures-io | 0.3.34 |
@@ -385,6 +384,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | html5ever | 0.39.0 |
 | http | 1.5.0 |
 | httparse | 1.10.1 |
+| hybrid-array | 0.4.15 |
 | idna | 1.1.0 |
 | image | 0.25.10 |
 | ipnet | 2.12.2 |
@@ -436,7 +436,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | serialize-to-javascript | 0.1.2 |
 | serialize-to-javascript-impl | 0.1.2 |
 | servo_arc | 0.4.3 |
-| sha2 | 0.10.9 |
+| sha2 | 0.11.1 |
 | simdutf8 | 0.1.5 |
 | siphasher | 1.0.4 |
 | smallvec | 1.16.5 |
@@ -463,7 +463,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | typeid | 1.0.3 |
 | typenum | 1.20.1 |
 | unicode-segmentation | 1.13.3 |
-| url | 2.5.8 |
+| url | 2.5.9 |
 | web_atoms | 0.2.6 |
 | web-time | 1.1.0 |
 | weezl | 0.1.12 |
@@ -805,7 +805,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | cfg-if | 1.0.5 |
 | chacha20 | 0.10.2 |
 | chrono | 0.4.45 |
-| cookie | 0.18.2 |
+| cookie | 0.18.3 |
 | cpufeatures | 0.2.17 | только arm64
 | crc32fast | 1.5.5 |
 | crossbeam-channel | 0.5.17 |
@@ -823,7 +823,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | erased-serde | 0.4.11 |
 | fdeflate | 0.3.7 |
 | flate2 | 1.1.11 |
-| form_urlencoded | 1.2.2 |
+| form_urlencoded | 1.2.3 |
 | futures-channel | 0.3.34 |
 | futures-core | 0.3.34 |
 | futures-io | 0.3.34 |
@@ -930,7 +930,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | toml_writer | 1.2.0+spec-1.1.0 |
 | typeid | 1.0.3 |
 | typenum | 1.20.1 |
-| url | 2.5.8 |
+| url | 2.5.9 |
 | web_atoms | 0.2.6 |
 | web_atoms | 0.3.0 |
 | web-time | 1.1.0 |
