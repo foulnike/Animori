@@ -5,7 +5,6 @@
 
 import { createApp, h, nextTick, type App, type VNode } from 'vue'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { AxeMatchers } from 'vitest-axe'
 import { axe } from 'vitest-axe'
 import { toHaveNoViolations } from 'vitest-axe/dist/matchers'
 
@@ -19,10 +18,10 @@ import { installMockBridge, resetMockBridge } from '@core-tests/bridge-module'
 
 expect.extend({ toHaveNoViolations })
 
-// У vitest-axe есть только глобальная типизация под старый Vi — под vitest 4 её дописываем здесь же.
-declare module '@vitest/expect' {
-  interface Assertion<T = any> extends AxeMatchers {}
-  interface AsymmetricMatchersContaining extends AxeMatchers {}
+declare module 'vitest' {
+  interface Matchers<R, T> {
+    toHaveNoViolations: () => R
+  }
 }
 
 const AXE_OPTIONS = { rules: { 'color-contrast': { enabled: false } } } as const
