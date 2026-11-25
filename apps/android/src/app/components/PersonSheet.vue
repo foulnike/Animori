@@ -484,8 +484,9 @@ onBeforeUnmount(() => {
 
             <template v-if="current.kind === 'character' && charCard">
               <p v-if="charCard.gender || charCard.age" class="am-dim">
-                <template v-if="charCard.gender">{{ genderWord(charCard.gender) }}</template
-                ><template v-if="charCard.gender && charCard.age"> · </template
+                <template v-if="charCard.gender">{{
+                  genderWord(charCard.gender)
+                }}</template><template v-if="charCard.gender && charCard.age"> · </template
                 ><template v-if="charCard.age">{{ charCard.age }}</template>
               </p>
               <p v-if="fmtDate(charCard.dateOfBirth)" class="am-dim">

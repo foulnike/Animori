@@ -23,7 +23,7 @@ armv7 собираются из одного дерева; пакеты, кот�
 
 Интерфейсный набор — верхняя граница: в него входят все рантайм-зависимости пакетов, а часть
 из них (компилятор шаблонов Vue) бандлер в сборку не берёт. Инструменты разработки — сборщик,
-тесты, линтер, 218 пакетов npm — в выпуски не входят и здесь не перечислены.
+тесты, линтер, 217 пакетов npm — в выпуски не входят и здесь не перечислены.
 
 ## Политика лицензий
 
@@ -56,13 +56,13 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 
 | Пакет | Версия | |
 | --- | --- | --- |
-| hls.js | 1.7.3 |
+| hls.js | 1.7.4 |
 
 #### Apache-2.0 OR MIT (1)
 
 | Пакет | Версия | |
 | --- | --- | --- |
-| @tauri-apps/api | 2.12.1 |
+| @tauri-apps/api | 2.12.5 |
 
 #### BSD-2-Clause (1)
 
@@ -74,7 +74,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 
 | Пакет | Версия | |
 | --- | --- | --- |
-| source-map-js | 1.2.2 |
+| source-map-js | 1.2.4 |
 
 #### ISC (1)
 
@@ -86,26 +86,26 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 
 | Пакет | Версия | |
 | --- | --- | --- |
-| @babel/helper-string-parser | 7.29.7 |
+| @babel/helper-string-parser | 7.29.14 |
 | @babel/helper-validator-identifier | 7.29.7 |
-| @babel/parser | 7.29.9 |
-| @babel/types | 7.29.8 |
+| @babel/parser | 7.29.14 |
+| @babel/types | 7.29.14 |
 | @jridgewell/sourcemap-codec | 1.6.0 |
-| @vue/compiler-core | 3.5.43 |
-| @vue/compiler-dom | 3.5.43 |
-| @vue/compiler-sfc | 3.5.43 |
-| @vue/compiler-ssr | 3.5.43 |
-| @vue/reactivity | 3.5.43 |
-| @vue/runtime-core | 3.5.43 |
-| @vue/runtime-dom | 3.5.43 |
-| @vue/server-renderer | 3.5.43 |
-| @vue/shared | 3.5.43 |
-| csstype | 3.2.3 |
+| @vue/compiler-core | 3.5.46 |
+| @vue/compiler-dom | 3.5.46 |
+| @vue/compiler-sfc | 3.5.46 |
+| @vue/compiler-ssr | 3.5.46 |
+| @vue/reactivity | 3.5.46 |
+| @vue/runtime-core | 3.5.46 |
+| @vue/runtime-dom | 3.5.46 |
+| @vue/server-renderer | 3.5.46 |
+| @vue/shared | 3.5.46 |
+| csstype | 3.2.4 |
 | estree-walker | 2.0.2 |
 | magic-string | 0.30.21 |
 | nanoid | 3.3.20 |
 | postcss | 8.5.32 |
-| vue | 3.5.43 |
+| vue | 3.5.46 |
 
 #### MIT OR Apache-2.0 (1)
 
