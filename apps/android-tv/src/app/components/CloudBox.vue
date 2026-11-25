@@ -183,8 +183,7 @@ function pullText(got: {
             Политике обработки персональных данных
           </button>
         </template>
-        <template v-else>{{ DOCS.privacy }}</template
-        >.
+        <template v-else>{{ DOCS.privacy }}</template>.
       </p>
 
       <div class="am-row">

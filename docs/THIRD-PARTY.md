@@ -14,8 +14,8 @@
 | Продукт | Файлы выпуска | Интерфейс (npm) | Нативная часть (Rust) | Полные тексты лицензий |
 | --- | --- | --- | --- | --- |
 | Windows | MSI, NSIS, портабл | 26 | 317 | в каталоге установки и в портабл-архиве |
-| Телефон | APK arm64, APK armv7 | 26 | 300 | внутри APK (assets) и на странице выпуска |
-| Android TV | APK arm64, APK armv7 | 26 | 300 | внутри APK (assets) и на странице выпуска |
+| Телефон | APK arm64, APK armv7 | 26 | 307 | внутри APK (assets) и на странице выпуска |
+| Android TV | APK arm64, APK armv7 | 26 | 307 | внутри APK (assets) и на странице выпуска |
 
 MSI, NSIS и портабл содержат один и тот же `AniMori.exe`, поэтому набор у них один. APK arm64 и
 armv7 собираются из одного дерева; пакеты, которые входят лишь в одну разрядность, помечены.
@@ -23,7 +23,7 @@ armv7 собираются из одного дерева; пакеты, кот�
 
 Интерфейсный набор — верхняя граница: в него входят все рантайм-зависимости пакетов, а часть
 из них (компилятор шаблонов Vue) бандлер в сборку не берёт. Инструменты разработки — сборщик,
-тесты, линтер, 218 пакетов npm — в выпуски не входят и здесь не перечислены.
+тесты, линтер, 217 пакетов npm — в выпуски не входят и здесь не перечислены.
 
 ## Политика лицензий
 
@@ -56,13 +56,13 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 
 | Пакет | Версия | |
 | --- | --- | --- |
-| hls.js | 1.7.3 |
+| hls.js | 1.7.4 |
 
 #### Apache-2.0 OR MIT (1)
 
 | Пакет | Версия | |
 | --- | --- | --- |
-| @tauri-apps/api | 2.12.1 |
+| @tauri-apps/api | 2.12.5 |
 
 #### BSD-2-Clause (1)
 
@@ -74,7 +74,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 
 | Пакет | Версия | |
 | --- | --- | --- |
-| source-map-js | 1.2.2 |
+| source-map-js | 1.2.4 |
 
 #### ISC (1)
 
@@ -86,26 +86,26 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 
 | Пакет | Версия | |
 | --- | --- | --- |
-| @babel/helper-string-parser | 7.29.7 |
+| @babel/helper-string-parser | 7.29.14 |
 | @babel/helper-validator-identifier | 7.29.7 |
-| @babel/parser | 7.29.9 |
-| @babel/types | 7.29.8 |
+| @babel/parser | 7.29.14 |
+| @babel/types | 7.29.14 |
 | @jridgewell/sourcemap-codec | 1.6.0 |
-| @vue/compiler-core | 3.5.43 |
-| @vue/compiler-dom | 3.5.43 |
-| @vue/compiler-sfc | 3.5.43 |
-| @vue/compiler-ssr | 3.5.43 |
-| @vue/reactivity | 3.5.43 |
-| @vue/runtime-core | 3.5.43 |
-| @vue/runtime-dom | 3.5.43 |
-| @vue/server-renderer | 3.5.43 |
-| @vue/shared | 3.5.43 |
-| csstype | 3.2.3 |
+| @vue/compiler-core | 3.5.46 |
+| @vue/compiler-dom | 3.5.46 |
+| @vue/compiler-sfc | 3.5.46 |
+| @vue/compiler-ssr | 3.5.46 |
+| @vue/reactivity | 3.5.46 |
+| @vue/runtime-core | 3.5.46 |
+| @vue/runtime-dom | 3.5.46 |
+| @vue/server-renderer | 3.5.46 |
+| @vue/shared | 3.5.46 |
+| csstype | 3.2.4 |
 | estree-walker | 2.0.2 |
 | magic-string | 0.30.21 |
 | nanoid | 3.3.20 |
 | postcss | 8.5.32 |
-| vue | 3.5.43 |
+| vue | 3.5.46 |
 
 #### MIT OR Apache-2.0 (1)
 
@@ -172,13 +172,14 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | rustls | 0.23.46 |
 | rustls-native-certs | 0.8.5 |
 
-#### Apache-2.0 OR MIT (35)
+#### Apache-2.0 OR MIT (36)
 
 | Пакет | Версия | |
 | --- | --- | --- |
 | atomic-waker | 1.1.2 |
 | bit-set | 0.8.0 |
 | bit-vec | 0.8.0 |
+| const-oid | 0.10.3 |
 | ctor | 1.0.13 |
 | equivalent | 1.0.3 |
 | fastrand | 2.5.0 |
@@ -189,9 +190,9 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | multiversion_no_op | 1.0.0 |
 | pin-project-lite | 0.2.17 |
 | rustc-hash | 2.1.3 |
-| tauri | 2.12.5 |
-| tauri-codegen | 2.7.4 |
-| tauri-macros | 2.7.4 |
+| tauri | 2.12.7 |
+| tauri-codegen | 2.7.6 |
+| tauri-macros | 2.7.6 |
 | tauri-plugin-clipboard-manager | 2.5.0 |
 | tauri-plugin-dialog | 2.8.4 |
 | tauri-plugin-fs | 2.7.1 |
@@ -201,9 +202,9 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | tauri-plugin-store | 2.5.1 |
 | tauri-plugin-updater | 2.14.1 |
 | tauri-plugin-window-state | 2.5.0 |
-| tauri-runtime | 2.12.2 |
-| tauri-runtime-wry | 2.12.3 |
-| tauri-utils | 2.10.2 |
+| tauri-runtime | 2.12.4 |
+| tauri-runtime-wry | 2.12.5 |
+| tauri-utils | 2.10.4 |
 | utf_types | 1.0.0 |
 | utf8_iter | 1.1.0 |
 | uuid | 1.29.2 |
@@ -267,7 +268,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | rustls-webpki | 0.103.16 |
 | untrusted | 0.9.0 |
 
-#### MIT (60)
+#### MIT (59)
 
 | Пакет | Версия | |
 | --- | --- | --- |
@@ -282,7 +283,6 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | dom_query | 0.28.0 |
 | fax | 0.2.7 |
 | fern | 0.7.1 |
-| generic-array | 0.14.7 |
 | h2 | 0.4.20 |
 | http-body | 1.1.0 |
 | http-body-util | 0.1.5 |
@@ -341,22 +341,21 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | base64 | 0.22.1 |
 | base64 | 0.23.1 |
 | bitflags | 2.13.2 |
-| block-buffer | 0.10.4 |
+| block-buffer | 0.12.1 |
 | camino | 1.2.6 |
 | cargo-platform | 0.1.9 |
 | cfg-if | 1.0.5 |
 | chacha20 | 0.10.2 |
 | chrono | 0.4.45 |
-| cookie | 0.18.2 |
-| cpufeatures | 0.2.17 |
+| cookie | 0.18.3 |
 | cpufeatures | 0.3.1 |
 | crc32fast | 1.5.5 |
 | crossbeam-channel | 0.5.17 |
 | crossbeam-utils | 0.8.23 |
-| crypto-common | 0.1.7 |
+| crypto-common | 0.2.2 |
 | data-url | 0.3.2 |
 | deranged | 0.5.9 |
-| digest | 0.10.7 |
+| digest | 0.11.3 |
 | dirs | 7.0.0 |
 | dirs-sys | 0.5.0 |
 | displaydoc | 0.2.7 |
@@ -365,7 +364,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | erased-serde | 0.4.11 |
 | fdeflate | 0.3.7 |
 | flate2 | 1.1.11 |
-| form_urlencoded | 1.2.2 |
+| form_urlencoded | 1.2.3 |
 | futures-channel | 0.3.34 |
 | futures-core | 0.3.34 |
 | futures-io | 0.3.34 |
@@ -385,6 +384,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | html5ever | 0.39.0 |
 | http | 1.5.0 |
 | httparse | 1.10.1 |
+| hybrid-array | 0.4.15 |
 | idna | 1.1.0 |
 | image | 0.25.10 |
 | ipnet | 2.12.2 |
@@ -436,7 +436,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | serialize-to-javascript | 0.1.2 |
 | serialize-to-javascript-impl | 0.1.2 |
 | servo_arc | 0.4.3 |
-| sha2 | 0.10.9 |
+| sha2 | 0.11.1 |
 | simdutf8 | 0.1.5 |
 | siphasher | 1.0.4 |
 | smallvec | 1.16.5 |
@@ -463,7 +463,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | typeid | 1.0.3 |
 | typenum | 1.20.1 |
 | unicode-segmentation | 1.13.3 |
-| url | 2.5.8 |
+| url | 2.5.9 |
 | web_atoms | 0.2.6 |
 | web-time | 1.1.0 |
 | weezl | 0.1.12 |
@@ -577,7 +577,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | bytemuck | 1.25.2 |
 | tinyvec | 1.13.3 |
 
-### Нативная часть: Телефон, Android TV — 300
+### Нативная часть: Телефон, Android TV — 307
 
 #### (Apache-2.0 OR MIT) AND BSD-3-Clause (1)
 
@@ -635,7 +635,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | hyper-rustls | 0.27.10 |
 | rustls | 0.23.46 |
 
-#### Apache-2.0 OR MIT (32)
+#### Apache-2.0 OR MIT (33)
 
 | Пакет | Версия | |
 | --- | --- | --- |
@@ -644,6 +644,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | bit-set | 0.8.0 |
 | bit-vec | 0.10.2 |
 | bit-vec | 0.8.0 |
+| const-oid | 0.10.3 |
 | ctor | 1.0.13 |
 | equivalent | 1.0.3 |
 | fastrand | 2.5.0 |
@@ -653,9 +654,9 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | multiversion_no_op | 1.0.0 |
 | pin-project-lite | 0.2.17 |
 | rustc-hash | 2.1.3 |
-| tauri | 2.12.5 |
-| tauri-codegen | 2.7.4 |
-| tauri-macros | 2.7.4 |
+| tauri | 2.12.7 |
+| tauri-codegen | 2.7.6 |
+| tauri-macros | 2.7.6 |
 | tauri-plugin-clipboard-manager | 2.5.0 |
 | tauri-plugin-dialog | 2.8.4 |
 | tauri-plugin-fs | 2.7.1 |
@@ -663,9 +664,9 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | tauri-plugin-log | 2.10.2 |
 | tauri-plugin-opener | 2.7.3 |
 | tauri-plugin-store | 2.5.1 |
-| tauri-runtime | 2.12.2 |
-| tauri-runtime-wry | 2.12.3 |
-| tauri-utils | 2.10.2 |
+| tauri-runtime | 2.12.4 |
+| tauri-runtime-wry | 2.12.5 |
+| tauri-utils | 2.10.4 |
 | utf_types | 1.0.0 |
 | utf8_iter | 1.1.0 |
 | uuid | 1.29.2 |
@@ -788,7 +789,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | winnow | 1.0.5 |
 | zmij | 1.0.23 |
 
-#### MIT OR Apache-2.0 (142)
+#### MIT OR Apache-2.0 (148)
 
 | Пакет | Версия | |
 | --- | --- | --- |
@@ -800,20 +801,24 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | base64 | 0.23.1 |
 | bitflags | 2.13.2 |
 | block-buffer | 0.10.4 |
+| block-buffer | 0.12.1 |
 | camino | 1.2.6 |
 | cargo-platform | 0.1.9 |
 | cfg-if | 1.0.5 |
 | chacha20 | 0.10.2 |
 | chrono | 0.4.45 |
-| cookie | 0.18.2 |
+| cookie | 0.18.3 |
 | cpufeatures | 0.2.17 | только arm64
+| cpufeatures | 0.3.1 | только arm64
 | crc32fast | 1.5.5 |
 | crossbeam-channel | 0.5.17 |
 | crossbeam-utils | 0.8.23 |
 | crypto-common | 0.1.7 |
+| crypto-common | 0.2.2 |
 | data-url | 0.3.2 |
 | deranged | 0.5.9 |
 | digest | 0.10.7 |
+| digest | 0.11.3 |
 | dirs | 7.0.0 |
 | dirs-sys | 0.5.0 |
 | displaydoc | 0.2.7 |
@@ -823,7 +828,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | erased-serde | 0.4.11 |
 | fdeflate | 0.3.7 |
 | flate2 | 1.1.11 |
-| form_urlencoded | 1.2.2 |
+| form_urlencoded | 1.2.3 |
 | futures-channel | 0.3.34 |
 | futures-core | 0.3.34 |
 | futures-io | 0.3.34 |
@@ -843,6 +848,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | html5ever | 0.40.1 |
 | http | 1.5.0 |
 | httparse | 1.10.1 |
+| hybrid-array | 0.4.15 |
 | iana-time-zone | 0.1.65 |
 | idna | 1.1.0 |
 | ipnet | 2.12.2 |
@@ -904,6 +910,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | servo_arc | 0.4.3 |
 | servo_arc | 0.5.0 |
 | sha2 | 0.10.9 |
+| sha2 | 0.11.1 |
 | simdutf8 | 0.1.5 | только arm64
 | siphasher | 1.0.4 |
 | smallvec | 1.16.5 |
@@ -930,7 +937,7 @@ MPL-2.0 — copyleft на уровне файла: изменённые файл
 | toml_writer | 1.2.0+spec-1.1.0 |
 | typeid | 1.0.3 |
 | typenum | 1.20.1 |
-| url | 2.5.8 |
+| url | 2.5.9 |
 | web_atoms | 0.2.6 |
 | web_atoms | 0.3.0 |
 | web-time | 1.1.0 |
