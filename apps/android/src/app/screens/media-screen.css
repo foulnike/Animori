@@ -426,14 +426,6 @@
   max-width: none;
 }
 
-/* Плитка описания раскрывается окном крупным планом. Под мышью об этом говорит курсор,
-   пульту — кромка фокуса по контуру плитки (её правила в theme.css). Заливки по наведению
-   нет нарочно: на приставке `:hover` остаётся припаркованным, и абзац светился бы под чужим
-   курсором. Скругление не задаём: у панели своё, и признак обязан его сохранить. */
-.am-about__hit {
-  cursor: pointer;
-}
-
 /* Ожидание описания. Пока русский источник не ответил, английский текст не показывается: пустое
    место читалось бы как «описания нет». Три строки угадывают высоту, и панель не дёргается. */
 .am-about__hold {
@@ -454,12 +446,23 @@
   width: 62%;
 }
 
-/* Справка под описанием: откуда взят текст. Названием, а не ссылкой — открывать на
-   телевизоре нечем, и подчёркнутая подпись читалась бы как поломка. */
 .am-about__tail {
   margin: 14px 0 0;
   font-size: 12.5px;
   color: var(--am-faint);
+}
+
+.am-about__more {
+  align-self: flex-start;
+  margin: 8px 0 0;
+  padding: 4px 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--am-accent);
+  cursor: pointer;
+  background: none;
+  border: 0;
 }
 
 .am-about-box {
@@ -611,13 +614,6 @@
   .am-about-box .am-about__clip {
     overflow: hidden;
     max-height: 152px;
-  }
-
-  .am-about__more {
-    margin-top: 10px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--am-accent);
   }
 }
 

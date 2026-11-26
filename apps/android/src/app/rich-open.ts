@@ -20,14 +20,14 @@ const known = new Map<number, number | null>()
 
 /** Уводит наружу через оболочку: в WebView2 переход в новом окне молча теряется. На телевизоре
  *  браузера нет, и уводить некуда — молчим. */
-function openOutside(url: string): void {
+export function openDescriptionLink(url: string): void {
   if (!canOpenOutside()) {
     Logger('INFO', `Описание: выход наружу пропущен, браузера нет (${url})`)
     return
   }
 
-  void Bridge.shell.openExternal(url).catch((e) => {
-    Logger('WARN', `Описание: внешняя ссылка не открылась (${url})`, e)
+  void Bridge.shell.openExternal(url, { confirm: true }).catch((e) => {
+    Logger('WARN', 'Описание: внешняя ссылка не открылась', e)
   })
 }
 
@@ -50,14 +50,14 @@ async function lookup(malId: number): Promise<number | null> {
  *  пусть откроется в браузере, чем никак. */
 export async function followRichAim(aim: RichAim): Promise<RichAimResult> {
   if (aim.kind === 'web') {
-    openOutside(aim.url)
+    openDescriptionLink(aim.url)
     return 'outside'
   }
 
   if (aim.kind === 'person') {
     const target = await resolveShikiPerson(aim.who, aim.shikiId)
     if (target === null) {
-      openOutside(aim.url)
+      openDescriptionLink(aim.url)
       return 'outside'
     }
 
@@ -69,7 +69,7 @@ export async function followRichAim(aim: RichAim): Promise<RichAimResult> {
   const mediaId = seen === undefined ? await lookup(aim.malId) : seen
 
   if (mediaId === null) {
-    openOutside(aim.url)
+    openDescriptionLink(aim.url)
     return 'outside'
   }
 

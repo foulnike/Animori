@@ -4,6 +4,7 @@
 import { Bridge } from '@/bridge'
 import { SHIKI_DOMAINS } from '../core/constants'
 import { reportError, reportStatus } from '../core/net-health'
+import { parsePersonBiography } from '../core/person-summary'
 import { Logger } from '../utils/logger'
 import { scoreNameMatch } from '../utils/name-match'
 import type { NameCandidate, NameTarget } from '../utils/name-match'
@@ -119,6 +120,11 @@ interface PersonDetails {
   mangas?: Array<{ id?: number } | null>
   works?: Array<{ anime?: { id?: number } | null } | null>
   roles?: Array<{ animes?: Array<{ id?: number } | null> } | null>
+}
+
+function personDescription(details: PersonDetails): string | null {
+  const html = details.description_html
+  return html && parsePersonBiography(html).length ? html : (details.description ?? null)
 }
 
 /**
@@ -313,7 +319,7 @@ export async function fetchShikiPersonREST(
               name: detailsRes.name ?? item.name ?? null,
               japanese: detailsRes.japanese ?? item.japanese ?? null,
               russian: detailsRes.russian ?? item.russian ?? null,
-              description: detailsRes.description_html ?? detailsRes.description ?? null,
+              description: personDescription(detailsRes),
               url: detailsRes.url ?? null,
               domain,
             },
@@ -537,7 +543,7 @@ export async function fetchShikiPersonDetails(
         name: d.name ?? null,
         japanese: d.japanese ?? null,
         russian: d.russian ?? null,
-        description: d.description_html ?? d.description ?? null,
+        description: personDescription(d),
         url: d.url ?? null,
         domain,
       }

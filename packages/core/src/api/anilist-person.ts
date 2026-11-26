@@ -6,6 +6,12 @@ import { Logger } from '@/utils/logger'
 /** Тип, переданный из плитки в PeopleBox. */
 export type PersonTarget = { kind: 'character' | 'staff' } & PersonRef
 
+const HEIGHT_FIELDS = `
+  initial { metric imperial }
+  min { metric imperial }
+  max { metric imperial }
+`
+
 const CHARACTER_CARD_QUERY = `
   query ($id: Int!) {
     Character(id: $id) {
@@ -15,6 +21,8 @@ const CHARACTER_CARD_QUERY = `
       description(asHtml: false)
       gender
       age
+      bloodType
+      height { ${HEIGHT_FIELDS} }
       dateOfBirth { year month day }
       siteUrl
       media(page: 1, perPage: 8, sort: [POPULARITY_DESC]) {
@@ -48,6 +56,11 @@ const STAFF_CARD_QUERY = `
       description(asHtml: false)
       primaryOccupations
       languageV2
+      gender
+      age
+      bloodType
+      height { ${HEIGHT_FIELDS} }
+      yearsActive
       dateOfBirth { year month day }
       dateOfDeath { year month day }
       homeTown
@@ -99,14 +112,24 @@ const STAFF_CHARACTERS_QUERY = `
   }
 `
 
-export interface CharacterCard {
+interface HeightValue {
+  metric: number | null
+  imperial: string | null
+}
+
+interface ProfileFields {
+  gender: string | null
+  bloodType: string | null
+  height: { initial: HeightValue | null; min: HeightValue | null; max: HeightValue | null } | null
+  dateOfBirth: { year: number | null; month: number | null; day: number | null } | null
+}
+
+export interface CharacterCard extends ProfileFields {
   id: number
   name: { full: string; native: string | null; alternative: string[] | null }
   image: { large: string | null } | null
   description: string | null
-  gender: string | null
   age: string | null
-  dateOfBirth: { year: number | null; month: number | null; day: number | null } | null
   siteUrl: string
   media: {
     edges: Array<{
@@ -128,14 +151,15 @@ export interface CharacterCard {
   } | null
 }
 
-export interface StaffCard {
+export interface StaffCard extends ProfileFields {
   id: number
   name: { full: string; native: string | null; alternative: string[] | null }
   image: { large: string | null } | null
   description: string | null
   primaryOccupations: string[] | null
   languageV2: string | null
-  dateOfBirth: { year: number | null; month: number | null; day: number | null } | null
+  age: number | null
+  yearsActive: (number | null)[] | null
   dateOfDeath: { year: number | null; month: number | null; day: number | null } | null
   homeTown: string | null
   siteUrl: string

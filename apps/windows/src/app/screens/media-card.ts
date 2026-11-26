@@ -12,7 +12,6 @@ import {
 
 import { fetchMediaCard, type MediaCard } from '@/api/anilist-media'
 import { setupVideoSources } from '@/api/video-sources'
-import { Bridge } from '@/bridge'
 import { hiddenCount, keepAllowed } from '@/core/adult'
 import { editEntry, getEntry, type EntryLook } from '@/core/collection'
 import { fetchFranchise, type FranchiseWork } from '@/core/franchise'
@@ -39,7 +38,7 @@ import { Logger } from '@/utils/logger'
 
 import { watchCovers } from '../covers'
 import { formatWord, statusWord } from '../labels'
-import { mediaLinks, type MediaLink } from '../media-links'
+import { mediaLinks, type MediaLink } from '@/core/media-links'
 import { navigate } from '../router'
 
 /** Пауза перед заказом меток: без придержки каждая плитка будила бы очередь отдельно. */
@@ -125,7 +124,6 @@ export interface MediaCardView {
   onPartSeen: (work: FranchiseWork) => void
   openFranchiseWork: (work: FranchiseWork) => void
   openStudio: (studioId: number) => void
-  onOpen: (url: string) => void
   onPickStatus: (value: string) => void
   onPickScore: (value: number) => void
   onPickProgress: (value: number) => void
@@ -714,13 +712,6 @@ export function useMediaCard(mediaId: Ref<number>): MediaCardView {
     }
   }
 
-  // Уводит наружу через оболочку: в WebView2 переход в новом окне молча отбрасывается, а переход в том же окне унёс бы само приложение.
-  function onOpen(url: string): void {
-    void Bridge.shell.openExternal(url).catch((e) => {
-      Logger('WARN', `Карточка: внешняя ссылка не открылась (${url})`, e)
-    })
-  }
-
   /** Работы студии — внутренним переходом, а не внешней ссылкой. */
   function openStudio(studioId: number): void {
     navigate('studio', { id: String(studioId) })
@@ -848,7 +839,6 @@ export function useMediaCard(mediaId: Ref<number>): MediaCardView {
     onPartSeen,
     openFranchiseWork,
     openStudio,
-    onOpen,
     onPickStatus,
     onPickScore,
     onPickProgress,

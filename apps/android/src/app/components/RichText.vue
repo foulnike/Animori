@@ -14,12 +14,9 @@ const props = defineProps<{
   text?: string | null
   /** Уже разобранные блоки: так компонент зовёт себя для вложенного уровня. */
   blocks?: RichBlock[]
-  /** Рисовать всё текстом, без единой ссылки. */
-  plain?: boolean
 }>()
 
-/** Переход увёл на другой экран: окошку человека пора закрыться. */
-const emit = defineEmits<{ (e: 'inside'): void }>()
+const emit = defineEmits<{ inside: []; person: [] }>()
 
 /** Раскрытые спойлеры этого уровня: ключ — место блока в списке. */
 const open = ref(new Set<number>())
@@ -44,12 +41,8 @@ function label(part: RichPart): string {
   return richLinkLabel(part.aim)
 }
 
-/** Рисовать ли кусок ссылкой. Ссылка, ведущая только наружу, на телевизоре никуда не ведёт:
- *  браузера нет. Перекрёстные ссылки ведут внутрь и остаются ссылками. */
 function linked(part: RichPart): part is RichPart & { kind: 'link' } {
-  if (props.plain === true) return false
-
-  return part.kind === 'link' && !(part.aim.kind === 'web' && !canOpenOutside())
+  return part.kind === 'link' && (part.aim.kind !== 'web' || canOpenOutside())
 }
 
 function shown(at: number): boolean {
@@ -86,7 +79,9 @@ watch(blocks, (list) => askNames(list), { immediate: true })
 /** Идёт по ссылке из описания. Окошко человека закрывается только на переходе к тайтлу:
  * после ссылки на другого человека окошко уже показывает нового, закрывать нечего. */
 async function follow(aim: RichAim): Promise<void> {
-  if ((await followRichAim(aim)) === 'media') emit('inside')
+  const opened = await followRichAim(aim)
+  if (opened === 'media') emit('inside')
+  else if (opened === 'person') emit('person')
 }
 </script>
 
@@ -121,14 +116,14 @@ async function follow(aim: RichAim): Promise<void> {
         <RichText
           v-if="shown(at)"
           :blocks="block.blocks"
-          :plain="props.plain"
           @inside="emit('inside')"
+          @person="emit('person')"
         />
       </div>
 
       <blockquote v-else-if="block.kind === 'quote'" class="am-rich__quote">
         <p v-if="block.who" class="am-rich__who">{{ block.who }}</p>
-        <RichText :blocks="block.blocks" :plain="props.plain" @inside="emit('inside')" />
+        <RichText :blocks="block.blocks" @inside="emit('inside')" @person="emit('person')" />
       </blockquote>
 
       <ul v-else-if="block.kind === 'list'" class="am-rich__list">

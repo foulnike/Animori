@@ -5,6 +5,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import AboutBox from '../components/AboutBox.vue'
 import BrandMark from '../components/BrandMark.vue'
+import DescriptionLinks from '../components/DescriptionLinks.vue'
 import EmptyMark from '../components/EmptyMark.vue'
 import EntrySheet from '../components/EntrySheet.vue'
 import PeopleBox from '../components/PeopleBox.vue'
@@ -81,7 +82,7 @@ const {
   heroStyle,
   about,
   aboutWait,
-  aboutSource,
+  aboutLinks,
   facts,
   ratings,
   franchiseRows,
@@ -121,20 +122,11 @@ function onAboutHit(e: MouseEvent): void {
   // Описания нет — плитка не цель: взведённое нажатием окно раскрылось бы само, когда текст придёт.
   if (about.value === '') return
 
-  const spot = e.target
-  if (spot instanceof HTMLElement && spot.closest('a, button') !== null) return
-  aboutOpen.value = true
-}
-
-/** Пульт: на цели с ролью кнопки браузер сам не кликает — раскрытие зовём руками.
- *  Ссылка в тексте и здесь остаётся ссылкой: её нажатие браузер разбирает сам. */
-function onAboutKey(e: KeyboardEvent): void {
-  if (e.key !== 'Enter' && e.key !== ' ') return
-  if (about.value === '') return
-
-  const spot = e.target
-  if (spot instanceof HTMLElement && spot.closest('a, button') !== null) return
-  e.preventDefault()
+  const target = e.target instanceof Element ? e.target.closest('a, button') : null
+  if (target !== null) {
+    if (target.hasAttribute('aria-expanded')) void nextTick(measureAbout)
+    return
+  }
   aboutOpen.value = true
 }
 
@@ -296,7 +288,7 @@ watch(card, (now) => {
               <h3 class="am-h3 am-hero__noteh">Описание</h3>
 
               <div class="am-hero__scroll">
-                <RichText v-if="about" class="am-about am-about--art" :text="about" plain />
+                <RichText v-if="about" class="am-about am-about--art" :text="about" />
                 <div v-else-if="aboutWait" class="am-about__hold" aria-hidden="true">
                   <span class="am-skeleton am-about__hold-line" />
                   <span class="am-skeleton am-about__hold-line" />
@@ -305,9 +297,7 @@ watch(card, (now) => {
                 <p v-else class="am-hero__sub">Описания ни один источник не дал.</p>
               </div>
 
-              <p v-if="aboutSource !== ''" class="am-about__tail am-about__tail--art">
-                Описание отсюда: {{ aboutSource }}
-              </p>
+              <DescriptionLinks class="am-about__tail am-about__tail--art" :links="aboutLinks" />
             </div>
           </div>
         </div>
@@ -315,22 +305,10 @@ watch(card, (now) => {
         <div class="am-board">
           <!-- На широком окне панели описания здесь нет: текст ушёл в шапку, а его место заняли виджеты. Обёртка сквозная. -->
           <div v-if="!wide" class="am-split__main">
-            <div
-              class="am-panel am-about-box am-about__hit"
-              :role="about ? 'button' : undefined"
-              :tabindex="about ? 0 : undefined"
-              @click="onAboutHit"
-              @keydown="onAboutKey"
-            >
+            <div class="am-panel am-about-box" @click="onAboutHit">
               <h3 class="am-h3">Описание</h3>
-              <!-- Разметка источника живая: спойлеры и начертания рисует компонент, а типографика .am-about остаётся на его корне. -->
-              <!-- Текст раскрывается окном крупным планом: в плитке он идёт 11.5px, и с трёх метров его не читают.
-     Цель — вся плитка, а не абзац: кромка фокуса обходит её контур, а не строки текста (см. `__hit`).
-     Сплошным текстом: описания с Шикимори набиты ссылками на персонажей и другие аниме, и на
-     приставке каждая становилась целью обхода посреди абзаца — пульт вставал на неё, а толку
-     не было. На ПК те же ссылки живые, там на них есть куда идти. -->
               <div v-if="about" ref="aboutText" class="am-about__clip">
-                <RichText class="am-about" :text="about" plain />
+                <RichText class="am-about" :text="about" />
               </div>
               <div v-else-if="aboutWait" class="am-about__hold" aria-hidden="true">
                 <span class="am-skeleton am-about__hold-line" />
@@ -339,12 +317,16 @@ watch(card, (now) => {
               </div>
               <p v-else class="am-dim">Описания ни один источник не дал.</p>
 
-              <!-- Дверь в окно крупного плана: срезанные строки требуют продолжения. -->
-              <span v-if="aboutMore" class="am-about__more">Читать дальше…</span>
+              <button
+                v-if="about"
+                class="am-about__more"
+                type="button"
+                @click.stop="aboutOpen = true"
+              >
+                {{ aboutMore ? 'Читать дальше…' : 'Открыть описание' }}
+              </button>
 
-              <p v-if="aboutSource !== ''" class="am-about__tail">
-                Описание отсюда: {{ aboutSource }}
-              </p>
+              <DescriptionLinks class="am-about__tail" :links="aboutLinks" />
             </div>
           </div>
 
@@ -452,7 +434,13 @@ watch(card, (now) => {
         </div>
 
         <!-- Описание крупным планом: своё окно, а не второй вид той же плитки. -->
-        <AboutBox v-if="about" :open="aboutOpen" :text="about" @close="aboutOpen = false" />
+        <AboutBox
+          v-if="about"
+          :open="aboutOpen"
+          :text="about"
+          :links="aboutLinks"
+          @close="aboutOpen = false"
+        />
 
         <!-- Признак онгоинга окну нужен для автозакладки: у идущего сезона потолок счёта — последняя
      вышедшая серия, и дошёдший до края счёт ещё не значит «просмотрено». -->

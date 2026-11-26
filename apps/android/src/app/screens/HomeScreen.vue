@@ -223,7 +223,6 @@ let calendarIds: number[] = []
 
 /** Приехавшие полки витрины и их порядок: плитки собираются на показ. */
 const staged = new Map<string, MediaBrief[]>()
-const heroIndex = ref(0)
 const heroCards = ref<Record<number, MediaCard>>({})
 const heroTitles = ref<Record<number, RussianTitle>>({})
 const heroReady = ref<Record<number, boolean>>({})
@@ -242,22 +241,28 @@ const heroItems = computed(
     })()
   ),
 )
-const heroBrief = computed(() => {
-  const item = heroItems.value.find((item) => item.mediaId === heroId.value)
-  return item && heroReady.value[item.mediaId] ? item : null
-})
-const heroAllReady = computed(
-  () =>
-    heroItems.value.length > 0 && heroItems.value.every((item) => heroReady.value[item.mediaId]),
+const heroSlides = computed(() => heroItems.value.filter((item) => heroReady.value[item.mediaId]))
+const heroBrief = computed(
+  () => heroSlides.value.find((item) => item.mediaId === heroId.value) ?? null,
 )
 const heroCard = computed(() => (heroBrief.value ? heroCards.value[heroBrief.value.mediaId] : null))
 const heroTitle = computed(() =>
   heroBrief.value ? heroTitles.value[heroBrief.value.mediaId] : null,
 )
+const heroName = computed(() =>
+  heroBrief.value
+    ? (heroTitle.value?.russian ??
+      peekRussianName(heroBrief.value.mediaId) ??
+      heroBrief.value.romaji)
+    : '',
+)
+const heroPoster = computed(() => heroCard.value?.cover ?? heroBrief.value?.cover)
+const heroDescription = computed(() =>
+  plainHeroDescription(heroTitle.value?.description ?? heroCard.value?.description),
+)
 let heroTimer: ReturnType<typeof setTimeout> | null = null
 const heroImages = ref<Record<number, string>>({})
 const heroId = ref<number | null>(null)
-const heroCurrentReady = computed(() => heroBrief.value !== null)
 
 function plainHeroDescription(raw: string | null | undefined): string {
   if (typeof raw !== 'string') return ''
@@ -276,22 +281,13 @@ function plainHeroDescription(raw: string | null | undefined): string {
     .trim()
 }
 
-function heroTarget(direction: -1 | 1): number | null {
-  const items = heroItems.value
-  if (items.length < 2 || heroId.value === null) return null
-  const current = items.findIndex((item) => item.mediaId === heroId.value)
-  if (current < 0) return null
-  const index = (current + direction + items.length) % items.length
-  const candidate = items[index]
-  return candidate && heroReady.value[candidate.mediaId] ? index : null
-}
-
 function changeHero(direction: -1 | 1): void {
-  const index = heroTarget(direction)
-  const target = index === null ? undefined : heroItems.value[index]
-  if (index === null || !target) return
-  heroIndex.value = index
-  heroId.value = target.mediaId
+  const slides = heroSlides.value
+  if (slides.length < 2) return
+  const current = slides.findIndex((item) => item.mediaId === heroId.value)
+  if (current < 0) return
+  const target = slides[(current + direction + slides.length) % slides.length]
+  if (target) heroId.value = target.mediaId
 }
 
 let heroTouch: { x: number; y: number } | null = null
@@ -300,6 +296,7 @@ let heroSuppressClickUntil = 0
 function startHeroSwipe(event: TouchEvent): void {
   heroTouch = null
   if (event.touches.length !== 1) return
+  if (event.target instanceof Element && event.target.closest('.am-home-hero__dots')) return
   const touch = event.touches[0]
   if (touch) heroTouch = { x: touch.clientX, y: touch.clientY }
 }
@@ -312,18 +309,14 @@ function endHeroSwipe(event: TouchEvent): void {
   const dx = touch.clientX - start.x
   const dy = touch.clientY - start.y
   if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.5) return
-  // Suppress the synthetic tap even when the adjacent slide is still loading.
+  // Suppress the synthetic tap even when only one slide is ready.
   heroSuppressClickUntil = Date.now() + 700
   changeHero(dx < 0 ? 1 : -1)
 }
 
-function openHero(): void {
-  if (Date.now() < heroSuppressClickUntil || !heroBrief.value) return
+function openHero(event: MouseEvent): void {
+  if (!heroBrief.value || (event.detail > 0 && Date.now() < heroSuppressClickUntil)) return
   open(heroBrief.value.mediaId)
-}
-
-function nextHero(): void {
-  changeHero(1)
 }
 
 watch(
@@ -356,15 +349,10 @@ watch(
 )
 
 // A complete slide receives fifteen full seconds before the next ready slide.
-watch(
-  () =>
-    `${heroId.value}:${heroItems.value.map((item) => Number(heroReady.value[item.mediaId] === true)).join('')}:${heroAllReady.value}`,
-  () => {
-    if (heroTimer !== null) clearTimeout(heroTimer)
-    heroTimer = null
-    if (heroId.value !== null && heroItems.value.length > 1) heroTimer = setTimeout(nextHero, 15000)
-  },
-)
+watch([heroId, () => heroSlides.value.length > 1], ([id, canAdvance]) => {
+  if (heroTimer !== null) clearTimeout(heroTimer)
+  heroTimer = id !== null && canAdvance ? setTimeout(() => changeHero(1), 15_000) : null
+})
 
 let activeDefs: ShelfDef[] = []
 
@@ -1262,68 +1250,76 @@ watch(
       </div>
     </div>
 
-    <section
-      v-if="!picked"
-      :data-am-hero="true"
-      class="am-home-hero"
-      :role="heroCurrentReady ? 'button' : undefined"
-      :tabindex="heroCurrentReady ? 0 : -1"
-      @click="openHero"
-      @touchstart.passive="startHeroSwipe"
-      @touchend.passive="endHeroSwipe"
-      @touchcancel="heroTouch = null"
-      @keydown.enter.prevent="heroCurrentReady && heroBrief && open(heroBrief.mediaId)"
-    >
+    <section v-if="!picked" data-am-hero="true" class="am-home-hero" aria-label="Популярное аниме">
       <div
-        v-if="!heroCurrentReady"
-        class="am-home-hero__loading"
-        role="status"
-        aria-label="Загрузка баннера"
+        class="am-home-hero__slide"
+        :class="{ 'am-home-hero__slide--with-poster': heroPoster }"
+        @touchstart.passive="startHeroSwipe"
+        @touchend.passive="endHeroSwipe"
+        @touchcancel="heroTouch = null"
       >
-        <span class="am-home-hero__spinner" />
-      </div>
-      <template v-if="heroBrief">
-        <Transition name="am-home-hero-crossfade" mode="out-in" :duration="650">
-          <div
-            v-if="heroBrief"
-            :key="heroBrief.mediaId"
-            class="am-home-hero__art"
-            :style="{ backgroundImage: `url(${heroImages[heroBrief.mediaId] ?? ''})` }"
+        <template v-if="heroBrief">
+          <Transition name="am-home-hero-crossfade">
+            <div
+              :key="heroBrief.mediaId"
+              class="am-home-hero__art"
+              :style="{ backgroundImage: `url(${heroImages[heroBrief.mediaId]})` }"
+            />
+          </Transition>
+          <div class="am-home-hero__veil" />
+          <button
+            class="am-home-hero__open"
+            type="button"
+            aria-labelledby="am-home-hero-title"
+            @click="openHero"
           />
-        </Transition>
-        <div class="am-home-hero__veil" />
-        <div class="am-home-hero__body">
-          <h1
-            :class="{
-              'am-home-hero__title--long':
-                (heroTitle?.russian ?? heroBrief.romaji ?? '').length > 42,
-              'am-home-hero__title--xlong':
-                (heroTitle?.russian ?? heroBrief.romaji ?? '').length > 68,
-            }"
-          >
-            {{ heroTitle?.russian ?? peekRussianName(heroBrief.mediaId) ?? heroBrief.romaji }}
-          </h1>
-          <div class="am-home-hero__facts">
-            <b v-if="heroBrief.averageScore">★ {{ (heroBrief.averageScore / 10).toFixed(1) }}</b
-            ><span v-if="heroBrief.seasonYear">{{ heroBrief.seasonYear }}</span
-            ><span v-if="heroBrief.format">{{ formatWord(heroBrief.format) }}</span
-            ><span v-if="heroBrief.episodes">{{ heroBrief.episodes }} серий</span>
+          <img
+            v-if="heroPoster"
+            class="am-home-hero__poster"
+            :src="heroPoster"
+            alt=""
+            decoding="async"
+            draggable="false"
+          />
+          <div class="am-home-hero__body">
+            <h1 id="am-home-hero-title">{{ heroName }}</h1>
+            <div class="am-home-hero__facts">
+              <b v-if="heroBrief.averageScore">★ {{ (heroBrief.averageScore / 10).toFixed(1) }}</b>
+              <span v-if="heroBrief.seasonYear">{{ heroBrief.seasonYear }}</span>
+              <span v-if="heroBrief.format">{{ formatWord(heroBrief.format) }}</span>
+              <span v-if="heroBrief.format === 'MOVIE' && heroBrief.duration">
+                {{ heroBrief.duration }} мин
+              </span>
+              <span v-else-if="heroBrief.episodes && heroBrief.format !== 'MOVIE'">
+                {{ heroBrief.episodes }} серий
+              </span>
+            </div>
+            <div
+              v-if="heroSlides.length > 1"
+              class="am-home-hero__dots"
+              :style="{ '--am-hero-dot-count': heroSlides.length }"
+              role="group"
+              aria-label="Выбор слайда"
+            >
+              <button
+                v-for="(item, index) in heroSlides"
+                :key="item.mediaId"
+                type="button"
+                :aria-label="`Слайд ${index + 1}`"
+                :aria-current="item.mediaId === heroId ? 'true' : undefined"
+                @click="heroId = item.mediaId"
+              />
+            </div>
           </div>
-          <p v-if="heroCard?.genres.length" class="am-home-hero__genres">
-            {{ heroCard.genres.map((genre) => genreWord(genre) ?? genre).join(' · ') }}
-          </p>
-          <p
-            v-if="heroTitle?.description ?? heroCard?.description"
-            class="am-home-hero__description"
-            :class="{
-              'am-home-hero__description--long':
-                plainHeroDescription(heroTitle?.description ?? heroCard?.description).length > 220,
-            }"
-          >
-            {{ plainHeroDescription(heroTitle?.description ?? heroCard?.description) }}
-          </p>
+          <ul v-if="heroCard?.genres.length" class="am-home-hero__genres" aria-label="Жанры">
+            <li v-for="genre in heroCard.genres" :key="genre">{{ genreWord(genre) ?? genre }}</li>
+          </ul>
+          <p v-if="heroDescription" class="am-home-hero__description">{{ heroDescription }}</p>
+        </template>
+        <div v-else class="am-home-hero__loading" role="status" aria-label="Загрузка баннера">
+          <span class="am-home-hero__spinner" />
         </div>
-      </template>
+      </div>
     </section>
     <p v-if="trouble" class="am-error">{{ trouble }}</p>
 
@@ -1710,190 +1706,189 @@ watch(
   backdrop-filter: blur(var(--am-blur)) saturate(1.4);
 }
 
-/* The focus target stays mounted; only its complete slide fades out and in. */
 .am-home-hero {
-  touch-action: pan-y;
-  position: relative;
-  height: 330px;
-  flex: none;
-  overflow: hidden;
-  isolation: isolate;
-  cursor: pointer;
   background: var(--am-panel);
   border: 1px solid var(--am-line);
   border-radius: var(--am-r-l);
 }
-.am-home-hero:focus-visible {
-  outline: 2px solid var(--am-accent);
-  outline-offset: 3px;
+.am-home-hero__slide {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 9px 12px;
+  min-height: clamp(156px, 46vw, 212px);
+  padding: clamp(12px, 3.4vw, 18px);
+  overflow: hidden;
+  border-radius: inherit;
+  touch-action: pan-y;
+}
+.am-home-hero__slide--with-poster {
+  grid-template-columns: clamp(62px, 19vw, 96px) minmax(0, 1fr);
 }
 .am-home-hero__art,
 .am-home-hero__veil {
   position: absolute;
+  z-index: -1;
   inset: 0;
 }
 .am-home-hero__art {
-  z-index: 0;
-  background: center / cover no-repeat;
-  opacity: 0.82;
+  background: center 40% / cover no-repeat;
+  filter: blur(10px);
+  transform: scale(1.08);
+  opacity: 0.35;
 }
 .am-home-hero__veil {
-  z-index: 1;
-  background:
-    linear-gradient(
-      90deg,
-      var(--am-panel),
-      color-mix(in srgb, var(--am-panel) 78%, transparent) 48%,
-      transparent
-    ),
-    linear-gradient(0deg, var(--am-panel), transparent 65%);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--am-panel) 62%, transparent),
+    color-mix(in srgb, var(--am-panel) 95%, transparent)
+  );
+}
+.am-home-hero__poster {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  background: var(--am-panel);
+  border-radius: var(--am-r-s);
+  box-shadow: var(--am-sh-2);
 }
 .am-home-hero__body {
-  position: relative;
-  z-index: 2;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 12px;
-  width: 68%;
-  height: 100%;
-  padding: 28px;
+  display: grid;
+  gap: 5px;
   min-width: 0;
-  overflow: hidden;
+  color: var(--am-text);
 }
-.am-home-hero__body > * {
-  flex: none;
-  min-width: 0;
-}
-.am-home-hero h1 {
-  margin: 0;
-  font-size: 32px;
-  line-height: 1.2;
-  max-height: 2.4em;
+.am-home-hero h1,
+.am-home-hero__description {
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  margin: 0;
   overflow: hidden;
   overflow-wrap: anywhere;
 }
-.am-home-hero h1.am-home-hero__title--long {
-  font-size: 27px;
-}
-.am-home-hero h1.am-home-hero__title--xlong {
-  font-size: 23px;
+.am-home-hero h1 {
+  -webkit-line-clamp: 3;
+  font-size: clamp(18px, 5vw, 25px);
+  line-height: 1.18;
 }
 .am-home-hero__facts {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 30px;
-  white-space: nowrap;
-  overflow: hidden;
-  font-size: 13px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 7px;
+  font-size: clamp(11px, 3vw, 13px);
+  line-height: 1.35;
   color: var(--am-dim);
+}
+.am-home-hero__facts > * {
+  white-space: nowrap;
+}
+.am-home-hero__facts > :not(:first-child)::before {
+  margin-inline-end: 7px;
+  color: var(--am-dim);
+  content: '·';
 }
 .am-home-hero__facts b {
-  flex: none;
-  padding: 4px 8px;
-  color: #07111f;
-  background: #75b8ff;
-  border-radius: var(--am-r-s);
-  line-height: 20px;
-}
-.am-home-hero p {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  overflow-wrap: anywhere;
-  margin: 0;
-  color: var(--am-dim);
+  color: var(--am-accent);
 }
 .am-home-hero__genres {
-  font-size: 12px;
-  line-height: 18px;
-  max-height: 36px;
-  -webkit-line-clamp: 2;
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.am-home-hero__genres li {
+  max-width: 100%;
+  padding: 3px 7px;
+  color: var(--am-dim);
+  font-size: 11.5px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  background: var(--am-fill-2);
+  border-radius: 6px;
 }
 .am-home-hero__description {
-  font-size: 14px;
-  line-height: 21px;
-  max-height: 63px;
-  -webkit-line-clamp: 3;
+  grid-column: 1 / -1;
+  -webkit-line-clamp: 5;
+  color: var(--am-dim);
+  font-size: clamp(13px, 3.4vw, 14px);
+  line-height: 1.46;
 }
-.am-home-hero__description--long {
-  font-size: 13px;
-  line-height: 20px;
-  max-height: 60px;
+.am-home-hero__open {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.am-home-hero__open:focus-visible,
+.am-home-hero__dots button:focus-visible {
+  outline: 2px solid var(--am-accent);
+  outline-offset: -3px;
+}
+.am-home-hero__dots {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(var(--am-hero-dot-count), minmax(0, 1fr));
+  width: min(100%, calc(var(--am-hero-dot-count) * 32px));
+  min-width: 0;
+}
+.am-home-hero__dots button {
+  display: grid;
+  min-width: 0;
+  height: var(--am-touch, 44px);
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: var(--am-r-s);
+  background: transparent;
+  color: var(--am-dim);
+  cursor: pointer;
+}
+.am-home-hero__dots button::before {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+  opacity: 0.58;
+  content: '';
+}
+.am-home-hero__dots button[aria-current='true'] {
+  color: var(--am-accent);
+}
+.am-home-hero__dots button[aria-current='true']::before {
+  width: 16px;
+  opacity: 1;
+}
+@media (max-width: 360px) {
+  .am-home-hero__slide--with-poster {
+    grid-template-columns: clamp(54px, 17.5vw, 63px) minmax(0, 1fr);
+    column-gap: 8px;
+  }
 }
 .am-home-hero-crossfade-enter-active,
 .am-home-hero-crossfade-leave-active {
-  transition: opacity 0.65s ease-in-out !important;
+  transition: opacity 0.24s ease-in-out;
 }
 .am-home-hero-crossfade-enter-from,
 .am-home-hero-crossfade-leave-to {
-  opacity: 0 !important;
+  opacity: 0;
 }
 @media (prefers-reduced-motion: reduce) {
   .am-home-hero-crossfade-enter-active,
   .am-home-hero-crossfade-leave-active {
-    transition: none !important;
-  }
-}
-
-/* Fixed picture and text zones, with room for every complete line at 320px. */
-.am-home-hero {
-  height: 480px;
-}
-.am-home-hero__art,
-.am-home-hero__veil {
-  bottom: auto;
-  height: 270px;
-}
-.am-home-hero__veil {
-  background: linear-gradient(
-    180deg,
-    transparent 28%,
-    color-mix(in srgb, var(--am-panel) 42%, transparent) 58%,
-    var(--am-panel) 100%
-  );
-}
-.am-home-hero__body {
-  position: absolute;
-  top: 245px;
-  bottom: 0;
-  height: auto;
-  width: 100%;
-  padding: 22px 22px 24px;
-  background: linear-gradient(180deg, transparent, var(--am-panel) 24%);
-  gap: 10px;
-}
-.am-home-hero h1 {
-  font-size: 25px;
-}
-.am-home-hero h1.am-home-hero__title--long {
-  font-size: 23px;
-}
-.am-home-hero h1.am-home-hero__title--xlong {
-  font-size: 21px;
-}
-@media (max-width: 360px) {
-  .am-home-hero__body {
-    padding: 16px;
-    gap: 9px;
-  }
-  .am-home-hero h1 {
-    font-size: 23px;
-  }
-  .am-home-hero h1.am-home-hero__title--long {
-    font-size: 21px;
-  }
-  .am-home-hero h1.am-home-hero__title--xlong {
-    font-size: 19px;
-  }
-  .am-home-hero__facts {
-    font-size: 11px;
-    gap: 7px;
+    transition: none;
   }
 }
 

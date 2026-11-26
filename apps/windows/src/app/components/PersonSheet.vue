@@ -11,23 +11,29 @@ import {
   type StaffCard,
 } from '@/api/anilist-person'
 import { fetchStaffWorks, type StaffWork } from '@/api/anilist-staff-works'
-import { Bridge } from '@/bridge'
 import { keepAllowed } from '@/core/adult'
 import { peekRussianName, prefetchRussianNames } from '@/core/media-title'
+import { personLinks, type PersonLink } from '@/core/person-links'
 import {
   askRussianPersonFull,
   getRussianPerson,
   peekRussianPerson,
   type RussianPerson,
 } from '@/core/person-title'
+import {
+  personCardFacts,
+  selectPersonBiography,
+  splitPersonDescription,
+} from '@/core/person-summary'
 import { settings } from '@/core/settings'
 import { Logger } from '@/utils/logger'
 
 import { genderWord, langWord, occupationWord } from '../labels'
-import { personLinks, type PersonLink } from '../person-links'
+import { openDescriptionLink } from '../rich-open'
 import { navigate } from '../router'
 import { holdDialog } from '../dialog-focus'
 
+import PersonSummary from './PersonSummary.vue'
 import RichText from './RichText.vue'
 import SakuraBloom from './SakuraBloom.vue'
 
@@ -61,6 +67,18 @@ const depth = ref(0)
 
 const charCard = ref<CharacterCard | null>(null)
 const staffCard = ref<StaffCard | null>(null)
+const anilistCard = computed(() => charCard.value ?? staffCard.value)
+const anilistDescription = computed(() => splitPersonDescription(anilistCard.value?.description))
+const summary = computed(() => {
+  const card = anilistCard.value
+  if (!card) return []
+  const fields = personCardFacts(card, {
+    gender: genderWord,
+    occupation: occupationWord,
+    language: langWord,
+  })
+  return [...fields, ...anilistDescription.value.facts]
+})
 const busy = ref(true)
 const expanded = ref(false)
 const tab = ref<Tab>('desc')
@@ -102,20 +120,16 @@ function translateAllowed(): boolean {
 
 /** Описание из загруженных данных: русское важнее английского.
  *  Пока русский источник не ответил, чужой текст скрыт — иначе он подменится русским на глазах. */
-function rawDesc(): string {
-  if (ruWait.value) return ''
-  if (ruPerson.value?.description) return ruPerson.value.description
-  return (
-    (current.value.kind === 'character'
-      ? charCard.value?.description
-      : staffCard.value?.description) ?? ''
-  )
-}
+const biography = computed(() =>
+  ruWait.value
+    ? null
+    : selectPersonBiography(ruPerson.value?.description, anilistDescription.value.description),
+)
 
 /** Длинное ли описание. Резать по символам нельзя — в тексте разметка, рез попадал в середину тега;
  *  длина лишь признак, что описание надо сложить по высоте. */
 function longDesc(): boolean {
-  return rawDesc().length > DESC_LIMIT
+  return (biography.value?.text.length ?? 0) > DESC_LIMIT
 }
 
 /** Ссылка на карточку AniList: своя страница из ответа, а запасная — из самой плитки. */
@@ -124,29 +138,15 @@ function anilistUrl(): string | null {
   return card?.siteUrl ?? current.value.siteUrl
 }
 
-/** Откуда взят текст под именем. Ссылка на Шикимори честна только когда описание пришло оттуда:
- *  номер известен из того же ответа, но страницы у источника может не быть вовсе. */
-function descSource(): { shikiId: number | null; fromShiki: boolean } {
-  const ru = ruPerson.value
-  const text = ru?.description?.trim() ?? ''
-  return { shikiId: ru?.shikiId ?? null, fromShiki: text !== '' }
-}
-
 /** Хвост под описанием: адреса, а не названия — на ПК ссылка должна быть ссылкой. */
 const descLinks = computed<PersonLink[]>(() =>
   personLinks({
     kind: current.value.kind,
     siteUrl: anilistUrl(),
-    ...descSource(),
+    shikiId: ruPerson.value?.shikiId ?? null,
+    fromShiki: biography.value?.fromShiki ?? false,
   }),
 )
-
-/** Уводит наружу через оболочку: переход в том же окне унёс бы само приложение. */
-function onOpen(url: string): void {
-  void Bridge.shell.openExternal(url).catch((e) => {
-    Logger('WARN', `Карточка человека: внешняя ссылка не открылась (${url})`, e)
-  })
-}
 
 /** Видимые работы: отбор 18+ живёт на слое показа, а не в запросе. */
 function shownWorks(): readonly StaffWork[] {
@@ -177,7 +177,7 @@ function characterWork(item: StaffCard['characters'][number]): string {
 
 function shownTabs(): Tab[] {
   const out: Tab[] = []
-  if (rawDesc() !== '') out.push('desc')
+  if (biography.value) out.push('desc')
   if (current.value.kind === 'staff') {
     if (staffCharacters().length > 0) out.push('characters')
     if (shownWorks().length > 0) out.push('works')
@@ -209,52 +209,6 @@ function altNames(): string[] {
 function largeImage(): string | null {
   const card = current.value.kind === 'character' ? charCard.value : staffCard.value
   return card?.image?.large ?? current.value.image ?? null
-}
-
-const MONTHS_RU = [
-  'января',
-  'февраля',
-  'марта',
-  'апреля',
-  'мая',
-  'июня',
-  'июля',
-  'августа',
-  'сентября',
-  'октября',
-  'ноября',
-  'декабря',
-]
-
-const MONTHS_RU_NOM = [
-  'январь',
-  'февраль',
-  'март',
-  'апрель',
-  'май',
-  'июнь',
-  'июль',
-  'август',
-  'сентябрь',
-  'октябрь',
-  'ноябрь',
-  'декабрь',
-]
-
-/** Дата { year, month, day } по-русски: «4 декабря», «декабрь 1995», «1995». */
-function fmtDate(
-  d: { year: number | null; month: number | null; day: number | null } | null,
-): string {
-  if (!d) return ''
-  const day = d.day ?? 0
-  const month = d.month ?? 0
-  const year = d.year ?? 0
-  if (month < 1 || month > 12) return year > 0 ? String(year) : ''
-  // Диапазон месяца проверен выше, элемент есть всегда.
-  const monthGen = MONTHS_RU[month - 1]!
-  const monthNom = MONTHS_RU_NOM[month - 1]!
-  if (day > 0) return year > 0 ? `${day} ${monthGen} ${year}` : `${day} ${monthGen}`
-  return year > 0 ? `${monthNom} ${year}` : monthNom
 }
 
 /** Сэйю без повторов: один человек — одна строка, сколько бы аниме ни было. */
@@ -523,36 +477,6 @@ onBeforeUnmount(() => {
             <p v-if="altNames().length" class="am-ps-names__alt">
               {{ altNames().join(' · ') }}
             </p>
-
-            <!-- Стафф: занятия, язык, город -->
-            <template v-if="current.kind === 'staff' && staffCard">
-              <p v-if="staffCard.primaryOccupations?.length" class="am-dim am-ps-names__occ">
-                {{ staffCard.primaryOccupations.map(occupationWord).join(', ') }}
-              </p>
-              <p v-if="staffCard.languageV2" class="am-dim">
-                {{ langWord(staffCard.languageV2)
-                }}<template v-if="staffCard.homeTown">, {{ staffCard.homeTown }}</template>
-              </p>
-              <p v-if="fmtDate(staffCard.dateOfBirth)" class="am-dim">
-                {{ fmtDate(staffCard.dateOfBirth)
-                }}<template v-if="fmtDate(staffCard.dateOfDeath)">
-                  &nbsp;—&nbsp;{{ fmtDate(staffCard.dateOfDeath) }}</template
-                >
-              </p>
-            </template>
-
-            <!-- Персонаж: пол, возраст, дата рождения -->
-            <template v-if="current.kind === 'character' && charCard">
-              <p v-if="charCard.gender || charCard.age" class="am-dim">
-                <template v-if="charCard.gender">{{
-                  genderWord(charCard.gender)
-                }}</template><template v-if="charCard.gender && charCard.age"> · </template
-                ><template v-if="charCard.age">{{ charCard.age }}</template>
-              </p>
-              <p v-if="fmtDate(charCard.dateOfBirth)" class="am-dim">
-                {{ fmtDate(charCard.dateOfBirth) }}
-              </p>
-            </template>
           </div>
 
           <!-- Управление окном одной группой в правом углу: шаг назад по цепочке
@@ -589,6 +513,13 @@ onBeforeUnmount(() => {
       </header>
 
       <div ref="box" class="am-sheet__body">
+        <PersonSummary
+          v-if="summary.length"
+          :key="current.kind + ':' + current.personId"
+          :facts="summary"
+          @inside="emit('close')"
+        />
+
         <!-- Скелетон -->
         <template v-if="busy">
           <span class="am-skeleton am-ps-skel" />
@@ -628,13 +559,13 @@ onBeforeUnmount(() => {
           </div>
 
           <div
-            v-if="shownTab() === 'desc' && rawDesc()"
+            v-if="shownTab() === 'desc' && biography"
             class="am-ps-desc"
             :class="{ 'am-ps-desc--fold': longDesc() && !expanded }"
           >
             <!-- Ссылка на тайтл закрывает окно (иначе карточка откроется за ним незамеченной),
                  а ссылка на человека — нет: окно уже показывает нового. -->
-            <RichText :text="rawDesc()" @inside="emit('close')" />
+            <RichText :blocks="biography.blocks" @inside="emit('close')" />
           </div>
           <button
             v-if="shownTab() === 'desc' && longDesc() && !expanded"
@@ -654,7 +585,7 @@ onBeforeUnmount(() => {
                 v-tip="link.hint"
                 class="am-ps-tail__link"
                 :href="link.url"
-                @click.prevent="onOpen(link.url)"
+                @click.prevent="openDescriptionLink(link.url)"
                 >{{ link.text }}</a
               >
             </template>
@@ -1020,10 +951,6 @@ onBeforeUnmount(() => {
   color: var(--am-faint);
 }
 
-.am-ps-names__occ {
-  margin-top: 4px;
-}
-
 /* Хвост под описанием: откуда текст и где сама карточка. Тем же приёмом, что и под
    описанием аниме, — бледная справка, подчёркивание появляется под мышью. */
 .am-ps-tail {
@@ -1054,6 +981,7 @@ onBeforeUnmount(() => {
 /* Описание лежит на своей подложке: стена текста без границ не читалась.
    Переносы и разметку держит сам RichText, здесь только типографика. */
 .am-ps-desc {
+  flex: none;
   margin: 0;
   padding: 14px 16px;
   font-size: 14px;

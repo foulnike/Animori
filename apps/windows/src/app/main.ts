@@ -1,5 +1,6 @@
 // Точка входа своего клиента (режим сборки app). Отличие от скрипта: разметка своя и готова сразу, ждать нечего.
 
+import { isTauri } from '@tauri-apps/api/core'
 import { createApp } from 'vue'
 import App from './App.vue'
 import { startAppearance } from './appearance'
@@ -13,6 +14,7 @@ import { hydrateLooks, peekLook, warmLooks } from '@/core/media-looks'
 import { loadCoversFromStore, prefetchCovers, type CoverPair } from '@/core/posters'
 import { loadSettings, settings } from '@/core/settings'
 import { installGlobalErrorHandlers, Logger, setLogEnabled } from '@/utils/logger'
+import { needsOnboarding } from '../../../../packages/onboarding/src/first-launch'
 
 // Стиль всплывающих подписей: плашка живёт в body, и scoped-правила
 // компонентов до неё не достают.
@@ -54,8 +56,7 @@ async function warmListCovers(): Promise<void> {
  * Настройки и надпись плашки — до первой отрисовки, коллекция — после монтирования (список односторонний), датасет фоном.
  */
 async function start(): Promise<void> {
-  // Круг сплэшей читается и записывается здесь же: ход круга обязан лечь в хранилище ДО показа, иначе спам перезагрузки (F5) показывал бы одну и ту же надпись.
-  await Promise.all([loadSettings(), initSplash()])
+  await loadSettings()
 
   // Журнал узнаёт, писать ли, только отсюда: сам он настройки не видит, иначе кольцо модулей.
   setLogEnabled(settings.enableLogger)
@@ -68,6 +69,14 @@ async function start(): Promise<void> {
 
   // Перехватчики ставятся до первой отрисовки: сбой монтирования — тоже событие для журнала. Флага им не нужно — пишет ли журнал, решает он сам.
   installGlobalErrorHandlers()
+
+  if (isTauri() && (await needsOnboarding())) {
+    const { assets, showOnboarding } = await import('./onboarding')
+    await showOnboarding(root as HTMLElement, assets, hideBoot)
+  }
+  // Круг приветствий служит признаком прежнего запуска, поэтому первая запись
+  // делается после завершения знакомства.
+  await initSplash()
 
   // Подписи v-tip и v-seen регистрируются на всё приложение: их просят метки плиток, кнопки шапок и полки карточек. У каждой один наблюдатель на всё окно, место ей здесь же.
   const app = createApp(App)

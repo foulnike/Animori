@@ -21,6 +21,13 @@ export interface AdultTagRule {
   hideInPartial: boolean
 }
 
+/** Независимая копия правил для формы и хранилища, в том числе из реактивного объекта Vue. */
+export function copyAdultTagRules(
+  rules: Readonly<Record<string, AdultTagRule>>,
+): Record<string, AdultTagRule> {
+  return Object.fromEntries(Object.entries(rules).map(([name, rule]) => [name, { ...rule }]))
+}
+
 export const ADULT_TAG_RULES_DEFAULT: Record<string, AdultTagRule> = {
   Incest: { threshold: 40, hideInPartial: false },
   Inseki: { threshold: 40, hideInPartial: false },

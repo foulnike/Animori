@@ -47,6 +47,21 @@ function onSource(url: string): void {
     <!-- Шапка — кнопка: список сворачивается, а счётчик в ней виден и свёрнутым, иначе блок
          выглядит пустым и его не ищут. -->
     <button class="am-credits__head" type="button" :aria-expanded="open" @click="open = !open">
+      <svg
+        class="am-credits__icon"
+        viewBox="0 0 20 20"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path
+          d="M10 2.5v15m-4 0h8M5 5h10M5 5l-3 7h6L5 5Zm10 0-3 7h6l-3-7ZM2 12a3 3 0 0 0 6 0m4 0a3 3 0 0 0 6 0"
+        />
+      </svg>
       <span class="am-credits__title">Источники и права</span>
       <span class="am-credits__count">{{ SOURCES.length }}</span>
       <svg class="am-credits__caret" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
@@ -140,6 +155,12 @@ function onSource(url: string): void {
 
 .am-credits__head:hover {
   color: var(--am-accent);
+}
+
+.am-credits__icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
 }
 
 .am-credits__title {

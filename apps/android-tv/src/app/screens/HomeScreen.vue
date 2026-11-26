@@ -221,7 +221,6 @@ let calendarIds: number[] = []
 
 /** Приехавшие полки витрины и их порядок: плитки собираются на показ. */
 const staged = new Map<string, MediaBrief[]>()
-const heroIndex = ref(0)
 const heroCards = ref<Record<number, MediaCard>>({})
 const heroTitles = ref<Record<number, RussianTitle>>({})
 const heroReady = ref<Record<number, boolean>>({})
@@ -240,13 +239,9 @@ const heroItems = computed(
     })()
   ),
 )
-const heroBrief = computed(() => {
-  const item = heroItems.value.find((item) => item.mediaId === heroId.value)
-  return item && heroReady.value[item.mediaId] ? item : null
-})
-const heroAllReady = computed(
-  () =>
-    heroItems.value.length > 0 && heroItems.value.every((item) => heroReady.value[item.mediaId]),
+const heroSlides = computed(() => heroItems.value.filter((item) => heroReady.value[item.mediaId]))
+const heroBrief = computed(
+  () => heroSlides.value.find((item) => item.mediaId === heroId.value) ?? null,
 )
 const heroCard = computed(() => (heroBrief.value ? heroCards.value[heroBrief.value.mediaId] : null))
 const heroTitle = computed(() =>
@@ -285,26 +280,12 @@ function plainHeroDescription(raw: string | null | undefined): string {
     .trim()
 }
 
-function heroTarget(direction: -1 | 1): number | null {
-  const items = heroItems.value
-  if (items.length < 2 || heroId.value === null) return null
-  const current = items.findIndex((item) => item.mediaId === heroId.value)
-  if (current < 0) return null
-  const index = (current + direction + items.length) % items.length
-  const candidate = items[index]
-  return candidate && heroReady.value[candidate.mediaId] ? index : null
-}
-
 function changeHero(direction: -1 | 1): void {
-  const index = heroTarget(direction)
-  const target = index === null ? undefined : heroItems.value[index]
-  if (index === null || !target) return
-  heroIndex.value = index
-  heroId.value = target.mediaId
-}
-
-function nextHero(): void {
-  changeHero(1)
+  const slides = heroSlides.value
+  const current = slides.findIndex((item) => item.mediaId === heroId.value)
+  if (slides.length < 2 || current < 0) return
+  const target = slides[(current + direction + slides.length) % slides.length]
+  if (target) heroId.value = target.mediaId
 }
 
 watch(
@@ -336,16 +317,14 @@ watch(
   { immediate: true },
 )
 
-// A complete slide receives fifteen full seconds before the next ready slide.
-watch(
-  () =>
-    `${heroId.value}:${heroItems.value.map((item) => Number(heroReady.value[item.mediaId] === true)).join('')}:${heroAllReady.value}`,
-  () => {
-    if (heroTimer !== null) clearTimeout(heroTimer)
-    heroTimer = null
-    if (heroId.value !== null && heroItems.value.length > 1) heroTimer = setTimeout(nextHero, 15000)
-  },
-)
+// Каждый показанный слайд держится 15 секунд, затем переключаемся на готовый.
+watch([heroId, () => heroSlides.value.length], () => {
+  if (heroTimer !== null) clearTimeout(heroTimer)
+  heroTimer = null
+  if (heroId.value !== null && heroSlides.value.length > 1) {
+    heroTimer = setTimeout(() => changeHero(1), 15000)
+  }
+})
 
 let activeDefs: ShelfDef[] = []
 
@@ -1096,17 +1075,18 @@ watch(
       </div>
     </div>
 
-    <section
-      v-if="!picked"
-      :data-am-hero="true"
-      ref="heroElement"
-      data-am-first
-      class="am-home-hero"
-      :role="heroCurrentReady ? 'button' : undefined"
-      :tabindex="heroCurrentReady ? 0 : -1"
-      @click="heroCurrentReady && heroBrief && open(heroBrief.mediaId)"
-      @keydown.enter.prevent="heroCurrentReady && heroBrief && open(heroBrief.mediaId)"
-    >
+    <section v-if="!picked" data-am-hero="true" class="am-home-hero">
+      <button
+        ref="heroElement"
+        data-am-first
+        class="am-home-hero__open"
+        type="button"
+        :tabindex="heroCurrentReady ? 0 : -1"
+        :aria-disabled="!heroCurrentReady"
+        :aria-labelledby="heroCurrentReady ? 'am-home-hero-title' : undefined"
+        :aria-label="heroCurrentReady ? undefined : 'Баннер'"
+        @click="heroBrief && open(heroBrief.mediaId)"
+      />
       <div
         v-if="!heroCurrentReady"
         class="am-home-hero__loading"
@@ -1127,6 +1107,7 @@ watch(
         <div class="am-home-hero__veil" />
         <div class="am-home-hero__body">
           <h1
+            id="am-home-hero-title"
             :class="{
               'am-home-hero__title--long':
                 (heroTitle?.russian ?? heroBrief.romaji ?? '').length > 42,
@@ -1155,6 +1136,38 @@ watch(
           >
             {{ plainHeroDescription(heroTitle?.description ?? heroCard?.description) }}
           </p>
+        </div>
+        <div
+          v-if="heroSlides.length > 1"
+          class="am-home-hero__navigation"
+          role="group"
+          aria-label="Слайды баннера"
+        >
+          <button
+            data-am-beside
+            class="am-home-hero__arrow"
+            type="button"
+            aria-label="Предыдущий слайд"
+            @click="changeHero(-1)"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6" /></svg>
+          </button>
+          <div class="am-home-hero__dots" aria-hidden="true">
+            <span
+              v-for="item in heroSlides"
+              :key="item.mediaId"
+              :class="{ 'am-home-hero__dot--on': item.mediaId === heroId }"
+            />
+          </div>
+          <button
+            data-am-beside
+            class="am-home-hero__arrow"
+            type="button"
+            aria-label="Следующий слайд"
+            @click="changeHero(1)"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m10 6 6 6-6 6" /></svg>
+          </button>
         </div>
       </template>
     </section>
@@ -1490,14 +1503,25 @@ watch(
   flex: none;
   overflow: hidden;
   isolation: isolate;
-  cursor: pointer;
   background: var(--am-panel);
   border: 1px solid var(--am-line);
   border-radius: var(--am-r-l);
 }
-.am-home-hero:focus-visible {
+.am-home-hero__open {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.am-home-hero__open:not([aria-disabled='true']):hover,
+.am-home-hero__open:focus-visible {
   outline: 2px solid var(--am-accent);
-  outline-offset: 3px;
+  outline-offset: -3px;
+  box-shadow: none;
 }
 .am-home-hero__art,
 .am-home-hero__veil {
@@ -1597,6 +1621,56 @@ watch(
   font-size: 13px;
   line-height: 20px;
   max-height: 60px;
+}
+.am-home-hero__navigation {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.am-home-hero__arrow {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-cap);
+  background: var(--am-glass-deep);
+  color: var(--am-text);
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity var(--am-fast) var(--am-ease);
+}
+.am-home-hero__arrow svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.am-home-hero__arrow:focus-visible {
+  outline: 2px solid var(--am-accent);
+  outline-offset: 2px;
+  box-shadow: none;
+  opacity: 1;
+}
+.am-home-hero__dots {
+  display: flex;
+  gap: 6px;
+}
+.am-home-hero__dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--am-faint);
+}
+.am-home-hero__dots .am-home-hero__dot--on {
+  background: var(--am-accent);
+  transform: scale(1.45);
 }
 .am-home-hero-crossfade-enter-active,
 .am-home-hero-crossfade-leave-active {

@@ -71,6 +71,25 @@ describe('разбор описаний', () => {
     expect(links(parts)).toHaveLength(0)
   })
 
+  it('оставляет ссылки на соцсети и вики внешними, в том числе по HTTP', () => {
+    const blocks = parseRich(
+      '<a href="//x.com/author">Соцсеть</a> и [Вики](http://wiki.example/animes/73)',
+    )
+    expect(links(firstPara(blocks)).map((link) => link.aim)).toEqual([
+      { kind: 'web', url: 'https://x.com/author' },
+      { kind: 'web', url: 'http://wiki.example/animes/73' },
+    ])
+  })
+
+  it('не делает ссылки с учётными данными и непубличными схемами кликабельными', () => {
+    const blocks = parseRich(
+      '[url=https://x.com@elsewhere.example/]Ложный адрес[/url] и <a href="file:///test">Файл</a>',
+    )
+    const parts = firstPara(blocks)
+    expect(line(parts)).toBe('Ложный адрес и Файл')
+    expect(links(parts)).toHaveLength(0)
+  })
+
   it('восстанавливает ссылки персонажей из HTML-описания Shikimori', () => {
     const blocks = parseRich(
       '<div>Вот <a href="/characters/10421-mai-minakami">Май Минаками</a> и <a href="https://shikimori.io/characters/41055-hakase-shinonome">Профессор</a>.</div>',

@@ -17,9 +17,9 @@ export type RichAimResult = 'media' | 'person' | 'outside'
 const known = new Map<number, number | null>()
 
 /** Уводит наружу через оболочку: в WebView2 переход в новом окне молча теряется. */
-function openOutside(url: string): void {
-  void Bridge.shell.openExternal(url).catch((e) => {
-    Logger('WARN', `Описание: внешняя ссылка не открылась (${url})`, e)
+export function openDescriptionLink(url: string): void {
+  void Bridge.shell.openExternal(url, { confirm: true }).catch((e) => {
+    Logger('WARN', 'Описание: внешняя ссылка не открылась', e)
   })
 }
 
@@ -41,14 +41,14 @@ async function lookup(malId: number): Promise<number | null> {
 /** Идёт по ссылке из описания. Любой промах ведёт к источнику — пусть откроется в браузере, чем никак. */
 export async function followRichAim(aim: RichAim): Promise<RichAimResult> {
   if (aim.kind === 'web') {
-    openOutside(aim.url)
+    openDescriptionLink(aim.url)
     return 'outside'
   }
 
   if (aim.kind === 'person') {
     const target = await resolveShikiPerson(aim.who, aim.shikiId)
     if (target === null) {
-      openOutside(aim.url)
+      openDescriptionLink(aim.url)
       return 'outside'
     }
 
@@ -61,7 +61,7 @@ export async function followRichAim(aim: RichAim): Promise<RichAimResult> {
 
   if (mediaId === null) {
     // Пары у AniList нет: пусть откроется у источника, чем никак.
-    openOutside(aim.url)
+    openDescriptionLink(aim.url)
     return 'outside'
   }
 

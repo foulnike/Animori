@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { personLinks } from '../src/app/person-links'
+import { personLinks } from '@/core/person-links'
 
 describe('personLinks', () => {
   it('указывает AniList, когда пришла своя страница', () => {

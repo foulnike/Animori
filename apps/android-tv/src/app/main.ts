@@ -1,5 +1,6 @@
 // Точка входа своего клиента (режим сборки app): разметка своя и готова сразу.
 
+import { isTauri } from '@tauri-apps/api/core'
 import { createApp } from 'vue'
 import App from './App.vue'
 import { startAppearance } from './appearance'
@@ -13,6 +14,7 @@ import { warmLooks } from '@/core/media-looks'
 import { initDatasetNames, updateDatasetNamesInBackground } from '@/core/dataset-names'
 import { loadSettings } from '@/core/settings'
 import { installGlobalErrorHandlers } from '@/utils/logger'
+import { needsOnboarding } from '../../../../packages/onboarding/src/first-launch'
 import { initSplash } from './splash'
 
 // Стиль всплывающих подписей: плашка живёт в body, и scoped-правила
@@ -40,13 +42,19 @@ function hideBoot(): void {
 async function start(): Promise<void> {
   // Настройки поднимаются до первой отрисовки: от них зависит отбор 18+ и источник названий; ошибок `loadSettings`
   // не бросит — без хранилища остаются дефолты. Коллекция идёт после монтирования, датасет — фоном.
-  await Promise.all([loadSettings(), initSplash().catch(() => undefined)])
+  await loadSettings()
 
   // Тема ставится до первой отрисовки: светлое окно, темнеющее на глазах, читается как поломка.
   startAppearance()
 
   // Перехватчики ставятся до первой отрисовки и после настроек: тумблер журнала должен быть прочтён.
   installGlobalErrorHandlers()
+
+  if (isTauri() && (await needsOnboarding())) {
+    const { assets, showOnboarding } = await import('./onboarding')
+    await showOnboarding(root as HTMLElement, assets, hideBoot)
+  }
+  await initSplash().catch(() => undefined)
 
   // Подписи v-tip и v-seen регистрируются на всё приложение: импорт в каждый файл был бы шумом,
   // а у наблюдателя показа плитки один на всё окно — место ему тоже здесь.

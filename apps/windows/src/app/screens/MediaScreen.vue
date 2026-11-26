@@ -10,6 +10,7 @@ import RichText from '../components/RichText.vue'
 import ShotBox from '../components/ShotBox.vue'
 import TuneBox from '../components/TuneBox.vue'
 import { genreWord } from '../labels'
+import { openDescriptionLink } from '../rich-open'
 import { currentRoute, navigate } from '../router'
 
 import { regulatedByTags } from '@/core/adult'
@@ -76,7 +77,6 @@ const {
   onPartSeen,
   openFranchiseWork,
   openStudio,
-  onOpen,
   onPickStatus,
   onPickScore,
   onPickProgress,
@@ -265,7 +265,7 @@ watch(mediaId, () => {
                     v-tip="link.hint"
                     class="am-about__link"
                     :href="link.url"
-                    @click.prevent="onOpen(link.url)"
+                    @click.prevent="openDescriptionLink(link.url)"
                     >{{ link.text }}</a
                   >
                 </template>
@@ -297,7 +297,7 @@ watch(mediaId, () => {
                     v-tip="link.hint"
                     class="am-about__link"
                     :href="link.url"
-                    @click.prevent="onOpen(link.url)"
+                    @click.prevent="openDescriptionLink(link.url)"
                     >{{ link.text }}</a
                   >
                 </template>

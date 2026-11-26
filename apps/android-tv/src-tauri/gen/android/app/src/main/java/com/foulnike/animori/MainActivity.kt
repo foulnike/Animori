@@ -27,6 +27,10 @@ class MainActivity : TauriActivity() {
   private lateinit var backStop: OnBackPressedCallback
 
   override fun onWebViewCreate(webView: WebView) {
+    // Фокус кнопки внутри страницы принимает пульт только после фокуса самого WebView.
+    webView.isFocusableInTouchMode = true
+    webView.post { webView.requestFocus() }
+
     backStop =
       object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {

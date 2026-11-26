@@ -6,7 +6,7 @@ import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
 import { APPEARANCES, appearance, setAppearance } from '../appearance'
 import { runBackStop } from '../back-stop'
 import { isWeakPlatform } from '../platform'
-import { currentRoute, goBack, navigate, navDirection } from '../router'
+import { buildHash, currentRoute, goBack, navigate, navDirection } from '../router'
 import { MENU, SCREEN_TITLES } from '../router/routes'
 import { updateOffer, updateOpen } from '../update'
 
@@ -28,8 +28,9 @@ const BACK_SCREENS: ReadonlyArray<string> = ['media', 'studio', 'log']
 
 const canGoBack = computed(() => BACK_SCREENS.includes(active.value))
 
-/** Позиция каждого экрана: возврат с карточки возвращает к месту, где человек её открыл. */
-const scrollByScreen = new Map<string, number>()
+/** Позиции экранов для возврата из карточки. Сама карточка всегда открывается сверху. */
+const scrollByRoute = new Map<string, number>()
+const browserScrollRestoration = window.history.scrollRestoration
 const SCROLL_TRIES = 20
 const SCROLL_STEP_MS = 60
 let scrollStop: (() => void) | null = null
@@ -50,7 +51,7 @@ function restoreScroll(top: number): void {
 
   const step = (): void => {
     if (left <= 0) return
-    window.scrollTo(0, top)
+    window.scrollTo({ left: 0, top, behavior: 'instant' })
     if (Math.abs(window.scrollY - top) <= 2 || --left <= 0) {
       stop()
       return
@@ -65,18 +66,21 @@ function restoreScroll(top: number): void {
   step()
 }
 
-function rememberScroll(): void {
-  scrollByScreen.set(active.value, window.scrollY)
-}
+// Сохраняем позицию до смены разметки: короткий экран уже мог бы обрезать scrollY.
+watch(currentRoute, (_, previous) => {
+  if (previous.name !== 'media' && scrollStop === null) {
+    scrollByRoute.set(buildHash(previous.name, previous.params), window.scrollY)
+  }
+  scrollStop?.()
+})
 
 watch(
-  active,
-  (next, prev) => {
-    scrollByScreen.set(prev, scrollByScreen.get(prev) ?? window.scrollY)
-    scrollStop?.()
-    window.scrollTo(0, 0)
-    const want = scrollByScreen.get(next) ?? 0
-    if (want > 0) restoreScroll(want)
+  currentRoute,
+  (route) => {
+    const top =
+      route.name === 'media' ? 0 : (scrollByRoute.get(buildHash(route.name, route.params)) ?? 0)
+    if (top > 0) restoreScroll(top)
+    else window.scrollTo({ left: 0, top: 0, behavior: 'instant' })
   },
   { flush: 'post' },
 )
@@ -100,12 +104,13 @@ function onReload(): void {
 }
 
 onMounted(() => {
-  window.addEventListener('scroll', rememberScroll, { passive: true })
+  if (browserScrollRestoration !== undefined) window.history.scrollRestoration = 'manual'
 })
 
 onBeforeUnmount(() => {
   scrollStop?.()
-  window.removeEventListener('scroll', rememberScroll)
+  if (browserScrollRestoration !== undefined)
+    window.history.scrollRestoration = browserScrollRestoration
 })
 </script>
 

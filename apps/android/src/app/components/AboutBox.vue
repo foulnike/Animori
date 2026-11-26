@@ -4,9 +4,12 @@
 
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
+import type { MediaLink } from '@/core/media-links'
+
 import { pushBackStop } from '../back-stop'
 import { useScrollLock } from '../scroll-lock'
 
+import DescriptionLinks from './DescriptionLinks.vue'
 import RichText from './RichText.vue'
 
 const props = defineProps<{
@@ -14,6 +17,7 @@ const props = defineProps<{
   open: boolean
   /** Описание как оно пришло от источника: разбор — дело RichText. */
   text: string
+  links: readonly MediaLink[]
 }>()
 
 const emit = defineEmits<{ close: [] }>()
@@ -106,7 +110,8 @@ onBeforeUnmount(() => {
 
           <!-- tabindex у тела: с фокусом на нём пульт видит, что находится внутри окна, и не считает окно пустым. -->
           <div ref="body" class="am-modal__body" tabindex="0" data-am-seed>
-            <RichText class="am-about--zoom" :text="text" plain />
+            <RichText class="am-about--zoom" :text="text" @inside="onClose" @person="onClose" />
+            <DescriptionLinks class="am-modal__sources" :links="links" />
           </div>
         </div>
       </div>
@@ -230,6 +235,11 @@ onBeforeUnmount(() => {
   font-size: clamp(15px, 1.35vw, 18px);
   line-height: 1.62;
   color: color-mix(in srgb, var(--am-text) 92%, transparent);
+}
+
+.am-modal__sources {
+  margin-top: 14px;
+  font-size: 12.5px;
 }
 
 /* ТЕЛЕФОН. Без своего запроса окно держало десктопную сетку и потолок 88vh: на узком

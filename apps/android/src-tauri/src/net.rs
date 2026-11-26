@@ -384,6 +384,8 @@ const ALLOWED_EXTERNAL: &[&str] = &[
     "https://graphql.anilist.co/*",
     "https://shikimori.one/*",
     "https://shikimori.me/*",
+    "https://shikimori.io/*",
+    "https://shikimori.rip/*",
     "https://*.shikimori.org/*",
     "https://moe.shikimori.one/*",
     "https://desu.shikimori.one/*",
@@ -400,24 +402,23 @@ const ALLOWED_EXTERNAL: &[&str] = &[
     "https://www.youtube.com/*",
     "https://www.dailymotion.com/*",
     "https://open.spotify.com/*",
+    // Публичные страницы источников, на которые ведёт онбординг.
+    "https://docs.anilist.co/",
+    "https://kodikplayer.com/",
+    "https://anilibria.top/api/docs/v1",
+    "https://yandex.ru/dev/disk/rest/",
 ];
 
 /// Максимальная длина URL, открываемого в браузере.
 const MAX_EXTERNAL_URL_LEN: usize = 2048;
 
-/// Проверяет URL перед открытием в браузере пользователя.
-/// Только HTTPS, без учётных данных, без явного нестандартного порта,
-/// длина ограничена, нет управляющих символов, хост в списке ALLOWED_EXTERNAL.
-/// Текст ошибки не раскрывает полный URL — только схему или хост.
-pub fn validate_external_url(raw: &str) -> Result<reqwest::Url, String> {
-    let url = raw.trim();
-
-    // Управляющие символы до разбора
-    if url.contains('\r') || url.contains('\n') {
+/// Проверяет, что адрес можно передать браузеру.
+fn parse_browser_url(raw: &str) -> Result<reqwest::Url, String> {
+    if raw.chars().any(char::is_control) {
         return Err("Управляющие символы в адресе".to_string());
     }
 
-    // Длина
+    let url = raw.trim();
     if url.len() > MAX_EXTERNAL_URL_LEN {
         return Err(format!(
             "Адрес слишком длинный: {} > {MAX_EXTERNAL_URL_LEN}",
@@ -427,14 +428,39 @@ pub fn validate_external_url(raw: &str) -> Result<reqwest::Url, String> {
 
     let parsed = reqwest::Url::parse(url).map_err(|_| "Адрес не распознан".to_string())?;
 
-    // Только HTTPS
-    if parsed.scheme() != "https" {
-        return Err(format!("Только https разрешён: {}", parsed.scheme()));
+    if !matches!(parsed.scheme(), "https" | "http") {
+        return Err(format!(
+            "Разрешены только http и https: {}",
+            parsed.scheme()
+        ));
     }
 
-    // Без учётных данных
     if !parsed.username().is_empty() || parsed.password().is_some() {
         return Err("Логин/пароль в адресе не разрешены".to_string());
+    }
+    if matches!(parsed.host_str(), Some("tauri.localhost" | "ipc.localhost")) {
+        return Err("Служебный адрес приложения".to_string());
+    }
+
+    Ok(parsed)
+}
+
+/// Готовит адрес и решает, нужен ли системный диалог. Ссылки из белого списка
+/// открываются сразу, прочие веб-адреса требуют разрешения вызывающего на показ диалога.
+pub fn prepare_external_url(
+    raw: &str,
+    allow_confirmation: bool,
+) -> Result<(reqwest::Url, bool), String> {
+    let parsed = parse_browser_url(raw)?;
+    if allowed(&parsed, ALLOWED_EXTERNAL) {
+        return Ok((parsed, false));
+    }
+    if allow_confirmation {
+        return Ok((parsed, true));
+    }
+
+    if parsed.scheme() != "https" {
+        return Err(format!("Только https разрешён: {}", parsed.scheme()));
     }
 
     // Без нестандартного порта (443 нормализуется и возвращается как None)
@@ -442,20 +468,15 @@ pub fn validate_external_url(raw: &str) -> Result<reqwest::Url, String> {
         return Err("Явный порт не разрешён".to_string());
     }
 
-    // Хост в списке
-    if !allowed(&parsed, ALLOWED_EXTERNAL) {
-        return Err(format!(
-            "Хост не в списке разрешённых: {}",
-            parsed.host_str().unwrap_or("?")
-        ));
-    }
-
-    Ok(parsed)
+    Err(format!(
+        "Хост не в списке разрешённых: {}",
+        parsed.host_str().unwrap_or("?")
+    ))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{allowed, normalize_bypass, validate_external_url};
+    use super::{allowed, normalize_bypass, prepare_external_url};
     use tauri_plugin_http::reqwest::Url;
 
     const LIST: &[&str] = &[
@@ -518,57 +539,106 @@ mod tests {
 
     #[test]
     fn external_https_allowed_host() {
-        assert!(validate_external_url("https://github.com/foulnike/Animori").is_ok());
-        assert!(validate_external_url("https://anilist.co/user/test").is_ok());
+        for url in [
+            "https://github.com/foulnike/Animori",
+            "https://anilist.co/character/61",
+            "https://shikimori.io/animes/5114",
+            "https://shikimori.rip/characters/1",
+            "https://myanimelist.net/anime/5114",
+        ] {
+            assert!(!prepare_external_url(url, false).unwrap().1, "{url}");
+            assert!(!prepare_external_url(url, true).unwrap().1, "{url}");
+        }
+    }
+
+    #[test]
+    fn external_onboarding_provider_pages() {
+        for url in [
+            "https://docs.anilist.co/",
+            "https://kodikplayer.com/",
+            "https://anilibria.top/api/docs/v1",
+            "https://yandex.ru/dev/disk/rest/",
+        ] {
+            assert!(prepare_external_url(url, false).is_ok(), "{url}");
+        }
+        assert!(prepare_external_url("https://yandex.ru/dev/", false).is_err());
+    }
+
+    #[test]
+    fn browser_url_outside_allowlist_requires_confirmation() {
+        for url in [
+            "https://x.com/author",
+            "https://en.wikipedia.org/wiki/Author",
+            "http://author.example:8080/profile",
+            "http://shikimori.io/animes/5114",
+            "https://anilist.co:8443/character/61",
+        ] {
+            assert!(prepare_external_url(url, true).unwrap().1, "{url}");
+            assert!(prepare_external_url(url, false).is_err(), "{url}");
+        }
+    }
+
+    #[test]
+    fn browser_url_rejects_non_web_and_misleading_urls() {
+        for url in [
+            "file:///C:/example.txt",
+            "javascript:alert(1)",
+            "ms-settings:privacy",
+            "https://x.com@elsewhere.example/",
+            "https://example.com/\tread",
+            "http://tauri.localhost/#",
+        ] {
+            assert!(prepare_external_url(url, true).is_err(), "{url}");
+        }
     }
 
     #[test]
     fn external_http_rejected() {
-        assert!(validate_external_url("http://github.com").is_err());
+        assert!(prepare_external_url("http://github.com", false).is_err());
     }
 
     #[test]
     fn external_file_rejected() {
-        assert!(validate_external_url("file:///etc/passwd").is_err());
+        assert!(prepare_external_url("file:///etc/passwd", false).is_err());
     }
 
     #[test]
     fn external_ms_settings_rejected() {
-        assert!(validate_external_url("ms-settings:privacy").is_err());
+        assert!(prepare_external_url("ms-settings:privacy", false).is_err());
     }
 
     #[test]
     fn external_javascript_rejected() {
-        assert!(validate_external_url("javascript:alert(1)").is_err());
+        assert!(prepare_external_url("javascript:alert(1)", false).is_err());
     }
 
     #[test]
     fn external_userinfo_rejected() {
-        let err = validate_external_url("https://user:pass@github.com").unwrap_err();
+        let err = prepare_external_url("https://user:pass@github.com", false).unwrap_err();
         assert!(err.contains("Логин/пароль"));
     }
 
     #[test]
     fn external_host_not_in_allowlist() {
-        let err = validate_external_url("https://evil.example/steal").unwrap_err();
+        let err = prepare_external_url("https://evil.example/steal", false).unwrap_err();
         assert!(err.contains("не в списке"));
     }
 
     #[test]
     fn external_explicit_port_rejected() {
-        assert!(validate_external_url("https://github.com:8443/").is_err());
+        assert!(prepare_external_url("https://github.com:8443/", false).is_err());
     }
 
     #[test]
     fn external_too_long_rejected() {
         let long = format!("https://github.com/{}", "x".repeat(2049));
-        let err = validate_external_url(&long).unwrap_err();
+        let err = prepare_external_url(&long, false).unwrap_err();
         assert!(err.contains("слишком длинный"));
     }
 
     #[test]
     fn external_crlf_rejected() {
-        let err = validate_external_url("https://github.com/\r\nX-Header: evil").unwrap_err();
+        let err = prepare_external_url("https://github.com/\r\nX-Header: evil", false).unwrap_err();
         assert!(err.contains("Управляющие символы"));
     }
 }

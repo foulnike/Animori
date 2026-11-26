@@ -111,9 +111,8 @@ function textOrNull(value: string | null): string | null {
   return clean === '' ? null : clean
 }
 
-/** Похоже ли на внешний веб-адрес. Только HTTPS: локальные HTTP-ссылки,
- * которые некоторые источники вставляют в markdown, должны остаться текстом. */
-function isWeb(url: string): boolean {
+/** Картинки в описаниях загружаются по HTTPS. */
+function isHttps(url: string): boolean {
   return /^https:\/\//i.test(url)
 }
 
@@ -145,13 +144,24 @@ function webAim(raw: string | null): RichAim | null {
   const asked = (raw ?? '').trim()
   if (asked === '') return null
 
-  const url = asked.startsWith('/') ? shikiOrigin() + asked : asked
-  if (!isWeb(url)) return null
+  let url = asked
+  if (asked.startsWith('//')) url = 'https:' + asked
+  else if (asked.startsWith('/')) url = shikiOrigin() + asked
+  if (!/^https?:\/\//i.test(url)) return null
+
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return null
+  }
+  if (parsed.username || parsed.password) return null
+  if (parsed.hostname === 'tauri.localhost' || parsed.hostname === 'ipc.localhost') return null
 
   const person = personFromUrl(url)
   if (person !== null) return person
 
-  const malId = malFromUrl(url)
+  const malId = SHIKI_HOST_RE.test(url) ? malFromUrl(parsed.pathname) : null
   return malId === null ? { kind: 'web', url } : { kind: 'media', malId, url }
 }
 
@@ -230,8 +240,7 @@ function toBbcode(text: string): string {
       // Прочая разметка HTML удаляется единым проходом после преобразований.
       // Спойлер AniList: ~!скрытое!~
       .replace(/~!([\s\S]*?)!~/g, '[spoiler]$1[/spoiler]')
-      // Ссылка маркдауном: [подпись](адрес). Декодируем обе схемы, чтобы
-      // служебные http-ссылки не оставались в исходном markdown-виде.
+      // Ссылка маркдауном: [подпись](адрес). Обе веб-схемы идут в разбор URL.
       .replace(/\[([^\]\n]+)\]\((https?:\/\/[^)\s]+)\)/g, '[url=$2]$1[/url]')
       // Картинка AniList: img(адрес) и img250(адрес)
       .replace(/\bimg\d*\((https?:\/\/[^)\s]+)\)/gi, '[img]$1[/img]')
@@ -389,7 +398,7 @@ export function parseRich(raw: string | null | undefined): RichBlock[] {
 
     const direct = (arg ?? '').trim()
     imageOn = true
-    imageText = isWeb(direct) ? direct : ''
+    imageText = isHttps(direct) ? direct : ''
   }
 
   function closeImage(): void {
@@ -398,7 +407,7 @@ export function parseRich(raw: string | null | undefined): RichBlock[] {
     imageOn = false
     const url = imageText.trim()
     imageText = ''
-    if (!isWeb(url)) return
+    if (!isHttps(url)) return
 
     flushLine()
     top().blocks.push({ kind: 'image', url })

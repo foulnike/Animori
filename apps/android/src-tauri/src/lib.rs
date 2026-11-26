@@ -1,5 +1,6 @@
 // Главное окно грузит свою сборку (dist/app), а не чужой сайт. Метка «main» нужна capabilities/default.json, а окно создаётся здесь: способ создания один и в одном месте.
 
+use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
 use tauri_plugin_opener::OpenerExt;
 
@@ -61,8 +62,47 @@ fn animori_restart(app: AppHandle) -> Result<(), String> {
 
 /// Открывает адрес в браузере по умолчанию. Схема проверяется здесь, а не на доверии к вызывающему: разметка не должна открыть что угодно.
 #[tauri::command]
-fn animori_open_external(app: AppHandle, url: String) -> Result<(), String> {
-    let validated = net::validate_external_url(&url)?;
+async fn animori_open_external(
+    app: AppHandle,
+    window: WebviewWindow,
+    url: String,
+    confirm: Option<bool>,
+) -> Result<(), String> {
+    let (validated, needs_confirmation) =
+        net::prepare_external_url(&url, confirm.unwrap_or(false))?;
+
+    if needs_confirmation {
+        static PENDING: tauri::async_runtime::Mutex<()> =
+            tauri::async_runtime::Mutex::const_new(());
+        let Ok(_guard) = PENDING.try_lock() else {
+            return Ok(());
+        };
+        let dialog = app
+            .dialog()
+            .message(format!(
+                "Вы переходите на сторонний сайт. Он может быть небезопасен.\n\n{}",
+                validated.origin().ascii_serialization()
+            ))
+            .title("Открыть сторонний сайт?")
+            .kind(MessageDialogKind::Warning)
+            .buttons(MessageDialogButtons::OkCancelCustom(
+                "Открыть в браузере".to_string(),
+                "Отмена".to_string(),
+            ));
+        #[cfg(desktop)]
+        let dialog = dialog.parent(&window);
+        #[cfg(mobile)]
+        let _ = window;
+
+        let (send, mut answer) = tauri::async_runtime::channel(1);
+        dialog.show(move |accepted| {
+            let _ = send.try_send(accepted);
+        });
+        if answer.recv().await != Some(true) {
+            return Ok(());
+        }
+    }
+
     app.opener()
         .open_url(validated.as_str(), None::<&str>)
         .map_err(|e| e.to_string())

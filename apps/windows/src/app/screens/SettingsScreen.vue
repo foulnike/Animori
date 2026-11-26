@@ -24,7 +24,7 @@ import { forgetCoverMemory, posterStats } from '@/core/posters'
 import { buildMalXml, malXmlFileName, parseMalXml } from '@/core/mal-xml'
 import { adultByBirth } from '@/core/adult'
 import { clearHidden } from '@/core/recs'
-import { saveSetting, settings } from '@/core/settings'
+import { copyAdultTagRules, saveSetting, settings } from '@/core/settings'
 import { setLogEnabled } from '@/utils/logger'
 
 import { APPEARANCES, appearance, setAppearance, setVisualTheme, visualTheme } from '../appearance'
@@ -200,7 +200,7 @@ const STALE_DAYS = 30
 /** Три режима фильтра: полная, частичная и отключённая. */
 const adultMode = ref(settings.adultMode)
 const ageVerified = ref(settings.adultAgeVerified)
-const adultTagRules = ref(structuredClone(settings.adultTagRules))
+const adultTagRules = ref(copyAdultTagRules(settings.adultTagRules))
 const pendingAdultMode = ref<typeof settings.adultMode | null>(null)
 
 /** Открыт ли вопрос о возрасте: взрослое включается ответом, а не нажатием — до него тумблер выключен. */
@@ -609,7 +609,7 @@ function onBirth(value: string): void {
 }
 
 function saveAdultTagRules(): void {
-  void saveSetting('adultTagRules', 'set_adult_tag_rules', adultTagRules.value)
+  void saveSetting('adultTagRules', 'set_adult_tag_rules', copyAdultTagRules(adultTagRules.value))
 }
 
 function updateAdultTagRule(

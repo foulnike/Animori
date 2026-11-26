@@ -38,7 +38,7 @@ import { studioLogos } from '@/core/studio-logos'
 import { Logger } from '@/utils/logger'
 
 import { formatWord, statusWord } from '../labels'
-import { mediaSourceName } from '../media-links'
+import { mediaLinks, type MediaLink } from '@/core/media-links'
 import { navigate } from '../router'
 
 /** Пауза перед заказом меток показанным частям франшизы: прокрутка приводит их по несколько разом,
@@ -109,7 +109,7 @@ export interface MediaCardView {
   /** Описание ещё не приехало: вместо текста показывается заглушка. */
   aboutWait: ComputedRef<boolean>
   /** Название источника описания текстом: пустая строка — источник не назван. */
-  aboutSource: ComputedRef<string>
+  aboutLinks: ComputedRef<MediaLink[]>
   facts: ComputedRef<string[]>
   ratings: ComputedRef<Rating[]>
   mineFacts: ComputedRef<MineFact[]>
@@ -341,15 +341,17 @@ export function useMediaCard(mediaId: Ref<number>): MediaCardView {
    *  «описаний нет». */
   const aboutWait = computed<boolean>(() => ruState.value === 'wait')
 
-  /** Бледная строка под описанием: откуда взят текст. Названием, а не ссылкой —
-   *  открывать адрес на телевизоре нечем, а подчёркнутая подпись, которая ничего не
-   *  делает, читается как поломка. Сбор названия — в media-links.ts. */
-  const aboutSource = computed<string>(() =>
-    mediaSourceName({
+  const aboutLinks = computed(() => {
+    const found = card.value
+    if (found === null) return []
+
+    return mediaLinks({
+      mediaId: found.mediaId,
+      malId: found.malId,
       sourceUrl: russian.value?.url ?? null,
       sourceName: russian.value?.sourceName ?? null,
-    }),
-  )
+    })
+  })
 
   /** Факты пилюлями под названием: только то, что сервер впрямь назвал. */
   const facts = computed<string[]>(() => {
@@ -825,7 +827,7 @@ export function useMediaCard(mediaId: Ref<number>): MediaCardView {
     progressText,
     about,
     aboutWait,
-    aboutSource,
+    aboutLinks,
     facts,
     ratings,
     mineFacts,

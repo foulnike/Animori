@@ -18,6 +18,11 @@ import {
   peekRussianPerson,
   type RussianPerson,
 } from '@/core/person-title'
+import {
+  personCardFacts,
+  selectPersonBiography,
+  splitPersonDescription,
+} from '@/core/person-summary'
 import { settings } from '@/core/settings'
 import { Logger } from '@/utils/logger'
 
@@ -26,6 +31,7 @@ import { genderWord, langWord, occupationWord } from '../labels'
 import { isWeakPlatform } from '../platform'
 import { navigate } from '../router'
 
+import PersonSummary from './PersonSummary.vue'
 import RichText from './RichText.vue'
 import SakuraBloom from './SakuraBloom.vue'
 
@@ -57,6 +63,18 @@ const depth = ref(0)
 
 const charCard = ref<CharacterCard | null>(null)
 const staffCard = ref<StaffCard | null>(null)
+const anilistCard = computed(() => charCard.value ?? staffCard.value)
+const anilistDescription = computed(() => splitPersonDescription(anilistCard.value?.description))
+const summary = computed(() => {
+  const card = anilistCard.value
+  if (!card) return []
+  const fields = personCardFacts(card, {
+    gender: genderWord,
+    occupation: occupationWord,
+    language: langWord,
+  })
+  return [...fields, ...anilistDescription.value.facts]
+})
 const busy = ref(true)
 
 /** Выбранный раздел. Его может не оказаться у этого человека — тогда показывается первый наличный. */
@@ -101,21 +119,17 @@ function translateAllowed(): boolean {
 
 /** Описание из загруженных данных: русское важнее английского. Пока русский источник
  *  не ответил, чужой текст не показывается — иначе он приедет и подменится. */
-function rawDesc(): string {
-  if (ruWait.value) return ''
-  if (ruPerson.value?.description) return ruPerson.value.description
-  return (
-    (current.value.kind === 'character'
-      ? charCard.value?.description
-      : staffCard.value?.description) ?? ''
-  )
-}
+const biography = computed(() =>
+  ruWait.value
+    ? null
+    : selectPersonBiography(ruPerson.value?.description, anilistDescription.value.description),
+)
 
 /** Разделы, которые есть у этого человека. Данные приезжают не разом: русское описание
  *  приходит позже карточки, работы — своим доходом. */
 const tabs = computed<Tab[]>(() => {
   const out: Tab[] = []
-  if (rawDesc() !== '') out.push('desc')
+  if (biography.value) out.push('desc')
   if (current.value.kind === 'staff' && shownWorks().length > 0) out.push('works')
   if (current.value.kind === 'character' && voiceActors().length > 0) out.push('voices')
   return out
@@ -124,10 +138,7 @@ const tabs = computed<Tab[]>(() => {
 /** Откуда взят текст под описанием. На приставке это только название: адрес открывать нечем,
  *  а подчёркнутая подпись, которая ничего не делает, читается как поломка. Пустая строка —
  *  строка молчит: описание могло прийти с AniList, и тогда указывать не на что. */
-const descSource = computed<string>(() => {
-  const text = ruPerson.value?.description?.trim() ?? ''
-  return text === '' ? '' : 'Шикимори'
-})
+const descSource = computed(() => (biography.value?.fromShiki ? 'Шикимори' : ''))
 
 /** Показанный раздел: выбранный, а нет его у этого человека — первый наличный. Так раздел
  *  не пустует в те такты, когда выбранное ещё не доехало или уже не про этого человека. */
@@ -168,52 +179,6 @@ function altNames(): string[] {
 function largeImage(): string | null {
   const card = current.value.kind === 'character' ? charCard.value : staffCard.value
   return card?.image?.large ?? current.value.image ?? null
-}
-
-const MONTHS_RU = [
-  'января',
-  'февраля',
-  'марта',
-  'апреля',
-  'мая',
-  'июня',
-  'июля',
-  'августа',
-  'сентября',
-  'октября',
-  'ноября',
-  'декабря',
-]
-
-const MONTHS_RU_NOM = [
-  'январь',
-  'февраль',
-  'март',
-  'апрель',
-  'май',
-  'июнь',
-  'июль',
-  'август',
-  'сентябрь',
-  'октябрь',
-  'ноябрь',
-  'декабрь',
-]
-
-/** Дата { year, month, day } по-русски: «4 декабря», «декабрь 1995», «1995». */
-function fmtDate(
-  d: { year: number | null; month: number | null; day: number | null } | null,
-): string {
-  if (!d) return ''
-  const day = d.day ?? 0
-  const month = d.month ?? 0
-  const year = d.year ?? 0
-  if (month < 1 || month > 12) return year > 0 ? String(year) : ''
-  // Диапазон месяца проверен выше, элемент есть всегда.
-  const monthGen = MONTHS_RU[month - 1]!
-  const monthNom = MONTHS_RU_NOM[month - 1]!
-  if (day > 0) return year > 0 ? `${day} ${monthGen} ${year}` : `${day} ${monthGen}`
-  return year > 0 ? `${monthNom} ${year}` : monthNom
 }
 
 /** Сэйю без повторов: один человек — одна строка, сколько бы аниме ни было. */
@@ -462,34 +427,6 @@ onBeforeUnmount(() => {
             <p v-if="altNames().length" class="am-ps-names__alt">
               {{ altNames().join(' · ') }}
             </p>
-
-            <template v-if="current.kind === 'staff' && staffCard">
-              <p v-if="staffCard.primaryOccupations?.length" class="am-dim am-ps-names__occ">
-                {{ staffCard.primaryOccupations.map(occupationWord).join(', ') }}
-              </p>
-              <p v-if="staffCard.languageV2" class="am-dim">
-                {{ langWord(staffCard.languageV2)
-                }}<template v-if="staffCard.homeTown">, {{ staffCard.homeTown }}</template>
-              </p>
-              <p v-if="fmtDate(staffCard.dateOfBirth)" class="am-dim">
-                {{ fmtDate(staffCard.dateOfBirth)
-                }}<template v-if="fmtDate(staffCard.dateOfDeath)">
-                  &nbsp;—&nbsp;{{ fmtDate(staffCard.dateOfDeath) }}</template
-                >
-              </p>
-            </template>
-
-            <template v-if="current.kind === 'character' && charCard">
-              <p v-if="charCard.gender || charCard.age" class="am-dim">
-                <template v-if="charCard.gender">{{
-                  genderWord(charCard.gender)
-                }}</template><template v-if="charCard.gender && charCard.age"> · </template
-                ><template v-if="charCard.age">{{ charCard.age }}</template>
-              </p>
-              <p v-if="fmtDate(charCard.dateOfBirth)" class="am-dim">
-                {{ fmtDate(charCard.dateOfBirth) }}
-              </p>
-            </template>
           </div>
 
           <!-- Управление окном одной группой в правом углу: шаг назад по цепочке стоит рядом с закрытием. -->
@@ -523,23 +460,30 @@ onBeforeUnmount(() => {
         </div>
       </header>
 
-      <!-- Ряд разделов. Одному разделу делить площадь не с кем, и ряд не показывается вовсе. -->
-      <div v-if="!busy && tabs.length > 1" class="am-ps-tabs" role="tablist">
-        <button
-          v-for="one in tabs"
-          :key="one"
-          class="am-ps-tab"
-          :class="{ 'am-ps-tab--on': shownTab === one }"
-          type="button"
-          role="tab"
-          :aria-selected="shownTab === one"
-          @click="tab = one"
-        >
-          {{ TAB_WORDS[one] }}
-        </button>
-      </div>
-
       <div ref="box" class="am-sheet__body">
+        <PersonSummary
+          v-if="summary.length"
+          :key="current.kind + ':' + current.personId"
+          :facts="summary"
+          @inside="emit('close')"
+        />
+
+        <!-- Ряд разделов. Одному разделу делить площадь не с кем, и ряд не показывается вовсе. -->
+        <div v-if="!busy && tabs.length > 1" class="am-ps-tabs" role="tablist">
+          <button
+            v-for="one in tabs"
+            :key="one"
+            class="am-ps-tab"
+            :class="{ 'am-ps-tab--on': shownTab === one }"
+            type="button"
+            role="tab"
+            :aria-selected="shownTab === one"
+            @click="tab = one"
+          >
+            {{ TAB_WORDS[one] }}
+          </button>
+        </div>
+
         <template v-if="busy">
           <span class="am-skeleton am-ps-skel" />
           <span class="am-skeleton am-ps-skel" />
@@ -562,7 +506,7 @@ onBeforeUnmount(() => {
           <!-- Описание — плита со своей прокруткой и сама фокусируемая: иначе за текст не зацепиться и
      листать его нечем. Вниз и вверх её крутит dpad по метке data-am-scroll. -->
           <div
-            v-if="shownTab === 'desc' && rawDesc() !== ''"
+            v-if="shownTab === 'desc' && biography"
             class="am-ps-desc"
             tabindex="0"
             role="group"
@@ -573,7 +517,7 @@ onBeforeUnmount(() => {
      другого человека окно не закрывает — оно уже показывает нового. -->
             <!-- Описание человека сплошным текстом: ссылки на других персонажей уводили бы
      читающего биографию из карточки в цепочку чужих биографий. -->
-            <RichText :text="rawDesc()" plain @inside="emit('close')" />
+            <RichText :blocks="biography.blocks" plain @inside="emit('close')" />
           </div>
 
           <!-- Откуда взят текст. На приставке адрес открывать нечем, поэтому названием, а не ссылкой:
@@ -662,11 +606,10 @@ onBeforeUnmount(() => {
   animation: am-veil-in var(--am-mid) var(--am-ease-soft) both;
 }
 
-/* Три этажа: шапка, ряд разделов и прокручиваемое тело. Подвал убран — его единственная кнопка
-   уводила на AniList. Ряд разделов пустой этаж не занимает: строки сетки без содержимого схлопываются. */
+/* Под шапкой прокручиваются сведения и выбранный раздел. */
 .am-sheet__box {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 16px;
   width: 100%;
   max-width: 820px;
@@ -879,15 +822,12 @@ onBeforeUnmount(() => {
   color: var(--am-faint);
 }
 
-.am-ps-names__occ {
-  margin-top: 4px;
-}
-
 /* Описание лежит на своей подложке: стена текста без границ не читалась. Разметку держит RichText. */
 /* Ряд разделов: описание, работы и голоса меняют друг друга, а не стоят столбиком — в столбик
    длинное описание отжимало полку работ за край окна. */
 .am-ps-tabs {
   display: flex;
+  flex: none;
   gap: 8px;
 }
 
@@ -922,7 +862,7 @@ onBeforeUnmount(() => {
 /* Описание — плита со своей прокруткой и сама цель для пульта: текст, не влезающий
    в кадр, должен листаться, а листать нечем, если за него нельзя зацепиться. */
 .am-ps-desc {
-  flex: 0 1 auto;
+  flex: none;
   min-height: 0;
   max-height: 100%;
   margin: 0;

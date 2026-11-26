@@ -117,7 +117,24 @@ onBeforeUnmount(() => {
 </script>
 <template>
   <div class="am-credits">
-    <button class="am-credits__btn" type="button" @click="open = true">Источники и права</button>
+    <button class="am-credits__btn" type="button" @click="open = true">
+      <svg
+        class="am-credits__icon"
+        viewBox="0 0 20 20"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path
+          d="M10 2.5v15m-4 0h8M5 5h10M5 5l-3 7h6L5 5Zm10 0-3 7h6l-3-7ZM2 12a3 3 0 0 0 6 0m4 0a3 3 0 0 0 6 0"
+        />
+      </svg>
+      <span>Источники и права</span>
+    </button>
 
     <Teleport to="body">
       <Transition name="am-modal">
@@ -364,7 +381,10 @@ onBeforeUnmount(() => {
 /* Кнопка остаётся по ширине содержимого: во флекс-колонке она иначе растянулась бы
    на всю панель и читалась как полоса, а не как действие. */
 .am-credits__btn {
+  display: inline-flex;
+  align-items: center;
   align-self: flex-start;
+  gap: 8px;
   padding: 8px 13px;
   font: inherit;
   font-size: 13px;
@@ -377,6 +397,12 @@ onBeforeUnmount(() => {
   transition:
     background-color var(--am-fast) var(--am-ease),
     border-color var(--am-fast) var(--am-ease);
+}
+
+.am-credits__icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
 }
 
 .am-credits__btn:hover:where(:not(.am-lite *)) {

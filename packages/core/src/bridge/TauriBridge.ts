@@ -274,9 +274,8 @@ const tauriShell: IShell = {
     return Promise.resolve()
   },
 
-  async openExternal(url: string): Promise<void> {
-    // Проверка схемы на стороне Rust: разметка вправе позвать это с любым адресом.
-    await invoke('animori_open_external', { url })
+  async openExternal(url: string, options?: { confirm: boolean }): Promise<void> {
+    await invoke('animori_open_external', { url, ...options })
   },
 
   back(): Promise<void> {
