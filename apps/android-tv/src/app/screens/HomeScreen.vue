@@ -37,6 +37,7 @@ import {
   shelfFill,
   type ShelfName,
 } from '@/core/recs'
+import { descriptionPreviewText } from '@/core/rich-text'
 import type { SnapshotEntry } from '@/core/snapshot'
 import { Logger } from '@/utils/logger'
 
@@ -260,6 +261,9 @@ let heroTimer: ReturnType<typeof setTimeout> | null = null
 const heroImages = ref<Record<number, string>>({})
 const heroId = ref<number | null>(null)
 const heroCurrentReady = computed(() => heroBrief.value !== null)
+const heroDescription = computed(() =>
+  descriptionPreviewText(heroTitle.value?.description ?? heroCard.value?.description),
+)
 const heroElement = ref<HTMLElement | null>(null)
 let heroSeeded = false
 watch(
@@ -271,23 +275,6 @@ watch(
   },
   { flush: 'post' },
 )
-
-function plainHeroDescription(raw: string | null | undefined): string {
-  if (typeof raw !== 'string') return ''
-  return raw
-    .replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, '$1')
-    .replace(/<br\s*\/?>(\s*)/gi, ' ')
-    .replace(/<[^>]+>/g, '')
-    .replace(/\[url=[^\]]+\]([\s\S]*?)\[\/url\]/gi, '$1')
-    .replace(/\[(?:character|person|anime|manga)=[^\]]+\s+([^\]]+)\]/gi, '$1')
-    .replace(/\[[a-z][a-z0-9_-]*(?:=[^\]]*)?\]/gi, '')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/\s+/g, ' ')
-    .trim()
-}
 
 function changeHero(direction: -1 | 1): void {
   const slides = heroSlides.value
@@ -1136,14 +1123,11 @@ watch(
             {{ heroCard.genres.map((genre) => genreWord(genre) ?? genre).join(' · ') }}
           </p>
           <p
-            v-if="heroTitle?.description ?? heroCard?.description"
+            v-if="heroDescription"
             class="am-home-hero__description"
-            :class="{
-              'am-home-hero__description--long':
-                plainHeroDescription(heroTitle?.description ?? heroCard?.description).length > 220,
-            }"
+            :class="{ 'am-home-hero__description--long': heroDescription.length > 220 }"
           >
-            {{ plainHeroDescription(heroTitle?.description ?? heroCard?.description) }}
+            {{ heroDescription }}
           </p>
         </div>
         <div

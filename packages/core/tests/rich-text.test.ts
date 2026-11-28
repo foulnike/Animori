@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseRich, type RichBlock, type RichPart } from '@/core/rich-text'
+import { descriptionPreviewText, parseRich, type RichBlock, type RichPart } from '@/core/rich-text'
 
 type RichLink = Extract<RichPart, { kind: 'link' }>
 
@@ -18,6 +18,23 @@ function firstPara(blocks: RichBlock[]): RichPart[] {
 function links(parts: RichPart[]): RichLink[] {
   return parts.filter((part): part is RichLink => part.kind === 'link')
 }
+
+describe('текст описания для баннера', () => {
+  it('сохраняет текст, подписи ссылок и границы между абзацами', () => {
+    expect(
+      descriptionPreviewText(
+        '<b>История</b>&nbsp;про [character=42 героя]<br>' +
+          '<a href="https://example.com">Подробнее</a> [quote]отрывок[/quote]',
+      ),
+    ).toBe('История про героя Подробнее отрывок')
+  })
+
+  it('декодирует каждый HTML-символ один раз', () => {
+    expect(descriptionPreviewText('&quot;А&quot; &amp; &amp;quot;Б&amp;quot; &#39;В&#39;')).toBe(
+      "\"А\" & &quot;Б&quot; 'В'",
+    )
+  })
+})
 
 describe('разбор описаний', () => {
   it('оставляет начертания и ссылки BBcode', () => {

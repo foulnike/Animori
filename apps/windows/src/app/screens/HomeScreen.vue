@@ -36,6 +36,7 @@ import {
   shelfFill,
   type ShelfName,
 } from '@/core/recs'
+import { descriptionPreviewText } from '@/core/rich-text'
 import type { SnapshotEntry } from '@/core/snapshot'
 import { Logger } from '@/utils/logger'
 
@@ -244,27 +245,9 @@ let heroTimer: ReturnType<typeof setTimeout> | null = null
 const heroImages = ref<Record<number, string>>({})
 const heroId = ref<number | null>(null)
 const heroCurrentReady = computed(() => heroBrief.value !== null)
-
-/** Баннер показывает описание как короткий текст: ссылки и исходные теги здесь не интерактивны. */
-function plainHeroDescription(raw: string | null | undefined): string {
-  if (typeof raw !== 'string') return ''
-
-  return raw
-    .replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, '$1')
-    .replace(/<br\s*\/?>(\s*)/gi, ' ')
-    .replace(/<[^>]+>/g, '')
-    .replace(/\[url=[^\]]+\]([\s\S]*?)\[\/url\]/gi, '$1')
-    .replace(/\[(?:character|person|anime|manga)=[^\]]+\s+([^\]]+)\]/gi, '$1')
-    .replace(/\[(?:spoiler|quote)(?:=[^\]]+)?\]/gi, '')
-    .replace(/\[\/(?:spoiler|quote)\]/gi, '')
-    .replace(/\[[a-z][a-z0-9_-]*(?:=[^\]]*)?\]/gi, '')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/\s+/g, ' ')
-    .trim()
-}
+const heroDescription = computed(() =>
+  descriptionPreviewText(heroTitle.value?.description ?? heroCard.value?.description),
+)
 
 /** Виды правки, доступные с плитки. Удаление записи сюда не входит. */
 type EntryEdit = 'status' | 'score' | 'progress' | 'repeat' | 'startedAt' | 'completedAt' | 'notes'
@@ -1335,8 +1318,8 @@ watch(
         <p v-if="heroCard?.genres.length" class="am-hero__genres">
           {{ heroCard.genres.map((genre) => genreWord(genre) ?? genre).join(' · ') }}
         </p>
-        <div v-if="heroTitle?.description ?? heroCard?.description" class="am-hero__description">
-          {{ plainHeroDescription(heroTitle?.description ?? heroCard?.description) }}
+        <div v-if="heroDescription" class="am-hero__description">
+          {{ heroDescription }}
         </div>
       </div>
       <div

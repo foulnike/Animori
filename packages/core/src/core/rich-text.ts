@@ -513,3 +513,38 @@ export function parseRich(raw: string | null | undefined): RichBlock[] {
 
   return stack[0]!.blocks
 }
+
+const PREVIEW_ENTITIES: Readonly<Record<string, string | undefined>> = {
+  '&nbsp;': ' ',
+  '&amp;': '&',
+  '&quot;': '"',
+  '&#39;': "'",
+}
+
+/** Собирает текст для интерполяции в баннере, сохраняя подписи ссылок. */
+export function descriptionPreviewText(raw: string | null | undefined): string {
+  const pending = parseRich(raw).reverse()
+  const lines: string[] = []
+  const textOf = (parts: RichPart[]) => parts.map((part) => part.text).join('')
+
+  while (pending.length > 0) {
+    const block = pending.pop()!
+    if (block.kind === 'para') lines.push(textOf(block.parts))
+    else if (block.kind === 'list') {
+      for (const item of block.items) lines.push(textOf(item))
+    } else if (block.kind === 'quote' || block.kind === 'spoiler') {
+      for (let index = block.blocks.length - 1; index >= 0; index -= 1) {
+        pending.push(block.blocks[index]!)
+      }
+    }
+  }
+
+  return lines
+    .join(' ')
+    .replace(
+      /&(?:nbsp|amp|quot|#39);/gi,
+      (entity) => PREVIEW_ENTITIES[entity.toLowerCase()] ?? entity,
+    )
+    .replace(/\s+/g, ' ')
+    .trim()
+}

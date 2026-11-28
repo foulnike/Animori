@@ -37,6 +37,7 @@ import {
   shelfFill,
   type ShelfName,
 } from '@/core/recs'
+import { descriptionPreviewText } from '@/core/rich-text'
 import type { SnapshotEntry } from '@/core/snapshot'
 import { Logger } from '@/utils/logger'
 
@@ -257,7 +258,7 @@ const heroName = computed(() =>
 )
 const heroPoster = computed(() => heroCard.value?.cover ?? heroBrief.value?.cover)
 const heroDescription = computed(() =>
-  plainHeroDescription(heroTitle.value?.description ?? heroCard.value?.description),
+  descriptionPreviewText(heroTitle.value?.description ?? heroCard.value?.description),
 )
 let heroTimer: ReturnType<typeof setTimeout> | null = null
 const heroImages = ref<Record<number, string>>({})
@@ -265,23 +266,6 @@ const heroId = ref<number | null>(null)
 const heroIndex = computed(() =>
   heroSlides.value.findIndex((item) => item.mediaId === heroId.value),
 )
-
-function plainHeroDescription(raw: string | null | undefined): string {
-  if (typeof raw !== 'string') return ''
-  return raw
-    .replace(/<a\b[^>]*>([\s\S]*?)<\/a>/gi, '$1')
-    .replace(/<br\s*\/?>(\s*)/gi, ' ')
-    .replace(/<[^>]+>/g, '')
-    .replace(/\[url=[^\]]+\]([\s\S]*?)\[\/url\]/gi, '$1')
-    .replace(/\[(?:character|person|anime|manga)=[^\]]+\s+([^\]]+)\]/gi, '$1')
-    .replace(/\[[a-z][a-z0-9_-]*(?:=[^\]]*)?\]/gi, '')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/\s+/g, ' ')
-    .trim()
-}
 
 function changeHero(direction: -1 | 1): void {
   const slides = heroSlides.value
