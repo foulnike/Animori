@@ -22,8 +22,8 @@
 ![Claude](https://img.shields.io/badge/Claude-D97757?style=flat-square&logo=claude&logoColor=white)
 
 **[Скачать для Windows](https://github.com/foulnike/Animori/releases/latest)** ·
-**[Скачать APK для Android TV](https://github.com/foulnike/Animori/releases/tag/android-tv-v3.2.3)** ·
-**[Скачать APK для телефона](https://github.com/foulnike/Animori/releases/tag/android-v3.2.3)** ·
+**[Скачать APK для Android TV](https://github.com/foulnike/Animori/releases/tag/android-tv-v3.3.0)** ·
+**[Скачать APK для телефона](https://github.com/foulnike/Animori/releases/tag/android-v3.3.0)** ·
 [Сборка из исходников](#сборка)
 
 </div>
@@ -32,9 +32,9 @@
 
 | Приложение | Версия | Скачать |
 | :--- | :--- | :--- |
-| **Windows** 10/11 | 3.2.3 | [MSI, NSIS и Portable (x64)](https://github.com/foulnike/Animori/releases/latest) |
-| **Android TV** 7.0+ | 3.2.3 | [APK arm64 и armv7](https://github.com/foulnike/Animori/releases/tag/android-tv-v3.2.3) |
-| **Телефон** (Android 7.0+) | 3.2.3 | [APK arm64 и armv7](https://github.com/foulnike/Animori/releases/tag/android-v3.2.3) |
+| **Windows** 10/11 | 3.3.0 | [MSI, NSIS и Portable (x64)](https://github.com/foulnike/Animori/releases/latest) |
+| **Android TV** 7.0+ | 3.3.0 | [APK arm64 и armv7](https://github.com/foulnike/Animori/releases/tag/android-tv-v3.3.0) |
+| **Телефон** (Android 7.0+) | 3.3.0 | [APK arm64 и armv7](https://github.com/foulnike/Animori/releases/tag/android-v3.3.0) |
 
 ## Связь с разработчиком
 
@@ -88,7 +88,7 @@
 </table>
 
 APK в [выпусках](https://github.com/foulnike/Animori/releases):
-`AniMori_3.2.3_armv7.apk` для 32-разрядных приставок и `AniMori_3.2.3_arm64.apk`
+`AniMori_3.3.0_armv7.apk` для 32-разрядных приставок и `AniMori_3.3.0_arm64.apk`
 для 64-разрядных.
 Подробности — в [apps/android-tv](apps/android-tv).
 
@@ -105,7 +105,7 @@ APK в [выпусках](https://github.com/foulnike/Animori/releases):
 </table>
 
 APK в [выпусках](https://github.com/foulnike/Animori/releases):
-`AniMori_3.2.3_arm64.apk` для 64-разрядных телефонов и `AniMori_3.2.3_armv7.apk`
+`AniMori_3.3.0_arm64.apk` для 64-разрядных телефонов и `AniMori_3.3.0_armv7.apk`
 для 32-разрядных.
 Подробности — в [apps/android](apps/android).
 
