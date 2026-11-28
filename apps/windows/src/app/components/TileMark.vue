@@ -1,16 +1,10 @@
 <script setup lang="ts">
-// Знак плитки настроек: нарисован, а не набран символом шрифта — шрифт даёт чужую толщину и оптику. Стоит слева от названия, а не вместо него: заголовок остаётся главным, знак отвечает «о чём
-// плитка».
 import { computed } from 'vue'
-
-/** Случаи, для которых есть знак. Список закрытый: чужое имя — ошибка сборки. */
-type TileName = 'import' | 'data' | 'look' | 'about' | 'debug' | 'cloud' | 'proxy' | 'adult'
 
 /** Пути одного знака массивом: штрих и скругления заданы оформлением ниже. Круги записаны
  *  дугами, а не <circle> — добавление знака сводится к строке. */
-const MARKS: Record<TileName, readonly string[]> = {
-  // Импорт списка: каноничная стрелка вниз в лоток — файл приходит снаружи и встаёт на место.
-  import: [
+const MARKS = {
+  download: [
     'M12 3.4v11.2',
     'M8.2 10.6 12 14.4 15.8 10.6',
     'M4 16.6v2a1.8 1.8 0 0 0 1.8 1.8h12.4a1.8 1.8 0 0 0 1.8-1.8v-2',
@@ -36,9 +30,17 @@ const MARKS: Record<TileName, readonly string[]> = {
     'M12 3.6a5 8.4 0 0 1 0 16.8 5 8.4 0 0 1 0-16.8',
   ],
   adult: ['M12 3.8 19 6.4v5.1c0 4.2-2.8 7.2-7 8.7-4.2-1.5-7-4.5-7-8.7V6.4z', 'M8.6 12h6.8'],
+  eraser: [
+    'M5 18.8 2.9 16.7a1.7 1.7 0 0 1 0-2.4l10-10a1.7 1.7 0 0 1 2.4 0l5.2 5.2a1.7 1.7 0 0 1 0 2.4l-7.9 7.9H7z',
+    'm8 9.2 7.6 7.6',
+    'M12.6 19.8h8.5',
+  ],
+  history: ['M3.8 10.2a8.4 8.4 0 1 1 .9 6', 'M3.8 5.4v4.8h4.8', 'M12 8v4l3 2'],
+  trash: ['M4 6.5h16m-10.5 0V3.8h5v2.7M6 6.5l1 13.7h10l1-13.7', 'M10 10v6.8m4-6.8v6.8'],
+  reload: ['M20.2 10.2a8.4 8.4 0 1 0-.9 6', 'M20.2 5.4v4.8h-4.8'],
 }
 
-const props = defineProps<{ name: TileName }>()
+const props = defineProps<{ name: keyof typeof MARKS }>()
 
 const glyph = computed(() => MARKS[props.name])
 </script>
@@ -50,8 +52,6 @@ const glyph = computed(() => MARKS[props.name])
 </template>
 
 <style scoped>
-/* Один знак на все семь плиток: 17 px в сетке 24 при штрихе 1.6. На кегле 14.5 знак читается, а
-   название остаётся главным, поэтому тон — приглушённый, а не в цвет заголовка. */
 .am-tile-mark {
   flex: none;
   width: 17px;
@@ -62,5 +62,9 @@ const glyph = computed(() => MARKS[props.name])
   stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.am-btn .am-tile-mark {
+  color: inherit;
 }
 </style>

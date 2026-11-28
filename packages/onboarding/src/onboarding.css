@@ -173,6 +173,26 @@
   font-size: 15px;
 }
 
+.am-intro__documents {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.am-intro__documents a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 14px;
+  background: var(--am-fill-1);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-m);
+}
+
 .am-intro__consent {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);

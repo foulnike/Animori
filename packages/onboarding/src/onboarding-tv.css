@@ -72,6 +72,28 @@
   color: var(--am-accent);
 }
 
+.am-intro--television .am-intro__documents {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.am-intro--television .am-intro__documents li {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 8px;
+  padding: 8px;
+  font-size: clamp(13px, 2.8vh, 20px);
+  text-align: center;
+  background: var(--am-fill-1);
+  border: 1px solid var(--am-line-soft);
+  border-radius: var(--am-r-m);
+}
+
+.am-intro--television .am-intro__documents img {
+  width: min(100%, clamp(72px, 18vh, 136px));
+  aspect-ratio: 1;
+}
+
 .am-intro__qr-repository {
   display: flex;
   gap: 10px;
@@ -204,9 +226,5 @@
 @media (max-width: 620px) {
   .am-intro--television .am-intro__providers {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .am-intro__qr-documents li {
-    flex-wrap: wrap;
   }
 }

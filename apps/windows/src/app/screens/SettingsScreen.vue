@@ -94,9 +94,9 @@ function toLog(): void {
  */
 function onDevtools(): void {
   void guard(async () => {
-    note.value = ''
+    debugNote.value = ''
     await Bridge.shell.devtools()
-    note.value = 'Консоль открыта отдельным окном: вкладка Console, ошибки и предупреждения.'
+    debugNote.value = 'Консоль разработчика открыта.'
   })
 }
 
@@ -118,6 +118,7 @@ const login = ref<LoginStart | null>(null)
 
 // Сброс и перенос идут молча, и без явного ответа человек не поймёт, случилось ли что-нибудь вообще.
 const note = ref('')
+const debugNote = ref('')
 const cleared = ref(false)
 
 /**
@@ -127,11 +128,12 @@ const cleared = ref(false)
 const loggerOn = ref(settings.enableLogger)
 
 async function onLogger(): Promise<void> {
-  await saveSetting('enableLogger', 'set_logger', loggerOn.value)
-  setLogEnabled(loggerOn.value)
-  note.value = loggerOn.value
-    ? 'Журнал пишется. Новые записи видны в «Журнале отладки» и в копии оттуда.'
-    : 'Журнал выключен: новые записи не пишутся, прошлые остаются.'
+  const enabled = loggerOn.value
+  setLogEnabled(enabled)
+  debugNote.value = enabled
+    ? 'Запись журнала включена.'
+    : 'Запись журнала отключена. Предыдущие записи сохранены.'
+  await saveSetting('enableLogger', 'set_logger', enabled)
 }
 
 /** Спрошено ли подтверждение переноса: даже слияние двигает записи, а замена вычищает список целиком. */
@@ -672,7 +674,7 @@ onBeforeUnmount(() => wideWindow.removeEventListener('change', updateWide))
               @keydown.enter.prevent="togglePanel('import')"
               @keydown.space.prevent="togglePanel('import')"
             >
-              <TileMark name="import" /> Импорт списка
+              <TileMark name="download" /> Импорт списка
             </h3>
 
             <!-- AniList. Знак берёт components/BrandMark.vue из файла
@@ -969,7 +971,7 @@ onBeforeUnmount(() => wideWindow.removeEventListener('change', updateWide))
                 :disabled="busy"
                 @click="onAskClear"
               >
-                Очистить память
+                <TileMark name="eraser" /> Очистить память
               </button>
 
               <button
@@ -979,7 +981,7 @@ onBeforeUnmount(() => wideWindow.removeEventListener('change', updateWide))
                 :disabled="busy"
                 @click="onAskWipe"
               >
-                Стереть историю
+                <TileMark name="history" /> Стереть историю
               </button>
 
               <button
@@ -990,7 +992,7 @@ onBeforeUnmount(() => wideWindow.removeEventListener('change', updateWide))
                 :disabled="busy"
                 @click="onAskDrop"
               >
-                Удалить мой список
+                <TileMark name="trash" /> Удалить мой список
               </button>
 
               <button
@@ -1001,11 +1003,11 @@ onBeforeUnmount(() => wideWindow.removeEventListener('change', updateWide))
                 :disabled="busy"
                 @click="onExport"
               >
-                Выгрузить в XML
+                <TileMark name="download" /> Выгрузить в XML
               </button>
 
               <button v-if="cleared" class="am-btn am-btn--ghost" type="button" @click="onReload">
-                Перезагрузить
+                <TileMark name="reload" /> Перезагрузить
               </button>
             </div>
 
@@ -1038,7 +1040,7 @@ onBeforeUnmount(() => wideWindow.removeEventListener('change', updateWide))
 
               <div class="am-row">
                 <button class="am-btn" type="button" :disabled="busy" @click="onClear">
-                  Очистить память
+                  <TileMark name="eraser" /> Очистить память
                 </button>
                 <button class="am-btn am-btn--ghost" type="button" @click="onCancelClear">
                   Отмена
@@ -1055,7 +1057,7 @@ onBeforeUnmount(() => wideWindow.removeEventListener('change', updateWide))
 
               <div class="am-row">
                 <button class="am-btn" type="button" :disabled="busy" @click="onWipeHistory">
-                  Стереть историю
+                  <TileMark name="history" /> Стереть историю
                 </button>
                 <button class="am-btn am-btn--ghost" type="button" @click="onCancelWipe">
                   Отмена
@@ -1070,7 +1072,7 @@ onBeforeUnmount(() => wideWindow.removeEventListener('change', updateWide))
 
               <div class="am-row">
                 <button class="am-btn" type="button" :disabled="busy" @click="onDropList">
-                  Удалить список
+                  <TileMark name="trash" /> Удалить список
                 </button>
                 <button class="am-btn am-btn--ghost" type="button" @click="onCancelDrop">
                   Отмена
@@ -1358,18 +1360,10 @@ onBeforeUnmount(() => wideWindow.removeEventListener('change', updateWide))
               <TileMark name="debug" /> Отладка
             </h3>
 
-            <p class="am-meta am-fine">
-              Журнал пишет ошибки, запросы и склад этого запуска. Когда что-то сломалось, пришлите
-              копию оттуда: версия, система и маршрут в ней уже есть.
-            </p>
+            <p class="am-meta am-fine">Журнал ошибок, сетевых запросов и событий хранилища.</p>
 
             <div class="am-row">
-              <button
-                v-tip="'Ошибки, запросы и склад этого запуска'"
-                class="am-btn am-btn--ghost"
-                type="button"
-                @click="toLog"
-              >
+              <button class="am-btn am-btn--ghost" type="button" @click="toLog">
                 Журнал отладки
               </button>
 
@@ -1386,12 +1380,11 @@ onBeforeUnmount(() => wideWindow.removeEventListener('change', updateWide))
               </button>
             </div>
 
-            <!-- Тумблер журнала: пока он включён, пишутся ошибки, запросы и склад, а при выключенном
-             журнал молчит и человек решает, что поломок не было. -->
             <label class="am-switch">
               <input v-model="loggerOn" type="checkbox" class="am-switch__box" @change="onLogger" />
               <span class="am-switch__name">Записывать журнал отладки</span>
             </label>
+            <p v-if="debugNote" class="am-note" role="status">{{ debugNote }}</p>
           </div>
         </Teleport>
       </div>

@@ -575,7 +575,7 @@ onMounted(() => {
             :disabled="busy"
             @click="detail = 'clear'"
           >
-            Очистить кэш
+            <SettingMark name="eraser" /> Очистить кэш
           </button>
           <button
             v-if="listCount > 0"
@@ -584,10 +584,10 @@ onMounted(() => {
             :disabled="busy"
             @click="onAskDrop"
           >
-            Удалить список
+            <SettingMark name="trash" /> Удалить список
           </button>
           <button v-if="cleared" class="am-btn" type="button" @click="onReload">
-            Перезагрузить
+            <SettingMark name="reload" /> Перезагрузить
           </button>
         </div>
         <p v-if="note" class="am-note" role="status">{{ note }}</p>
@@ -857,7 +857,7 @@ onMounted(() => {
             :disabled="busy"
             @click="onDropList"
           >
-            Удалить список
+            <SettingMark name="trash" /> Удалить список
           </button>
           <button
             v-else
@@ -866,7 +866,7 @@ onMounted(() => {
             :disabled="busy"
             @click="onClear"
           >
-            Очистить
+            <SettingMark name="eraser" /> Очистить
           </button>
         </template>
       </SettingsSheet>

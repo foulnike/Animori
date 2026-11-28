@@ -914,7 +914,7 @@ onMounted(() => {
         <div class="am-row">
           <!-- Выгрузка списка файлом XML: формат чужой и старый, зато его понимают Шикимори, AniList, Kitsu и сам MyAnimeList. Куда ложить файл, спрашивает система родным пикером. -->
           <button class="am-btn" type="button" :disabled="busy" @click="onExport">
-            Выгрузить в XML
+            <SettingMark name="download" /> Выгрузить в XML
           </button>
 
           <button
@@ -925,7 +925,7 @@ onMounted(() => {
             :disabled="busy"
             @click="onClear"
           >
-            Очистить память
+            <SettingMark name="eraser" /> Очистить память
           </button>
 
           <button
@@ -936,11 +936,11 @@ onMounted(() => {
             :disabled="busy"
             @click="onAskDrop"
           >
-            Удалить мой список
+            <SettingMark name="trash" /> Удалить мой список
           </button>
 
           <button v-if="cleared" class="am-btn am-btn--ghost" type="button" @click="onReload">
-            Перезагрузить
+            <SettingMark name="reload" /> Перезагрузить
           </button>
         </div>
 
@@ -950,7 +950,7 @@ onMounted(() => {
 
           <div class="am-row">
             <button class="am-btn" type="button" :disabled="busy" @click="onDropList">
-              Удалить список
+              <SettingMark name="trash" /> Удалить список
             </button>
             <button class="am-btn am-btn--ghost" type="button" @click="onCancelDrop">Отмена</button>
           </div>

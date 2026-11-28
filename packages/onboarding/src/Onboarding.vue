@@ -8,6 +8,7 @@ import closingPhoto from '../assets/foulnike-joke.jpg'
 import { PROVIDERS, REPOSITORY, SLIDES, TV_FEATURE_SLIDES, type OnboardingAssets } from './content'
 import { completeOnboarding } from './first-launch'
 import FeatureScene from './FeatureScene.vue'
+import { DOCUMENTS } from './legal'
 
 const props = defineProps<OnboardingAssets>()
 const emit = defineEmits<{ complete: [] }>()
@@ -21,7 +22,6 @@ const content = ref<HTMLElement | null>(null)
 const title = ref<HTMLHeadingElement | null>(null)
 const previousButton = ref<HTMLButtonElement | null>(null)
 const nextButton = ref<HTMLButtonElement | null>(null)
-const credits = ref<HTMLElement | null>(null)
 const consent = ref<HTMLInputElement | null>(null)
 
 const slide = computed(() => {
@@ -53,13 +53,6 @@ function onConsentEnter(event: KeyboardEvent): void {
   if (!props.television) return
   event.preventDefault()
   if (!event.repeat) agreed.value = !agreed.value
-}
-
-function focusAgreementControl(event: KeyboardEvent, target: HTMLElement | null): void {
-  if (!props.television || !target) return
-  event.preventDefault()
-  event.stopPropagation()
-  target.focus()
 }
 
 function onContentDown(event: KeyboardEvent): void {
@@ -192,18 +185,23 @@ async function next(): Promise<void> {
             </template>
 
             <template v-else-if="slide.kind === 'agreement'">
-              <div ref="credits" @keydown.down="focusAgreementControl($event, consent)">
-                <component :is="props.credits" />
-              </div>
+              <ul class="am-intro__documents">
+                <li v-for="doc in DOCUMENTS" :key="doc.id">
+                  <template v-if="television">
+                    <img :src="television.documentCodes[doc.id]" alt="QR-код" />
+                    <span>{{ doc.title }}</span>
+                  </template>
+                  <a v-else :href="doc.url" @click.prevent="openLink(doc.url)">
+                    {{ doc.title }} <span aria-hidden="true">↗</span>
+                  </a>
+                </li>
+              </ul>
               <label class="am-intro__consent">
                 <input
                   ref="consent"
                   v-model="agreed"
                   type="checkbox"
                   @keydown.enter="onConsentEnter"
-                  @keydown.up="
-                    focusAgreementControl($event, credits?.querySelector('button') ?? null)
-                  "
                 />
                 <span>
                   Я принимаю Условия использования и подтверждаю, что ознакомился с Политикой
@@ -222,7 +220,7 @@ async function next(): Promise<void> {
                     поддержка помогает AniMori жить и развиваться.
                   </p>
                   <figure v-if="television" class="am-intro__qr-repository">
-                    <img :src="television.codes[REPOSITORY]" alt="" />
+                    <img :src="television.repositoryCode" alt="" />
                     <figcaption>Поставьте звёздочку на GitHub</figcaption>
                   </figure>
                   <a

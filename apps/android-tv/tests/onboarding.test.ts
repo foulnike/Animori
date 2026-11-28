@@ -5,6 +5,7 @@ import { runBackStop } from '@/app/back-stop'
 import { assets } from '@/app/onboarding'
 import { installMockBridge, resetMockBridge } from '@core-tests/bridge-module'
 import { needsOnboarding } from '../../../packages/onboarding/src/first-launch'
+import { DOCUMENTS } from '../../../packages/onboarding/src/legal'
 import Onboarding from '../../../packages/onboarding/src/Onboarding.vue'
 
 let app: App | undefined
@@ -61,7 +62,7 @@ it('при первом включении ведёт с пульта через
     'Переносите списки',
     'Восстановите список',
     'Источники данных',
-    'Условия использования',
+    'Политика и условия',
   ]) {
     next.click()
     await nextTick()
@@ -82,40 +83,20 @@ it('при первом включении ведёт с пульта через
     }
   }
   expect(indicator.getAttribute('aria-valuenow')).toBe('7')
-  expect(document.querySelector('.am-credits__code')).toBeNull()
+  const documents = [...root.querySelectorAll('.am-intro__documents li')]
+  expect(documents.map((item) => item.textContent?.trim())).toEqual(
+    DOCUMENTS.map((doc) => doc.title),
+  )
+  expect(documents.map((item) => item.querySelector('img')?.getAttribute('src'))).toEqual(
+    DOCUMENTS.map((doc) => assets.television.documentCodes[doc.id]),
+  )
+  expect(root.textContent).not.toContain('Источники и права')
   expect(root.querySelector('a')).toBeNull()
   expect(next.disabled).toBe(true)
   next.click()
-  expect(heading()).toBe('Условия использования')
+  expect(heading()).toBe('Политика и условия')
 
   const checkbox = root.querySelector<HTMLInputElement>('input[type="checkbox"]')!
-  expect(document.activeElement).toBe(checkbox)
-  checkbox.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }))
-  const credits = root.querySelector<HTMLButtonElement>('.am-credits__btn')!
-  expect(document.activeElement).toBe(credits)
-  credits.click()
-  await nextTick()
-  const dialog = document.querySelector('[role="dialog"][aria-label="Источники и права"]')!
-  expect(dialog.querySelector('a')).toBeNull()
-  dialog.querySelector<HTMLButtonElement>('[aria-label="Следующая страница"]')!.click()
-  await nextTick()
-  const documents = dialog.querySelectorAll<HTMLButtonElement>('.am-credits__documents button')
-  expect(documents).toHaveLength(2)
-  for (const documentButton of documents) {
-    documentButton.focus()
-    documentButton.click()
-    await nextTick()
-    expect(document.querySelector('.am-credits__code img')).not.toBeNull()
-    expect(runBackStop()).toBe(true)
-    await nextTick()
-    expect(document.querySelector('.am-credits__code img')).toBeNull()
-  }
-  expect(next.disabled).toBe(true)
-  expect(runBackStop()).toBe(true)
-  await nextTick()
-  expect(heading()).toBe('Условия использования')
-  await vi.waitFor(() => expect(document.activeElement).toBe(credits))
-  credits.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
   expect(document.activeElement).toBe(checkbox)
   checkbox.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
   await nextTick()

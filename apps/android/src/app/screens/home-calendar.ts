@@ -513,8 +513,9 @@ async function fetchWeek(mediaIds: number[]): Promise<void> {
 }
 
 async function load(mediaIds: number[]): Promise<void> {
-  startKey.value = weekStart(Date.now())
-  todayKey.value = dayStart(Date.now())
+  const now = Date.now()
+  startKey.value = weekStart(now)
+  todayKey.value = dayStart(now)
   picked.value = 0
 
   // Занято уже на чтение кэша: смена заканчивается либо показом, либо сетью.
@@ -534,6 +535,12 @@ async function load(mediaIds: number[]): Promise<void> {
 /** Смена области показа: неделя та же, выбор дня тот же, меняется только наполнение. Повторное нажатие
  *  ничего не делает, только если показ не пуст: пустой — это и «ничего не вышло», и «запрос не дошёл». */
 async function setScope(next: CalendarScope, mediaIds: number[]): Promise<void> {
+  if (startKey.value !== weekStart(Date.now())) {
+    scope.value = next
+    await load(mediaIds)
+    return
+  }
+
   if (scope.value === next && entries.value.length > 0) return
 
   // Прежний показ уходит сразу: иначе до ответа под новой подписью висели бы строки прошлой области.

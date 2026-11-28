@@ -14,8 +14,14 @@
 }
 
 .am-family--settings {
-  align-self: flex-start;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-self: stretch;
   margin: 2px 0 8px;
+}
+
+.am-family--settings > .am-family__btn {
+  min-width: 0;
 }
 
 .am-family__btn {

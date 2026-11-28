@@ -100,7 +100,7 @@ afterEach(() => {
 })
 
 describe('верхний баннер телефона', () => {
-  it('показывает постер и описание, а точки выбирают готовый слайд без перехода в карточку', async () => {
+  it('показывает постер, описание и индикатор слайда с навигацией свайпом', async () => {
     app = mountHome([1, 3, 4])
     await vi.waitFor(() => expect(slideTitle()).toBe('Тайтл 1'))
 
@@ -115,22 +115,19 @@ describe('верхний баннер телефона', () => {
       [...slide.querySelectorAll('.am-home-hero__genres li')].map((item) => item.textContent),
     ).toEqual(['Экшен', 'Сверхъестественное', 'Психологическое', 'Повседневность'])
     expect(element('.am-home-hero__facts', body).textContent).toContain('100 мин')
-    expect(body.querySelectorAll('.am-home-hero__dots button')).toHaveLength(3)
+    const dots = element('.am-home-hero__dots', slide)
+    expect(dots.parentElement).toBe(slide)
+    expect(dots.getAttribute('aria-label')).toBe('Слайд 1 из 3')
+    expect(dots.querySelectorAll('.am-home-hero__dot')).toHaveLength(3)
+    expect(slide.querySelectorAll('button')).toHaveLength(1)
 
-    const dot = element('button[aria-label="Слайд 3"]', body)
-    dot.click()
+    swipe(slide, 130, 230)
     await nextTick()
     expect(slideTitle()).toBe('Тайтл 4')
-    expect(dot.getAttribute('aria-current')).toBe('true')
+    expect(dots.getAttribute('aria-label')).toBe('Слайд 3 из 3')
+    expect(dots.lastElementChild?.classList.contains('am-home-hero__dot--on')).toBe(true)
     expect(hero.querySelector('.am-home-hero__poster')).toBeNull()
     expect(window.location.hash).toBe('#/home')
-
-    element('button[aria-label="Следующий слайд"]', body).click()
-    await nextTick()
-    expect(slideTitle()).toBe('Тайтл 1')
-    element('button[aria-label="Предыдущий слайд"]', body).click()
-    await nextTick()
-    expect(slideTitle()).toBe('Тайтл 4')
 
     element('.am-home-hero__open', hero).click()
     expect(window.location.hash).toBe('#/media/4')
@@ -155,4 +152,19 @@ describe('верхний баннер телефона', () => {
     await vi.advanceTimersByTimeAsync(1)
     expect(slideTitle()).toBe('Тайтл 4')
   })
+})
+
+it('выбирает день календаря напрямую', async () => {
+  app = mountHome([1])
+  const calendar = element('.am-cal')
+  const days = calendar.querySelectorAll<HTMLButtonElement>('.am-cal__day')
+  const otherDay = element<HTMLButtonElement>('.am-cal__day[aria-pressed="false"]', calendar)
+  expect(days).toHaveLength(7)
+  expect(calendar.querySelector('.am-cal__bar button:not(.am-seg__btn)')).toBeNull()
+  expect(calendar.querySelector('.am-cal__span')).toBeNull()
+
+  otherDay.click()
+  await nextTick()
+  expect(otherDay.getAttribute('aria-pressed')).toBe('true')
+  expect(calendar.querySelectorAll('.am-cal__day[aria-pressed="true"]')).toHaveLength(1)
 })

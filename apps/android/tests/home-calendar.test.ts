@@ -432,6 +432,48 @@ describe('состояние недели', () => {
     expect(view.days.value).toHaveLength(7)
   })
 
+  it('берёт расписание из кэша до полуночи воскресенья и обновляет его в понедельник', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(WEDNESDAY)
+
+    const db = await import('@/core/db')
+    let saved: Parameters<typeof db.dbSet>[1] | null = null
+    vi.spyOn(db, 'dbGet').mockImplementation(async <T>(store: string, key: IDBValidKey) =>
+      store === 'mediaCache' && key === 'schedule:week' ? (saved as T | null) : null,
+    )
+    vi.spyOn(db, 'dbSet').mockImplementation(async (store, record) => {
+      if (store === 'mediaCache' && 'key' in record && record.key === 'schedule:week')
+        saved = record
+    })
+
+    const queriedWeeks: number[] = []
+    bridge.bridge.anilist.query = async (body: string) => {
+      const { query, variables } = JSON.parse(body) as {
+        query: string
+        variables: { from: number }
+      }
+      if (!query.includes('airingSchedules')) return blank()
+
+      queriedWeeks.push(variables.from + 1)
+      return schedule([airing(21, queriedWeeks.length, secs(Date.now()))])
+    }
+
+    const view = cal.useHomeCalendar()
+    mine(view)
+    await view.load([21])
+    await vi.waitFor(() => expect(saved).not.toBeNull())
+
+    vi.setSystemTime(at(2026, 8, 20, 23, 59))
+    await view.load([21])
+    expect(queriedWeeks).toEqual([secs(at(2026, 8, 14))])
+    expect(view.days.value.flatMap((day) => day.rows).map((row) => row.episode)).toEqual([1])
+
+    vi.setSystemTime(at(2026, 8, 21))
+    await view.setScope('mine', [21])
+    expect(queriedWeeks).toEqual([secs(at(2026, 8, 14)), secs(at(2026, 8, 21))])
+    expect(view.shown.value?.rows.map((row) => row.episode)).toEqual([2])
+  })
+
   it('отказ самого моста тоже попадает в отметку, а не в пустоту', async () => {
     // Не транспорт, а отказ моста: пропуск стёрли между проверкой и отправкой.
     bridge.bridge.anilist.query = async () => {

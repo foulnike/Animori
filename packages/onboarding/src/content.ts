@@ -1,13 +1,14 @@
 import type { Component } from 'vue'
+import type { DOCUMENTS } from './legal'
 
 export type FeatureKey = 'player' | 'lists' | 'transfer' | 'cloud'
 
 export interface OnboardingAssets {
   icon: string
-  credits: Component
   desktop?: { background: Component }
   television?: {
-    codes: Readonly<Record<string, string>>
+    documentCodes: Readonly<Record<(typeof DOCUMENTS)[number]['id'], string>>
+    repositoryCode: string
     pushBackStop: (handler: () => boolean) => () => void
   }
 }
@@ -43,7 +44,7 @@ export const SLIDES = [
     description: 'Сохраните список на Яндекс Диске и восстановите его на другом устройстве.',
   },
   { kind: 'providers', title: 'Источники данных' },
-  { kind: 'agreement', title: 'Условия использования' },
+  { kind: 'agreement', title: 'Политика и условия' },
   { kind: 'finish', title: 'Приятного пользования!' },
 ] as const satisfies readonly Slide[]
 

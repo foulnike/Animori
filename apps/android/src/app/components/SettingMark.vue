@@ -1,8 +1,18 @@
 <script setup lang="ts">
 // Значки плит настроек: нарисованы, а не набраны знаками Юникода — у тех своя величина и толщина. Вектор в клетке 20×20, одна толщина линии, цвет по тексту, все знаки центрированы по (10, 10).
 
-/// Имена плит мозаики. У каждой своё окно, и на него приходится свой знак.
-type Kind = 'list' | 'look' | 'data' | 'cloud' | 'net' | 'about' | 'adult'
+type Kind =
+  | 'list'
+  | 'look'
+  | 'data'
+  | 'cloud'
+  | 'net'
+  | 'about'
+  | 'adult'
+  | 'eraser'
+  | 'trash'
+  | 'download'
+  | 'reload'
 
 const props = defineProps<{ name: Kind }>()
 </script>
@@ -17,6 +27,7 @@ const props = defineProps<{ name: Kind }>()
     stroke-linecap="round"
     stroke-linejoin="round"
     aria-hidden="true"
+    focusable="false"
   >
     <!-- Импорт списка: строки и стрелка, приходящая в них сверху. -->
     <template v-if="props.name === 'list'">
@@ -65,6 +76,27 @@ const props = defineProps<{ name: Kind }>()
       <path d="M10 2.8 16.2 5v4.4c0 3.7-2.5 6.3-6.2 7.8-3.7-1.5-6.2-4.1-6.2-7.8V5z" />
       <path d="M7.1 9.8h5.8" />
     </template>
+
+    <template v-else-if="props.name === 'eraser'">
+      <path
+        d="M4 16.4 2.1 14.5a1.4 1.4 0 0 1 0-2L10.5 4a1.4 1.4 0 0 1 2 0l4.5 4.5a1.4 1.4 0 0 1 0 2l-5.9 5.9z"
+      />
+      <path d="m6.4 8.2 6.4 6.4m-1.7 1.8H18" />
+    </template>
+
+    <template v-else-if="props.name === 'trash'">
+      <path d="M3.3 5.5h13.4M8 5.5V3.2h4v2.3m-7 0 .8 11.4h8.4L15 5.5M8.3 8.4v5.7m3.4-5.7v5.7" />
+    </template>
+
+    <template v-else-if="props.name === 'download'">
+      <path
+        d="M10 2.8v9.3m-3.2-3.2 3.2 3.2 3.2-3.2M3.4 13.8v1.7A1.5 1.5 0 0 0 4.9 17h10.2a1.5 1.5 0 0 0 1.5-1.5v-1.7"
+      />
+    </template>
+
+    <template v-else-if="props.name === 'reload'">
+      <path d="M16.8 8.5a7 7 0 1 0-.7 5m.7-9v4h-4" />
+    </template>
   </svg>
 </template>
 
@@ -75,5 +107,11 @@ const props = defineProps<{ name: Kind }>()
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.am-btn .am-setmark {
+  flex: none;
+  width: 1.25em;
+  height: 1.25em;
 }
 </style>

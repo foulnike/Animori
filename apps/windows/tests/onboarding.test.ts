@@ -59,21 +59,20 @@ describe('первый запуск AniMori', () => {
     expect(heading()).toBe('Источники данных')
     next.click()
     await nextTick()
-    expect(heading()).toBe('Условия использования')
+    expect(heading()).toBe('Политика и условия')
     expect(next.disabled).toBe(true)
     expect(await needsOnboarding()).toBe(true)
 
-    expect(root.querySelector('.am-credits__docs')).toBeNull()
-    const credits = root.querySelector<HTMLButtonElement>('.am-credits__head')!
-    credits.click()
-    await nextTick()
-    const documents = root.querySelectorAll<HTMLButtonElement>('.am-credits__docs button')
-    expect(documents).toHaveLength(2)
-    documents[0]!.click()
+    const documents = [...root.querySelectorAll<HTMLAnchorElement>('.am-intro__documents a')]
+    expect(documents.map((link) => link.getAttribute('href'))).toEqual(
+      DOCUMENTS.map((doc) => doc.url),
+    )
+    expect(root.textContent).not.toContain('Источники и права')
+    for (const [index, link] of documents.entries()) {
+      link.click()
+      expect(mock.bridge.shell.openExternal).toHaveBeenLastCalledWith(DOCUMENTS[index]?.url)
+    }
     expect(next.disabled).toBe(true)
-    credits.click()
-    await nextTick()
-    expect(mock.bridge.shell.openExternal).toHaveBeenCalledWith(DOCUMENTS[0]?.url)
     const consent = root.querySelector<HTMLInputElement>('input[type="checkbox"]')!
     consent.checked = true
     consent.dispatchEvent(new Event('change', { bubbles: true }))
