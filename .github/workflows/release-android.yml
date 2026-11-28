@@ -274,50 +274,11 @@ jobs:
           fi
           echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
 
-      # Описание релиза берётся из ведущего абзаца раздела: подробности лежат
-      # в CHANGELOG.md, а в окно обновления целиком раздел не лезет.
       - name: Описание релиза из CHANGELOG
         id: notes
-        run: |
-          python3 - <<'PY' >> "$GITHUB_OUTPUT"
-          import pathlib
-
-          lines = pathlib.Path('CHANGELOG.md').read_text(encoding='utf-8').splitlines()
-
-          # Заголовок раздела — «## [версия]». Редактор умеет экранировать скобку
-          # («## \[3.0.2]»), и такой заголовок разделом тоже считаем.
-          def is_section(line):
-              return line.startswith('## ') and line.replace('\\', '').lstrip('#').strip().startswith('[')
-
-          marks = [i for i, line in enumerate(lines) if is_section(line)]
-          if not marks:
-              raise SystemExit('В CHANGELOG.md не найдено ни одного раздела вида "## [версия]"')
-
-          start = marks[0] + 1
-          end = marks[1] if len(marks) > 1 else len(lines)
-
-          # Ведущий абзац: до первого подзаголовка любого уровня.
-          stop = end
-          for i in range(start, end):
-              if lines[i].lstrip().startswith('#'):
-                  stop = i
-                  break
-
-          body = '\n'.join(lines[start:stop]).strip()
-          if not body:
-              raise SystemExit('У раздела нет ведущего абзаца: нечего показать в окне обновления')
-
-          # Окно обновления урежет текст само (NOTES_LIMIT в src/app/update.ts),
-          # но длинное описание не нужно и на странице выпуска.
-          if len(body) > 1200:
-              body = body[:1200].rstrip() + '…'
-
-          body += '\n\n— Политика: https://github.com/foulnike/Animori/blob/main/docs/PRIVACY.md · Условия: https://github.com/foulnike/Animori/blob/main/docs/TERMS.md'
-
-          print('body<<ANIMORI_NOTES')
-          print(body)
-          print('ANIMORI_NOTES')
-          PY
+        env:
+          RELEASE_VERSION: ${{ steps.ver.outputs.version }}
+        run: python3 ../../scripts/android-release-notes.py CHANGELOG.md "$RELEASE_VERSION" --github-output >> "$GITHUB_OUTPUT"
 
       - name: Собрать файлы выпуска
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
