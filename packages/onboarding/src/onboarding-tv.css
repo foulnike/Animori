@@ -38,20 +38,18 @@
   font-size: clamp(12px, 2.5vh, 16px);
 }
 
-.am-intro--television .am-intro__details {
-  font-size: clamp(14px, 2.9vh, 19px);
-}
-
 .am-intro--television .am-intro__logo {
   width: clamp(66px, 19vh, 140px);
 }
 
-.am-intro--television .am-intro__image img {
-  max-height: clamp(120px, 51vh, 400px);
+.am-intro--television .am-intro__feature-art {
+  grid-column: 2;
+  grid-row: 1;
 }
 
-.am-intro--television .am-intro__gallery figcaption {
-  font-size: clamp(13px, 2.6vh, 18px);
+.am-intro--television .am-intro__slide--feature .am-intro__copy {
+  justify-items: start;
+  text-align: start;
 }
 
 .am-intro--television .am-intro__providers {
@@ -74,16 +72,6 @@
   color: var(--am-accent);
 }
 
-.am-intro__qr-documents {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.am-intro__qr-documents li,
 .am-intro__qr-repository {
   display: flex;
   gap: 10px;
@@ -95,7 +83,6 @@
   border-radius: var(--am-r-m);
 }
 
-.am-intro__qr-documents img,
 .am-intro__qr-repository img {
   flex: none;
   width: clamp(70px, 18vh, 132px);
@@ -178,6 +165,25 @@
 .am-intro--television .am-intro__actions button {
   min-height: clamp(44px, 9vh, 60px);
   font-size: clamp(15px, 3vh, 22px);
+}
+
+.am-intro--television .am-intro__actions .am-intro__arrow {
+  display: grid;
+  place-items: center;
+  width: clamp(44px, 9vh, 60px);
+  padding: 0;
+}
+
+.am-intro--television .am-intro__arrow svg {
+  width: 46%;
+  height: auto;
+}
+
+.am-intro--television .am-intro__actions button:disabled {
+  color: var(--am-dim);
+  background: var(--am-fill-1);
+  border-color: var(--am-line-soft);
+  opacity: 0.36;
 }
 
 .am-intro--television :is(button, input):focus {

@@ -4,6 +4,7 @@
 import { computed, onMounted, ref } from 'vue'
 
 import { Bridge } from '@/bridge'
+import { importResultText } from '@/utils/import-text'
 import {
   eachEntry,
   entryCount,
@@ -15,7 +16,6 @@ import {
   unlinkCollection,
   type MalPullResult,
   type PullMode,
-  type ShikiPullResult,
 } from '@/core/collection'
 import { datasetStatus, initDatasetNames } from '@/core/dataset-names'
 import { clearCache, getDbStats } from '@/core/db'
@@ -40,6 +40,7 @@ import { saveXmlFile } from '../save-file'
 import BrandMark from '../components/BrandMark.vue'
 import CloudBox from '../components/CloudBox.vue'
 import CloudHelp from '../components/CloudHelp.vue'
+import { currentRoute } from '../router'
 import CreditsBox from '../components/CreditsBox.vue'
 import DateField from '../components/DateField.vue'
 import ProxyBox from '../components/ProxyBox.vue'
@@ -171,8 +172,7 @@ function onLogout(): void {
     login.value = null
     await readState()
 
-    note.value =
-      left > 0 ? `Счёт отключён. Список остался здесь местным: записей ${left}.` : 'Счёт отключён.'
+    note.value = left > 0 ? `Аккаунт отключён. Записей в списке: ${left}.` : 'Аккаунт отключён.'
   })
 }
 
@@ -196,16 +196,7 @@ function onPull(mode: PullMode): void {
     const done = await refreshFromServer(mode)
     await readState()
 
-    // Способ берётся из ответа, а не из просьбы: смена счёта переключает перенос на замену сама, и сказать надо о том, что случилось на деле.
-    if (done.mode === 'replace') {
-      note.value = `Список замещён списком с AniList: записей ${done.total}.`
-      return
-    }
-
-    note.value =
-      `Списки слиты: всего ${done.total}, новых ${done.added}, ` +
-      `обновлено ${done.updated}, своих правок сохранено ${done.kept}, ` +
-      `только здесь ${done.onlyHere}.`
+    note.value = importResultText(done)
   })
 }
 
@@ -279,12 +270,7 @@ function onMalPull(mode: PullMode): void {
       const done: MalPullResult = await pullFromMalFile(file.text, mode)
       await readState()
 
-      malNote.value =
-        done.mode === 'replace'
-          ? `Список замещён списком из файла: записей ${done.total}.`
-          : `Списки слиты: всего ${done.total}, новых ${done.added}, ` +
-            `обновлено ${done.updated}, своих правок сохранено ${done.kept}, ` +
-            `только здесь ${done.onlyHere}.`
+      malNote.value = importResultText(done)
     } catch (e) {
       malError.value = describe(e)
     } finally {
@@ -349,10 +335,10 @@ async function onUpCheck(): Promise<void> {
 
   try {
     updateOffer.value = await checkUpdate()
-    if (updateOffer.value === null) upNote.value = 'Обновлений нет — это последняя версия.'
+    if (updateOffer.value === null) upNote.value = 'Установлена последняя версия.'
   } catch {
     updateOffer.value = null
-    upNote.value = 'Спросить не удалось: GitHub не ответил. Попробуйте позже.'
+    upNote.value = 'Не удалось проверить обновления. Повторите позже.'
   } finally {
     upBusy.value = false
     // Кнопка гасла disabled, и пульт стоял на крестике: возвращаем его к ответу, который теперь читается строкой ниже.
@@ -389,10 +375,21 @@ const birth = ref('')
 const ageError = ref('')
 
 /** Плита мозаики: за каждой своё окно. */
-type Door = 'list' | 'look' | 'data' | 'cloud' | 'net' | 'about'
+type Door = 'list' | 'look' | 'adult' | 'data' | 'cloud' | 'net' | 'about'
 
 /** Открытая плита. null — мозаика на виду. */
-const openDoor = ref<Door | null>(null)
+const adultEntry = currentRoute.value.params.id === 'adult'
+const openDoor = ref<Door | null>(adultEntry ? 'adult' : null)
+const doorGrid = ref<HTMLElement | null>(null)
+
+function closeAdultDoor(): void {
+  closeAge()
+  openDoor.value = null
+  restoreFocus(
+    null,
+    () => doorGrid.value?.querySelector<HTMLButtonElement>('[data-door="adult"]') ?? null,
+  )
+}
 
 /** Открыта ли справка по переносу: кнопка «i» — в шапке модалки копии. */
 const cloudHelp = ref(false)
@@ -402,8 +399,9 @@ const cloudHelp = ref(false)
 const doors = computed<ReadonlyArray<{ name: Door; title: string }>>(() => [
   { name: 'list', title: 'Импорт списка' },
   { name: 'look', title: 'Оформление' },
+  { name: 'adult', title: 'Контент 18+' },
   { name: 'data', title: 'Данные' },
-  { name: 'cloud', title: 'Копия списка' },
+  { name: 'cloud', title: 'Облачная копия' },
   { name: 'net', title: 'Прокси' },
   { name: 'about', title: 'О программе' },
 ])
@@ -480,23 +478,6 @@ function onShikiCancel(): void {
   askingShiki.value = false
 }
 
-/** Потери словами. Тайтлы, которых нет у AniList, в список не попадают вовсе, и молчать
- * об этом нельзя: человек считает записи глазами и решит, что программа съела половину. */
-function lostText(done: ShikiPullResult): string {
-  if (done.lost === 0) return ''
-  if (done.lostTitles.length === 0) return ` Без пары на AniList: ${done.lost}.`
-
-  const more = done.lost > done.lostTitles.length ? ' и другие' : ''
-  return ` Без пары на AniList ${done.lost}: ${done.lostTitles.join(', ')}${more}.`
-}
-
-/** Даты просмотра словами. Ноль здесь не поломка, а «просмотров не было»: у запланированного
- * тайтла дат и не бывает, и говорить об этом надо так, чтобы человек не пошёл искать ошибку. */
-function datesText(done: ShikiPullResult): string {
-  if (done.dated === 0) return ' Дат просмотра в журнале Шикимори не нашлось.'
-  return ` Даты просмотра перенесены в ${done.dated} записей.`
-}
-
 /** Перенос списка с Шикимори по нику. Способы те же два, и вопрос тот же: замена вычищает
  * всё, включая перенесённое с AniList и добавленное руками. */
 function onShikiPull(mode: PullMode): void {
@@ -516,16 +497,7 @@ function onShikiPull(mode: PullMode): void {
       const done = await pullFromShikimori(shikiNick.value, mode)
       await readState()
 
-      shikiNote.value =
-        done.mode === 'replace'
-          ? `Список замещён списком ${done.nick} с Шикимори: записей ${done.total}.` +
-            lostText(done) +
-            datesText(done)
-          : `Списки слиты: всего ${done.total}, новых ${done.added}, ` +
-            `обновлено ${done.updated}, своих правок сохранено ${done.kept}, ` +
-            `только здесь ${done.onlyHere}.` +
-            lostText(done) +
-            datesText(done)
+      shikiNote.value = importResultText(done)
     } catch (e) {
       shikiError.value = describe(e)
     } finally {
@@ -631,7 +603,7 @@ function onClear(): void {
     await clearCache()
     cleared.value = true
     await readState()
-    note.value = 'Память очищена. Названия и описания загрузятся заново.'
+    note.value = 'Кэш очищен'
   })
 }
 
@@ -673,14 +645,13 @@ onMounted(() => {
 
 <template>
   <section class="am-page am-set">
-    <!-- Мозаика плит: шесть плит вместо длинной колонки панелей. Обход пульта получает шесть
-     остановок вместо пятнадцати, а знакомая панель открывается окном поверх экрана. -->
-    <div class="am-doors">
+    <div ref="doorGrid" class="am-doors">
       <button
         v-for="item in doors"
         :key="item.name"
         class="am-door"
         type="button"
+        :data-door="item.name"
         @click="openDoor = item.name"
       >
         <!-- Цветок-подложка: та же розетка, что на плитках статистики ПК-билда, под
@@ -738,7 +709,7 @@ onMounted(() => {
 
             <template v-else>
               <button class="am-btn" type="button" :disabled="busy" @click="onAsk">
-                {{ busy ? 'Переносим…' : 'Перенести список' }}
+                {{ busy ? 'Импорт…' : 'Импортировать' }}
               </button>
               <button class="am-btn am-btn--ghost" type="button" :disabled="busy" @click="onLogout">
                 Отключить
@@ -770,7 +741,7 @@ onMounted(() => {
                 :disabled="busy"
                 @click="onPull('replace')"
               >
-                Заменить целиком
+                Заменить текущий список
               </button>
               <button class="am-btn am-btn--ghost" type="button" @click="onCancel">Отмена</button>
             </div>
@@ -805,7 +776,6 @@ onMounted(() => {
 
             <span class="am-serv__text">
               <span class="am-serv__name">Шикимори</span>
-              <span class="am-serv__note">Профиль на Шикимори должен быть открытым.</span>
             </span>
           </div>
 
@@ -815,7 +785,8 @@ onMounted(() => {
                 v-model="shikiNick"
                 class="am-input"
                 type="text"
-                placeholder="Ник на Шикимори"
+                aria-label="Имя открытого профиля Шикимори"
+                placeholder="Имя открытого профиля"
                 :disabled="shikiBusy"
                 @change="onShikiNick"
               />
@@ -823,14 +794,17 @@ onMounted(() => {
             <button
               v-tip="'Забрать список с Шикимори: слиянием или с заменой'"
               ref="shikiBtn"
-              class="am-btn"
+              class="am-btn am-shiki-import"
               type="button"
               :disabled="shikiBusy || !shikiNick.trim()"
+              :aria-busy="shikiBusy"
               @click="onShikiAsk"
             >
-              {{ shikiBusy ? 'Переносим…' : 'Перенести список' }}
+              <span v-if="shikiBusy" class="am-shiki-import__spin" aria-hidden="true" />
+              {{ shikiBusy ? 'Переносим…' : 'Импортировать' }}
             </button>
           </div>
+          <p v-if="shikiBusy" class="am-meta" role="status">Идёт перенос, не закрывайте окно.</p>
 
           <!-- Вопрос перед переносом: замена вычищает список целиком, включая набранное руками, — такое не делают одним промахом пульта. -->
           <div v-if="askingShiki" class="am-ask">
@@ -851,7 +825,7 @@ onMounted(() => {
                 :disabled="shikiBusy"
                 @click="onShikiPull('replace')"
               >
-                Заменить целиком
+                Заменить текущий список
               </button>
               <button class="am-btn am-btn--ghost" type="button" @click="onShikiCancel">
                 Отмена
@@ -884,7 +858,7 @@ onMounted(() => {
 
           <div class="am-row">
             <button class="am-btn" type="button" :disabled="malBusy" @click="onMalPick">
-              {{ malBusy ? 'Переносим…' : 'Выбрать файл' }}
+              {{ malBusy ? 'Импорт…' : 'Импортировать XML' }}
             </button>
           </div>
 
@@ -906,7 +880,7 @@ onMounted(() => {
                 :disabled="malBusy"
                 @click="onMalPull('replace')"
               >
-                Заменить целиком
+                Заменить текущий список
               </button>
               <button class="am-btn am-btn--ghost" type="button" @click="onMalCancel">
                 Отмена
@@ -972,7 +946,7 @@ onMounted(() => {
 
         <!-- Удаление списка необратимо для местных записей: спрашиваем всегда. Вопрос коротким: подпись кнопки под ним и есть ответ. -->
         <div v-if="askingDrop" class="am-ask">
-          <p class="am-ask__text">Удалить список с этого устройства?</p>
+          <p class="am-ask__text">Удалить список? Действие необратимо.</p>
 
           <div class="am-row">
             <button class="am-btn" type="button" :disabled="busy" @click="onDropList">
@@ -988,12 +962,12 @@ onMounted(() => {
     </SettingsSheet>
 
     <!-- Копия списка: на телевизоре от неё остался один путь — забрать копию по ссылке. -->
-    <SettingsSheet :open="openDoor === 'cloud'" title="Копия списка" @close="openDoor = null">
+    <SettingsSheet :open="openDoor === 'cloud'" title="Облачная копия" @close="openDoor = null">
       <template #tools>
         <button
           class="am-help-i"
           type="button"
-          aria-label="Как получить ссылку"
+          aria-label="Справка по облачной копии"
           @click="cloudHelp = true"
         >
           i
@@ -1024,8 +998,7 @@ onMounted(() => {
           </button>
         </div>
 
-        <h3 class="am-h3 am-family-heading">Семейство интерфейса</h3>
-        <div class="am-family" role="group" aria-label="Семейство интерфейса">
+        <div class="am-family" role="group" aria-label="Оформление интерфейса">
           <button
             class="am-family__btn"
             :class="{ 'am-family__btn--on': visualTheme === 'standard' }"
@@ -1045,8 +1018,17 @@ onMounted(() => {
             Lain
           </button>
         </div>
+      </div>
+    </SettingsSheet>
 
-        <h3 class="am-h3 am-adult-heading"><SettingMark name="adult" /> Взрослое</h3>
+    <SettingsSheet
+      :open="openDoor === 'adult'"
+      title="Контент 18+"
+      initial-focus=".am-adult-mode--active"
+      @close="closeAdultDoor"
+    >
+      <div class="am-panel am-box">
+        <h3 class="am-h3">Контент 18+</h3>
 
         <div class="am-adult-control" role="radiogroup" aria-label="Фильтрация контента 18+">
           <button
@@ -1189,7 +1171,7 @@ onMounted(() => {
         >
           {{
             upBusy
-              ? 'Спрашиваем GitHub…'
+              ? 'Проверяем обновления…'
               : updateOffer
                 ? `Обновление до ${updateOffer.version}`
                 : 'Проверить обновление'
@@ -1198,16 +1180,12 @@ onMounted(() => {
 
         <p v-if="upNote" class="am-note">{{ upNote }}</p>
 
-        <!-- Плашки с просьбой о звезде здесь больше нет: она вела на GitHub, а ссылку наружу на телевизоре открыть нечем. -->
-
         <!-- Свежесть датасета — единственное, за чем человеку приходится следить руками, поэтому про просрочку говорим словами. -->
         <p v-if="datasetStale" class="am-stale">
-          Датасет не обновлялся больше {{ STALE_DAYS }} дней. Названия, которых в нём нет, программа
-          добирает из сети по одному — это медленно. Загляните в
+          База названий устарела.
           <button v-if="outside" class="am-link" type="button" @click="onDatasetLink">
-            animori-data</button
-          ><span v-else class="am-meta">animori-data</span>
-          и запустите сборку кнопкой.
+            Открыть animori-data
+          </button>
         </p>
 
         <!-- Плашка репозитория: не строка заметок, а приглашение — свой фон и своё сердце,
@@ -1235,8 +1213,8 @@ onMounted(() => {
           </svg>
 
           <span class="am-repo__text">
-            AniMori — бесплатное приложение, без рекламы и телеметрии. Если вам понравилось —
-            поставьте звёздочку, если что-то сломалось — оставьте issue в репозитории.
+            AniMori — бесплатное приложение без рекламы и телеметрии. Поддержите проект звёздочкой
+            на GitHub. Там же можно сообщить об ошибке.
           </span>
         </button>
 

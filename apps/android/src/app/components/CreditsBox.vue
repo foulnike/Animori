@@ -9,8 +9,12 @@ import { useScrollLock } from '../scroll-lock'
 import { canOpenOutside } from '../platform'
 import { Bridge } from '@/bridge'
 
+import { DOCUMENTS } from '../../../../../packages/onboarding/src/legal'
+
 /** Открыто ли окно. */
 const open = ref(false)
+const trigger = ref<HTMLButtonElement | null>(null)
+const close = ref<HTMLButtonElement | null>(null)
 
 // Открытое окно замирает фон под собой.
 useScrollLock(() => open.value)
@@ -24,32 +28,9 @@ const body = ref<HTMLElement | null>(null)
 /** Список источников. Порядок — по роли в программе: сперва то, что стоит на каждой карточке. */
 const SOURCES = [
   { name: 'AniList', what: 'каталог, списки, расписание выхода' },
-  { name: 'Шикимори', what: 'русские названия, описания, персонажи и персонал' },
+  { name: 'Шикимори', what: 'русские названия, описания, персонажи и авторы' },
   { name: 'Kodik, Anilibria', what: 'ссылки на видео' },
   { name: 'animori-data', what: 'датасет русских названий, CC0-1.0' },
-]
-
-/** Оговорки. Язык сухой и юридический не случайно: этот текст читают вслух при разборе,
- *  и мягкие формулировки там не помогают. */
-const TERMS = [
-  'Наименования, описания и иные тексты принадлежат своим авторам и воспроизводятся со ссылкой на источник. Сведения об авторе описания публикуются на странице источника.',
-  'Видеоматериал предоставляется сторонними сервисами, не связанными с AniMori и не являющимися правообладателями: лицензий на него программа не получает, не размещает, не хранит и не копирует его и прав на распространение не имеет.',
-  'Источники программой не проверяются: законность, содержимое и доступность не гарантируются. Плеер лишь открывает адрес потока выбранного человека — за выбор источника, за просмотр и за его законность в своей юрисдикции отвечает пользователь.',
-  'AniMori не является продуктом AniList, не связан с ним и не одобрен им. Пользовательские списки хранятся на устройстве и в AniList не передаются.',
-  'Материалы возрастного ограничения по умолчанию скрыты; их отображение включается настройкой «Взрослое содержимое».',
-  'Код распространяется по лицензии MIT, перечень зависимостей и их лицензий приведён в THIRD-PARTY.md. Данные датасета animori-data публикуются по CC0-1.0.',
-]
-
-/** Правовые документы: полные тексты живут в репозитории. */
-const DOCS = [
-  {
-    name: 'Политика обработки персональных данных',
-    url: 'https://github.com/foulnike/Animori/blob/main/docs/PRIVACY.md',
-  },
-  {
-    name: 'Условия использования',
-    url: 'https://github.com/foulnike/Animori/blob/main/docs/TERMS.md',
-  },
 ]
 
 function onClose(): void {
@@ -68,6 +49,8 @@ const STEP = 60
  *  фокус стоит на теле текста, и обход его предком не считает. */
 function onKey(e: KeyboardEvent): void {
   if (e.key === 'Escape') {
+    e.preventDefault()
+    e.stopPropagation()
     onClose()
     return
   }
@@ -84,7 +67,13 @@ function onKey(e: KeyboardEvent): void {
 
   e.preventDefault()
   e.stopPropagation()
-  box.scrollBy({ top: step, behavior: 'smooth' })
+  if (e.target === close.value && step > 0) {
+    box.focus()
+  } else if (e.target === box && step < 0 && box.scrollTop <= 0) {
+    close.value?.focus()
+  } else {
+    box.scrollBy({ top: step, behavior: 'smooth' })
+  }
 }
 
 // Шаг «Назад» ставится только на время окна: оно открывается поверх окна настроек, и без своей
@@ -93,13 +82,11 @@ let stopBack: (() => void) | null = null
 
 watch(open, (isOpen) => {
   if (!isOpen) {
-    document.removeEventListener('keydown', onKey)
     stopBack?.()
     stopBack = null
+    trigger.value?.focus({ preventScroll: true })
     return
   }
-
-  document.addEventListener('keydown', onKey)
 
   if (stopBack === null) {
     stopBack = pushBackStop(function () {
@@ -114,14 +101,13 @@ watch(open, (isOpen) => {
 })
 
 onBeforeUnmount(() => {
-  document.removeEventListener('keydown', onKey)
   stopBack?.()
   stopBack = null
 })
 </script>
 <template>
   <div class="am-credits">
-    <button class="am-credits__btn" type="button" @click="open = true">
+    <button ref="trigger" class="am-credits__btn" type="button" @click="open = true">
       <svg
         class="am-credits__icon"
         viewBox="0 0 20 20"
@@ -148,6 +134,7 @@ onBeforeUnmount(() => {
           role="dialog"
           aria-modal="true"
           aria-label="Источники и права"
+          @keydown="onKey"
         >
           <!-- Клик мимо закрывает: это справка, держать её силой незачем. -->
           <div class="am-modal__veil" @click="onClose" />
@@ -155,7 +142,13 @@ onBeforeUnmount(() => {
           <div class="am-modal__box">
             <div class="am-modal__head">
               <h3 class="am-modal__title">Источники и права</h3>
-              <button class="am-modal__x" type="button" aria-label="Закрыть" @click="onClose">
+              <button
+                ref="close"
+                class="am-modal__x"
+                type="button"
+                aria-label="Закрыть"
+                @click="onClose"
+              >
                 ✕
               </button>
             </div>
@@ -169,30 +162,24 @@ onBeforeUnmount(() => {
                 </li>
               </ul>
 
-              <h4 class="am-modal__h">Оговорки</h4>
-              <ul>
-                <li v-for="term in TERMS" :key="term">{{ term }}</li>
-              </ul>
+              <h4 class="am-modal__h">Права и лицензии</h4>
+              <p class="am-modal__rights">
+                Сведения об авторах описаний указаны на страницах источников. Лицензии зависимостей
+                перечислены в THIRD-PARTY.md.
+              </p>
 
-              <div class="am-modal__warn">
-                Ссылки на видео ведут на сторонние сервисы, не связанные с AniMori. Программа ничего
-                не скачивает, не хранит и не копирует, лицензии на видеоматериал не получает, прав
-                на его распространение не имеет, источники не проверяет и за содержимое не отвечает.
-              </div>
-
-              <!-- Правовые документы: на приставке браузера нет — адрес показывается текстом. -->
               <h4 class="am-modal__h">Правовые документы</h4>
               <ul>
-                <li v-for="doc in DOCS" :key="doc.url">
+                <li v-for="doc in DOCUMENTS" :key="doc.url">
                   <button
                     v-if="outside"
                     class="am-modal__link"
                     type="button"
                     @click="onDoc(doc.url)"
                   >
-                    {{ doc.name }}
+                    {{ doc.title }}
                   </button>
-                  <template v-else>{{ doc.name }} — {{ doc.url }}</template>
+                  <template v-else>{{ doc.title }} — {{ doc.url }}</template>
                 </li>
               </ul>
             </div>
@@ -356,13 +343,8 @@ onBeforeUnmount(() => {
   border: 0;
 }
 
-/* Короткое предупреждение — рамкой, теми же средствами, что и в справке: в отличие от оговорок его
-   читают не подряд, а замечают глазом. */
-.am-modal__warn {
-  padding: 11px 13px;
-  background: color-mix(in srgb, var(--am-warn) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--am-warn) 42%, transparent);
-  border-radius: var(--am-r-m);
+.am-modal__rights {
+  margin: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {

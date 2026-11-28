@@ -4,6 +4,7 @@
 import { onMounted, ref } from 'vue'
 
 import { Bridge } from '@/bridge'
+import { amCopy } from '@/utils/dom'
 import {
   checkChosenPlace,
   connectPlace,
@@ -81,8 +82,6 @@ const askingCloud = ref(false)
  *  размер и время чужой копии — то, по чему человек решает, замещать её или забрать. */
 const strangerAsk = ref<CloudStranger | null>(null)
 
-/** Где человек берёт пропуск к Яндекс Диску. Своего приложения у сборки нет. */
-const YANDEX_OAUTH_URL = 'https://oauth.yandex.com/client/new/'
 const panelOpen = ref(false)
 
 function togglePanel(): void {
@@ -120,9 +119,7 @@ function tokenNeeded(): boolean {
 /// Подпись под названием площадки: одна строка на все состояния,
 /// а не три абзаца в разных местах панели, как раньше.
 function placeNote(): string {
-  if (cloudPlace.value !== 'yandex') return 'Копия списка одним файлом в папке приложения'
-  if (!cloudSaved.value) return 'Пропуск не сохранён'
-  if (cloudThere.value === '') return 'На связи'
+  if (!cloudOn() || cloudThere.value === '') return ''
   return `В облаке: ${cloudThere.value}`
 }
 
@@ -164,7 +161,7 @@ async function readCloud(): Promise<void> {
 
   const got = await copyInfo()
   if (!got.ok) {
-    cloudThere.value = 'спросить не удалось'
+    cloudThere.value = 'не удалось проверить копию'
     return
   }
 
@@ -218,7 +215,7 @@ function onCloudToken(): void {
     cloudSaved.value = true
     tokenDraft.value = ''
     tokenOpen.value = false
-    cloudNote.value = 'Пропуск принят: Яндекс Диск на связи.'
+    cloudNote.value = 'Яндекс Диск подключён'
     await readCloud()
   })
 }
@@ -228,16 +225,6 @@ function onCloudToken(): void {
 function onTokenCancel(): void {
   tokenDraft.value = ''
   tokenOpen.value = false
-}
-
-/** Пропуск выдаёт сам Яндекс: адрес открывает оболочка, окно ходит только к API. */
-function onCloudHelp(): void {
-  void Bridge.shell.openExternal(YANDEX_OAUTH_URL)
-}
-
-/** Политика обработки: копия уходит на серверы Яндекса по кнопке — условия должны быть под рукой. */
-function onPrivacy(): void {
-  void Bridge.shell.openExternal('https://github.com/foulnike/Animori/blob/main/docs/PRIVACY.md')
 }
 
 /** Проверка связи по кнопке: пропуск можно отозвать со стороны, и узнать об этом лучше сейчас. */
@@ -251,7 +238,7 @@ function onCloudCheck(): void {
       return
     }
 
-    cloudNote.value = 'Связь есть: пропуск годен и папка копии доступна.'
+    cloudNote.value = 'Яндекс Диск доступен'
     await readCloud()
   })
 }
@@ -290,7 +277,7 @@ function onCloudReplace(): void {
   void cloudGuard(() => writeCopy(true))
 }
 
-/// «Сначала забрать»: вопрос сменяется вопросом о способе, ничего не записывается —
+/// «Восстановить копию»: вопрос сменяется вопросом о способе, ничего не записывается —
 /// человек почти всегда хочет сперва увидеть чужие записи у себя.
 function onStrangerPull(): void {
   strangerAsk.value = null
@@ -374,7 +361,7 @@ function onShare(): void {
     }
 
     shareLink.value = done.value
-    cloudNote.value = 'Ссылка готова. На другом устройстве достаточно набрать её хвост.'
+    cloudNote.value = 'Ссылка создана'
   })
 }
 
@@ -390,7 +377,7 @@ function onUnshare(): void {
     }
 
     shareLink.value = ''
-    cloudNote.value = 'Доступ по ссылке закрыт. Файл копии остался на месте.'
+    cloudNote.value = 'Доступ по ссылке закрыт'
   })
 }
 
@@ -466,7 +453,7 @@ function onCloudForget(): void {
     tokenOpen.value = false
     strangerAsk.value = null
 
-    cloudNote.value = 'Облако отключено. Файл копии на Диске остался нетронутым.'
+    cloudNote.value = 'Яндекс Диск отключён'
   })
 }
 
@@ -501,14 +488,14 @@ onMounted(() => {
 
       <span class="am-place__text">
         <span class="am-place__name">Яндекс Диск</span>
-        <span class="am-place__note">{{ placeNote() }}</span>
+        <span v-if="placeNote()" class="am-place__note">{{ placeNote() }}</span>
       </span>
 
       <button
-        v-tip="'Подробно: как это устроено и где взять пропуск'"
+        v-tip="'Справка по облачной копии'"
         class="am-icon"
         type="button"
-        aria-label="Как это работает"
+        aria-label="Справка по облачной копии"
         @click="helpOpen = true"
       >
         i
@@ -517,7 +504,7 @@ onMounted(() => {
       <span class="am-place__acts">
         <template v-if="cloudOn()">
           <button
-            v-tip="'Проверить связь: годен ли пропуск и на месте ли папка копии'"
+            v-tip="'Проверить связь'"
             class="am-icon"
             type="button"
             aria-label="Проверить связь"
@@ -527,17 +514,17 @@ onMounted(() => {
             ↻
           </button>
           <button
-            v-tip="'Сменить пропуск'"
+            v-tip="'Сменить токен'"
             class="am-icon"
             type="button"
-            aria-label="Сменить пропуск"
+            aria-label="Сменить токен"
             :disabled="cloudBusy || tokenOpen"
             @click="tokenOpen = true"
           >
             🔑
           </button>
           <button
-            v-tip="'Отключить облако: забыть пропуск. Файл копии на Диске останется'"
+            v-tip="'Отключить облако'"
             class="am-icon"
             type="button"
             aria-label="Отключить облако"
@@ -550,7 +537,7 @@ onMounted(() => {
 
         <button
           v-else
-          v-tip="'Ввести пропуск Яндекс Диска'"
+          v-tip="'Ввести токен Яндекс Диска'"
           class="am-btn"
           type="button"
           :disabled="cloudBusy || tokenNeeded()"
@@ -561,33 +548,19 @@ onMounted(() => {
       </span>
     </div>
 
-    <!-- Прежний выбор Google: место считается невыбранным, и об этом сказано
-         прямо. Подставить другое облако молча программа не вправе. -->
     <p v-if="cloudPlace === 'google'" class="am-meta">
-      Google Диск убран из программы: вход с устройства не давал скрытой папки, а без проверки
-      Google пропуск умирал за неделю. Подключите Яндекс Диск — файл копии в Google Диске остался на
-      месте и никуда не денется.
+      Подключите Яндекс Диск для новых копий. Предыдущая копия осталась на Google Диске.
     </p>
 
-    <!-- Пропуск вставляется руками: готовых Яндекс не выдаёт. Порядок по шагам
-         живёт в справке под «i», здесь только адрес и поле. -->
     <template v-if="tokenNeeded()">
-      <p class="am-meta">
-        Создайте приложение с правом «Приложения на Диске» на
-        <button class="am-link" type="button" @click="onCloudHelp">oauth.yandex.com</button>,
-        вставьте токен и сохраните; условия — в
-        <button class="am-link" type="button" @click="onPrivacy">
-          Политике обработки персональных данных</button
-        >.
-      </p>
-
       <div class="am-row">
         <label class="am-field">
           <input
             v-model="tokenDraft"
             class="am-input"
             type="password"
-            placeholder="Пропуск Яндекс Диска"
+            aria-label="Токен Яндекс Диска"
+            placeholder="Токен Яндекс Диска"
           />
         </label>
         <button
@@ -615,7 +588,6 @@ onMounted(() => {
            общепринятый лоток со стрелкой; направление продублировано словами. -->
       <div class="am-duo">
         <button
-          v-tip="'Записать нынешний список в облако. Незнакомую копию не затрёт без спроса'"
           class="am-duo__btn"
           type="button"
           :disabled="!cloudOn() || cloudBusy"
@@ -635,12 +607,10 @@ onMounted(() => {
             <path d="M12 3v13" />
             <path d="m7 8 5-5 5 5" />
           </svg>
-          <span class="am-duo__name">{{ cloudBusy ? 'Работаем…' : 'Сохранить' }}</span>
-          <span class="am-duo__note">список → облако</span>
+          <span class="am-duo__name">Сохранить копию</span>
         </button>
 
         <button
-          v-tip="'Забрать копию из облака: слиянием или с заменой'"
           class="am-duo__btn"
           type="button"
           :disabled="!cloudOn() || cloudBusy"
@@ -660,8 +630,7 @@ onMounted(() => {
             <path d="M12 4v13" />
             <path d="m7 12 5 5 5-5" />
           </svg>
-          <span class="am-duo__name">Забрать</span>
-          <span class="am-duo__note">облако → список</span>
+          <span class="am-duo__name">Восстановить копию</span>
         </button>
       </div>
 
@@ -684,17 +653,17 @@ onMounted(() => {
         </li>
       </ul>
 
-      <!-- Незнакомая копия: узел вопроса как у переноса, но первым стоит «Сначала забрать» —
+      <!-- Незнакомая копия: узел вопроса как у переноса, но первым стоит «Восстановить копию» —
            предлагать необратимую замену главной кнопкой значило бы толкать под руку. -->
       <div v-if="strangerAsk" class="am-ask">
         <p class="am-ask__text">
-          В облаке копия, которую писали не мы: {{ strangerText(strangerAsk) }}. Здесь записей:
+          Найдена копия с другого устройства: {{ strangerText(strangerAsk) }}. Здесь записей:
           {{ list }}.
         </p>
 
         <div class="am-row">
           <button class="am-btn" type="button" :disabled="cloudBusy" @click="onStrangerPull">
-            Сначала забрать
+            Восстановить копию
           </button>
           <button
             v-tip="'Записать свой список поверх. Чужую копию не вернуть'"
@@ -714,11 +683,11 @@ onMounted(() => {
       <!-- Копия ложится поверх живого списка: спрашиваем всегда, теми же
            словами и тем же узлом, что и перенос с AniList. -->
       <div v-if="askingCloud" class="am-ask">
-        <p class="am-ask__text">Записей: {{ list }}.</p>
+        <p class="am-ask__text">При замене текущие записи будут удалены.</p>
 
         <div class="am-row">
           <button class="am-btn" type="button" :disabled="cloudBusy" @click="onCloudPull('merge')">
-            Добавить недостающее
+            Добавить недостающие записи
           </button>
           <button
             class="am-btn am-btn--ghost"
@@ -726,7 +695,7 @@ onMounted(() => {
             :disabled="cloudBusy"
             @click="onCloudPull('replace')"
           >
-            Заменить целиком
+            Заменить текущий список
           </button>
           <button class="am-btn am-btn--ghost" type="button" @click="onCloudCancel">Отмена</button>
         </div>
@@ -736,11 +705,17 @@ onMounted(() => {
            а единственное место, где список открывается кому-то ещё. -->
       <template v-if="cloudOn()">
         <p class="am-sub">Ссылка для телевизора</p>
+        <p class="am-meta">
+          {{
+            shareLink
+              ? 'Копия доступна всем, у кого есть ссылка.'
+              : 'После публикации копия будет доступна всем, у кого есть ссылка.'
+          }}
+        </p>
 
         <div class="am-row">
           <button
             v-if="!shareLink"
-            v-tip="'Опубликовать файл копии и получить короткую ссылку на него'"
             class="am-btn am-btn--ghost"
             type="button"
             :disabled="cloudBusy"
@@ -753,6 +728,27 @@ onMounted(() => {
             <label class="am-field">
               <input class="am-input" type="text" readonly :value="shareLink" />
             </label>
+            <button
+              v-tip="'Скопировать ссылку'"
+              class="am-icon am-cloud-copy"
+              type="button"
+              aria-label="Скопировать ссылку"
+              @click="amCopy(shareLink, $event.currentTarget as HTMLElement)"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="18"
+                height="18"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="8" y="8" width="12" height="12" rx="2" />
+                <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+              </svg>
+            </button>
             <button
               v-tip="'Открыть ссылку в браузере'"
               class="am-icon"
@@ -775,19 +771,14 @@ onMounted(() => {
         </div>
 
         <p v-if="shareLink" class="am-meta">
-          На телевизоре набирают только хвост — <code>{{ linkTail(shareLink) }}</code> — в поле
-          «Забрать по ссылке» ниже. По ссылке копию прочитает любой, кто её знает; когда перенос
-          закончен, доступ можно закрыть.
-        </p>
-        <p v-else class="am-meta">
-          Пропуск пультом не набрать. Ссылка даёт короткий хвост — его и вводят на телевизоре.
+          Код копии: <code>{{ linkTail(shareLink) }}</code>
         </p>
       </template>
     </template>
 
     <!-- Чтение по ссылке стоит последним и живёт отдельно от места:
          ни пропуска, ни выбранного облака оно не требует — только хвост ссылки. -->
-    <p class="am-sub">Забрать по ссылке · пропуск не нужен</p>
+    <p class="am-sub">Восстановить по ссылке</p>
 
     <div class="am-row">
       <label class="am-field">
@@ -795,40 +786,39 @@ onMounted(() => {
           v-model="linkDraft"
           class="am-input"
           type="text"
-          placeholder="Ссылка на копию или её хвост"
+          aria-label="Ссылка или код копии"
+          placeholder="Ссылка или код копии"
         />
       </label>
       <button
-        v-tip="'Спросить, что лежит по ссылке. Список пока не меняется'"
         class="am-btn"
         type="button"
         :disabled="cloudBusy || !linkDraft.trim()"
         @click="onLinkFind"
       >
-        {{ cloudBusy ? 'Смотрим…' : 'Найти копию' }}
+        {{ cloudBusy ? 'Поиск…' : 'Найти копию' }}
       </button>
     </div>
 
     <div v-if="linkFound" class="am-ask">
       <p class="am-ask__text">
-        По ссылке лежит копия: {{ sizeText(linkFound.bytes)
+        Найдена копия: {{ sizeText(linkFound.bytes)
         }}<template v-if="linkFound.modified">
           · {{ whenText(Date.parse(linkFound.modified)) }}</template
-        >. Здесь записей: {{ list }}.
+        >. При замене текущие записи ({{ list }}) будут удалены.
       </p>
 
       <div class="am-row">
         <button class="am-btn" type="button" :disabled="cloudBusy" @click="onLinkPull('merge')">
-          Добавить недостающее
+          Добавить недостающие записи
         </button>
         <button
-          v-tip="'Заменить свой список копией по ссылке целиком'"
           class="am-btn am-btn--ghost"
           type="button"
           :disabled="cloudBusy"
           @click="onLinkPull('replace')"
         >
-          Заменить целиком
+          Заменить текущий список
         </button>
         <button class="am-btn am-btn--ghost" type="button" @click="onLinkCancel">Отмена</button>
       </div>

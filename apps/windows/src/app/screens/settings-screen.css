@@ -1,8 +1,6 @@
 /* Оформление настроек, вынесено из SettingsScreen.vue: собранный в одном файле экран не правится точечно; подключено через src у style scoped.
    Тот же файл подключают CloudBox.vue и ProxyBox.vue: обе панели одеты теми же классами. */
 
-/* Панели собраны в стопки: в сетке напрямую высокая панель держала строку, и под соседями зияла пустота.
-   Стопки стоят рядом: слева Данные со справкой, справа копия с прокси; на полном экране левая раскладывается. */
 .am-set {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -20,64 +18,14 @@
   min-width: 0;
 }
 
-/* Фуллскрин: три колонки в ряд (справа облачная копия, её доля шире); при двух панели тянулись простынёй.
-   Порог 1400px, а не 1200: на 1280 три колонки сжимали панель облака до нечитаемой ширины пути файла. */
 @media (min-width: 1400px) {
   .am-set {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.1fr);
     max-width: 1680px;
   }
 
-  /* Левая стопка растворяется: справка с прокси — первый столбец, Данные — второй, копия — третий. */
-  .am-set__col--left {
+  .am-set__col--split {
     display: contents;
-  }
-
-  .am-set__col--look {
-    order: 1;
-  }
-
-  .am-set__col--main {
-    order: 2;
-  }
-
-  .am-set__col--right {
-    order: 3;
-  }
-}
-
-/* Узкое окно: одна колонка, порядок прежний — список, копия, оформление, прокси.
-   Обе стопки растворяются, иначе прокси оказался бы выше оформления. */
-@media (max-width: 980px) {
-  .am-set {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .am-set__col--left,
-  .am-set__col--right {
-    display: contents;
-  }
-
-  .am-set__col--main {
-    order: 1;
-  }
-
-  .am-set__col--right > :nth-child(1) {
-    order: 2;
-  }
-
-  .am-set__col--look {
-    order: 3;
-  }
-
-  .am-set__col--right > :nth-child(2) {
-    order: 4;
-  }
-
-  /* Плитка отладки встаёт последней: на узком окне стопки растворяются, и без своего номера она
-     оказалась бы первой — отладка наравне с импортом списка. */
-  .am-set__col--right > :nth-child(3) {
-    order: 5;
   }
 }
 
@@ -176,6 +124,35 @@
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+}
+
+.am-shiki-import {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.am-shiki-import__spin {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: am-shiki-import-spin 0.8s linear infinite;
+}
+
+@keyframes am-shiki-import-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .am-shiki-import__spin {
+    animation: none;
+  }
 }
 
 .am-field {
@@ -373,11 +350,6 @@
 .am-duo__name {
   font-size: 13px;
   font-weight: 600;
-}
-
-.am-duo__note {
-  font-size: 11px;
-  color: var(--am-dim);
 }
 
 /* Подзаголовок внутри панели с волосяной линией до края. */
@@ -1190,18 +1162,13 @@ code {
   .am-adult-control {
     grid-template-columns: 1fr;
   }
+
   .am-adult-mode {
     min-height: 52px;
   }
 }
 
 /* Final adult control polish: explicit contrast and diagonal disabled chip. */
-.am-adult-heading {
-  margin: 16px 0 0;
-  font-size: 14px;
-  font-weight: 750;
-  color: var(--am-text);
-}
 .am-adult-mode__chip {
   position: relative;
   overflow: hidden;
@@ -1240,12 +1207,6 @@ code {
   background: #e94b58;
 }
 
-.am-adult-heading {
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  font-size: inherit !important;
-}
-.am-adult-heading .am-tile-mark,
-.am-adult-heading .am-setmark {
-  color: var(--am-faint);
+.am-cloud-copy.am-copied {
+  color: var(--am-accent);
 }

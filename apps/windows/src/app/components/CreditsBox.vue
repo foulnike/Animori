@@ -1,10 +1,9 @@
 <script setup lang="ts">
-// Источники и права: сервисы, на каких условиях программа их показывает. Отдельно от фактов
-// «О программе», в одной модалке; список свёрнут, оговорки под ним.
-
 import { ref } from 'vue'
 
 import { Bridge } from '@/bridge'
+
+import { DOCUMENTS } from '../../../../../packages/onboarding/src/legal'
 
 /** Развёрнут ли список. По умолчанию нет: панель открывают за версией и датсетом, а не за этим. */
 const open = ref(false)
@@ -14,7 +13,7 @@ const SOURCES = [
   { name: 'AniList', what: 'каталог, списки, расписание', url: 'https://anilist.co' },
   {
     name: 'Шикимори',
-    what: 'русские названия, описания, персонажи',
+    what: 'русские названия, описания, персонажи и авторы',
     url: 'https://shikimori.one',
   },
   { name: 'AnimeThemes', what: 'опенинги и эндинги', url: 'https://animethemes.moe' },
@@ -24,14 +23,6 @@ const SOURCES = [
     what: 'датасет названий, CC0-1.0',
     url: 'https://github.com/foulnike/animori-data',
   },
-] as const
-
-/** Адреса правовых документов. Один источник правды — файлы в репозитории. */
-const PRIVACY_URL = 'https://github.com/foulnike/Animori/blob/main/docs/PRIVACY.md'
-const TERMS_URL = 'https://github.com/foulnike/Animori/blob/main/docs/TERMS.md'
-const DOCS = [
-  { name: 'Политика обработки персональных данных', url: PRIVACY_URL },
-  { name: 'Условия использования', url: TERMS_URL },
 ] as const
 
 /** Открыть адрес источника. У Kodik и Anilibria адреса нет: это названия сервисов, а не адреса,
@@ -87,42 +78,19 @@ function onSource(url: string): void {
         </li>
       </ul>
 
-      <!-- Оговорки. Язык сухой и юридический не случайно: этот текст читают вслух при разборе,
-           и мягкие формулировки там не помогают. -->
-      <ul class="am-credits__terms">
-        <li>
-          Наименования, описания и иные тексты принадлежат своим авторам и воспроизводятся со
-          ссылкой на источник. Сведения об авторе описания публикуются на странице источника.
-        </li>
-        <li>
-          Видеоматериал предоставляется сторонними сервисами, не связанными с AniMori и не
-          являющимися правообладателями: лицензий на него программа не получает, не размещает, не
-          хранит и не копирует его и прав на распространение не имеет.
-        </li>
-        <li>
-          Источники программой не проверяются: законность, содержимое и доступность не
-          гарантируются. Плеер лишь открывает адрес потока выбранного человека — за выбор источника,
-          за просмотр и за его законность в своей юрисдикции отвечает пользователь.
-        </li>
-        <li>
-          Материалы возрастного ограничения по умолчанию скрыты; их отображение включается
-          настройкой «Взрослое содержимое».
-        </li>
-        <li>
-          AniMori не является продуктом AniList, не связан с ним и не одобрен им. Пользовательские
-          списки хранятся на устройстве и в AniList не передаются.
-        </li>
-        <li>
-          Код распространяется по лицензии MIT, перечень зависимостей и их лицензий приведён в
-          THIRD-PARTY.md. Данные датасета animori-data публикуются по CC0-1.0.
-        </li>
-      </ul>
+      <div class="am-credits__rights">
+        <h4>Права и лицензии</h4>
+        <p>
+          Сведения об авторах описаний указаны на страницах источников. Лицензии зависимостей
+          перечислены в THIRD-PARTY.md.
+        </p>
+      </div>
 
       <!-- Правовые документы: полные тексты живут в репозитории, здесь — только вход к ним. -->
       <ul class="am-credits__list am-credits__docs">
-        <li v-for="doc in DOCS" :key="doc.url" class="am-credits__row">
+        <li v-for="doc in DOCUMENTS" :key="doc.url" class="am-credits__row">
           <button class="am-chip am-credits__chip" type="button" @click="onSource(doc.url)">
-            {{ doc.name }}
+            {{ doc.title }}
           </button>
         </li>
       </ul>
@@ -240,24 +208,23 @@ function onSource(url: string): void {
   color: var(--am-dim);
 }
 
-/* Оговорки — маркированным списком, а не абзацами: их читают по одной, и список даёт глазу
-   пять зацепок вместо сплошной стены. */
-.am-credits__terms {
-  display: grid;
-  gap: 5px;
-  margin: 14px 0 0;
-  padding-left: 16px;
-  font-size: 11.5px;
+.am-credits__rights {
+  margin-top: 14px;
+  font-size: 12px;
   line-height: 1.6;
-  color: var(--am-faint);
+  color: var(--am-dim);
 }
 
-.am-credits__terms li::marker {
-  color: var(--am-line);
+.am-credits__rights h4 {
+  margin: 0 0 4px;
+  font-size: inherit;
+  color: var(--am-text);
 }
 
-/* Правовые документы — отдельным списком под оговорками: вход к полным текстам,
-   а не ещё одна оговорка. */
+.am-credits__rights p {
+  margin: 0;
+}
+
 .am-credits__docs {
   margin-top: 10px;
 }

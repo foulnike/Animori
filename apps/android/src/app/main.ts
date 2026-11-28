@@ -6,6 +6,7 @@ import App from './App.vue'
 import { startAppearance } from './appearance'
 import { seen } from './see-tile'
 import { startInsets } from './insets'
+import { startTapFeedback } from './tap-feedback'
 import { tip } from './tip'
 import { isWeakPlatform, markPlatform } from './platform'
 import { startUpdateCheck } from './update'
@@ -30,6 +31,7 @@ markPlatform()
 
 // Системные поля моста — в CSS-переменные: навбар в env() не приходит.
 startInsets()
+startTapFeedback()
 
 /// Снимает заставку из index.html: она стоит отдельным узлом рядом с корнем, а Vue не стирает содержимое корня,
 /// а дописывает своё — знак висел бы под окном. Снимается сразу после монтирования, до него — нельзя.

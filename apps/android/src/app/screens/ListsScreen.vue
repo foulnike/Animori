@@ -115,7 +115,6 @@ const shown = computed(() =>
 const hasMore = computed(() => picked.value > rows.value.length)
 
 /** Сколько ещё скрыто: число на кнопке честнее голого «ещё». */
-const restCount = computed(() => Math.max(0, picked.value - rows.value.length))
 
 /** Запись в правке из памяти коллекции. undefined — окно не показывается. */
 const editRow = computed<SnapshotEntry | undefined>(() => {
@@ -407,13 +406,15 @@ onBeforeUnmount(() => {
           v-model="word"
           class="am-find__field"
           type="search"
-          placeholder="Поиск по своему списку"
+          aria-label="Поиск в списке"
+          placeholder="Поиск в списке"
           @input="onType"
         />
         <span v-if="searching" class="am-find__num">{{ picked }}</span>
         <button
           v-if="searching"
-          v-tip="'Сбросить поиск'"
+          v-tip="'Очистить поиск'"
+          aria-label="Очистить поиск"
           class="am-find__wipe"
           type="button"
           @click="onClear"
@@ -439,6 +440,7 @@ onBeforeUnmount(() => {
           class="am-seg__btn am-look__btn"
           :class="{ 'am-seg__btn--on': tab.key === view }"
           type="button"
+          v-tip="tab.title"
           :aria-label="tab.title"
           :aria-pressed="tab.key === view"
           @click="pickView(tab.key)"
@@ -485,8 +487,14 @@ onBeforeUnmount(() => {
 
     <div v-else-if="total === 0" class="am-empty">
       <span class="am-empty__mark"><EmptyMark name="tray" /></span>
-      <span>Все записи скрыты меткой 18+.</span>
-      <span>Показ взрослого включается в настройках, в разделе оформления.</span>
+      <span>Записи скрыты фильтром 18+</span>
+      <button
+        class="am-btn am-btn--soft"
+        type="button"
+        @click="navigate('settings', { id: 'adult' })"
+      >
+        Настройки 18+
+      </button>
     </div>
 
     <div v-else-if="searchBusy && rows.length === 0" class="am-empty">
@@ -496,8 +504,14 @@ onBeforeUnmount(() => {
     <div v-else-if="searching && rows.length === 0" class="am-empty">
       <span class="am-empty__mark"><EmptyMark name="magnifier" /></span>
       <template v-if="hidden > 0">
-        <span>Нашлось только скрытое меткой 18+.</span>
-        <span>Показ взрослого включается в настройках, в разделе оформления.</span>
+        <span>Результаты скрыты фильтром 18+</span>
+        <button
+          class="am-btn am-btn--soft"
+          type="button"
+          @click="navigate('settings', { id: 'adult' })"
+        >
+          Настройки 18+
+        </button>
       </template>
       <template v-else>
         <span>В своём списке ничего не нашлось.</span>
@@ -510,12 +524,17 @@ onBeforeUnmount(() => {
     <div v-else-if="rows.length === 0" class="am-empty">
       <span class="am-empty__mark"><EmptyMark name="tray" /></span>
       <template v-if="hidden > 0">
-        <span>Здесь всё скрыто меткой 18+.</span>
-        <span>Показ взрослого включается в настройках, в разделе оформления.</span>
+        <span>Записи скрыты фильтром 18+</span>
+        <button
+          class="am-btn am-btn--soft"
+          type="button"
+          @click="navigate('settings', { id: 'adult' })"
+        >
+          Настройки 18+
+        </button>
       </template>
       <template v-else>
         <span>В этой закладке записей нет.</span>
-        <span>Загляните в соседние закладки — или добавьте аниме из поиска.</span>
       </template>
     </div>
 
@@ -547,7 +566,7 @@ onBeforeUnmount(() => {
     <!-- Метка конца списка всегда на месте: смотритель берёт её один раз при сборке. -->
     <div ref="tailMark" class="am-tail">
       <button v-if="hasMore" class="am-btn am-btn--soft" type="button" @click="showMore">
-        Показать ещё · осталось {{ restCount }}
+        Показать ещё
       </button>
     </div>
 
@@ -660,9 +679,9 @@ onBeforeUnmount(() => {
   display: grid;
   flex: 0 0 auto;
   place-items: center;
-  width: 22px;
-  height: 22px;
-  font-size: 15px;
+  width: 48px;
+  height: 48px;
+  font-size: 17px;
   line-height: 1;
   color: var(--am-dim);
   cursor: pointer;
@@ -691,7 +710,8 @@ onBeforeUnmount(() => {
 .am-look__btn {
   display: grid;
   place-items: center;
-  width: 36px;
+  min-width: 48px;
+  min-height: 48px;
   padding: 0;
   font-size: 14px;
   line-height: 1;

@@ -11,6 +11,7 @@ const props = defineProps<{
   open: boolean
   /** Имя окна для читалок: на экране его несёт заголовок панели. */
   title: string
+  initialFocus?: string
 }>()
 
 const emit = defineEmits<{ close: [] }>()
@@ -107,14 +108,17 @@ watch(
 
         // Порядок входа: первое действие панели → текстовое поле → крестик шапки → тело. Крестик важнее тела:
         // у тела подсветки нет. Поле ввода ждёт вторым — с фокуса на нём WebView поднимает клавиатуру.
-        const control = pick(box, false) ?? pick(box, true) ?? close.value
+        const initial = props.initialFocus
+          ? box.querySelector<HTMLElement>(props.initialFocus)
+          : null
+        const control = initial ?? pick(box, false) ?? pick(box, true) ?? close.value
         if (control !== null) {
           if (isTextField(control)) {
             // Блокировка та же, что у обхода пульта: без неё WebView открывает клавиатуру сразу.
             control.setAttribute('data-am-held', '')
             control.readOnly = true
           }
-          control.focus({ preventScroll: true })
+          control.focus({ preventScroll: initial === null })
           if (document.activeElement === control) return
         }
 

@@ -21,21 +21,14 @@ import {
   saveProxyPassword,
 } from '@/core/proxy-settings'
 
-import { restoreFocus } from '../focus-return'
 import { isWeakPlatform } from '../platform'
 
-import PickBox from './PickBox.vue'
+import SettingsSheet from './SettingsSheet.vue'
 
-/** Виды прокси: список один на панель, порядок строк задан здесь. Свой список, а не
- *  `<select>`: тот рисует оболочка, на тёмной теме выпадал белым. */
 const KINDS: ReadonlyArray<{ key: ProxyKind; title: string }> = [
   { key: 'http', title: 'HTTP' },
   { key: 'socks5', title: 'SOCKS5' },
 ]
-
-/** Слабая ли площадка — то есть телевизор. По ней строка-тумблер берёт фокус сама, а галочка внутри
- *  уходит из обхода: её мишень 54×30, а крестик окна стоит в правом углу шапки и не перекрывается. */
-const lite = isWeakPlatform()
 
 /** Значения на случай отсутствия ключа; до первого чтения поля не пустуют. */
 const enabled = ref(DEFAULT_PROXY.enabled)
@@ -61,6 +54,15 @@ const error = ref('')
 const checking = ref(false)
 const checkText = ref('')
 const checkOk = ref(false)
+const advanced = ref(false)
+const advancedPage = ref(0)
+const checkResultOpen = ref(false)
+const checkButton = ref<HTMLButtonElement | null>(null)
+
+function showAdvanced(): void {
+  advancedPage.value = 0
+  advanced.value = true
+}
 
 function describe(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
@@ -94,14 +96,13 @@ const socksWithAuth = computed(() => kind.value === 'socks5' && login.value.trim
 /** Строка состояния. */
 const statusText = computed(() => {
   const s = status.value
-  if (s === null) return 'читаем…'
+  if (s === null) return 'Нет данных'
 
-  if (s.outcome === 'off') return 'при запуске прокси был выключен — трафик идёт напрямую'
+  if (s.outcome === 'off') return 'Прокси выключен, трафик идёт напрямую'
   if (s.outcome === 'invalid') {
-    return 'при запуске прокси был включён, но адрес негоден — трафик идёт напрямую'
+    return 'Неверный адрес прокси, трафик идёт напрямую'
   }
-  if (s.outcome === 'unreachable')
-    return `при запуске ${s.server} не ответил — трафик идёт напрямую`
+  if (s.outcome === 'unreachable') return `${s.server} не ответил, трафик идёт напрямую`
   if (s.outcome === 'windowUnsupported') {
     // Не «не ответил»: адрес как раз ответил, и врать про него нельзя. Беда в платформе, и сказать надо ещё и о том, что тумблер не впустую: запросы программы через прокси идут, а страница — нет.
     return (
@@ -116,7 +117,7 @@ const statusText = computed(() => {
   if (s.auth === 'pending') return `${s.server} применён, авторизация запрошена и ответа пока нет`
   if (s.auth === 'accepted') return `применён ${s.server}, авторизация пройдена`
 
-  return `при запуске применён ${s.server}${s.hasCredentials ? ' (с логином)' : ''}`
+  return `Применён ${s.server}${s.hasCredentials ? ' (с логином)' : ''}`
 })
 
 async function loadConfig(): Promise<void> {
@@ -141,8 +142,7 @@ async function loadStatus(): Promise<void> {
   try {
     status.value = await Bridge.proxyDiagnostics.status()
   } catch (e) {
-    // Без снимка строка состояния остаётся на «читаем…» навсегда, а кнопка перезапуска не появится ни при каких правках. Молчать об этом нельзя: человек решит, что настройка применилась.
-    error.value = 'Состояние прокси неизвестно — перезапуск не предлагается. ' + describe(e)
+    error.value = 'Не удалось прочитать состояние прокси. ' + describe(e)
   }
 }
 
@@ -155,15 +155,9 @@ function cleanHost(): void {
     .replace(/\/+$/, '')
 }
 
-function onEnabled(): void {
-  void saveProxyField('enabled', enabled.value)
-}
-
-/** Enter на строке-тумблере. Галочка внутри переключается с клавиатуры сама, а метка вокруг
- *  неё — нет: `<label>` щелчок мышью превращает в нажатие по полю, а Enter и пробел на себе  не разбирает. Переключаем значение сами и зовём тот же обработчик, что и по клику. */
-function onSwitchKey(): void {
+function toggleEnabled(): void {
   enabled.value = !enabled.value
-  onEnabled()
+  void saveProxyField('enabled', enabled.value)
 }
 
 /** Выбор вида: нормализация и запись поля. Значение приходит строкой и нормализуется —
@@ -226,24 +220,22 @@ function onRestart(): void {
 async function check(): Promise<void> {
   if (checking.value) return
 
-  // Держатель запоминается до проверки: кнопка гаснет disabled и отдаёт фокус, а после проверки обход оставил бы пульт на крестике окна — мимо строки с разбором.
-  const from = document.activeElement
   checking.value = true
   checkText.value = ''
-  void loadStatus()
+  const startupStatus = loadStatus()
 
   try {
     const probe = await Bridge.proxyDiagnostics.probe()
 
     if (probe.outcome === 'off') {
       checkOk.value = false
-      checkText.value = 'Прокси выключен — проверять нечего.'
+      checkText.value = 'Прокси выключен.'
       return
     }
 
     if (probe.outcome === 'invalid') {
       checkOk.value = false
-      checkText.value = 'Адрес или порт заданы неверно — проверять нечего.'
+      checkText.value = 'Проверьте адрес и порт прокси.'
       return
     }
 
@@ -266,8 +258,9 @@ async function check(): Promise<void> {
     checkOk.value = false
     checkText.value = 'Проверка не удалась: ' + describe(e)
   } finally {
+    await startupStatus
     checking.value = false
-    restoreFocus(from)
+    checkResultOpen.value = true
   }
 }
 
@@ -278,154 +271,179 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="am-panel am-box">
-    <h3 class="am-h3">Прокси</h3>
+  <div class="am-settings-content">
+    <div class="am-settings-actions">
+      <button
+        class="am-btn am-proxy-switch"
+        type="button"
+        role="switch"
+        :aria-checked="enabled"
+        @click="toggleEnabled"
+      >
+        <span class="am-proxy-switch__track" aria-hidden="true" />
+        Использовать прокси
+      </button>
+    </div>
 
-    <!-- Строка-тумблер на телевизоре берёт фокус сама, а галочка внутри из обхода убирается:
-         мишенью с трёх метров служит вся строка, и «вверх» от неё находит крестик окна. -->
-    <label
-      class="am-switch"
-      :tabindex="lite ? 0 : -1"
-      role="switch"
-      :aria-checked="enabled"
-      @keydown.enter.prevent="onSwitchKey"
-      @keydown.space.prevent="onSwitchKey"
-    >
-      <input
-        v-model="enabled"
-        :tabindex="lite ? -1 : 0"
-        type="checkbox"
-        class="am-switch__box"
-        @change="onEnabled"
-      />
-      <span class="am-switch__name">Использовать прокси</span>
-    </label>
-
-    <!-- Вид и порт узкие, адрес забирает остаток строки: набирают его чаще всего. Вид — своим списком,
-         а не `<select>` (список у того рисует оболочка, на тёмной теме выпадал белым); подпись невидимая, для читалок. -->
-    <div class="am-row">
-      <div class="am-field am-proxy__kind">
-        <PickBox
-          :model-value="kind"
-          :items="KINDS"
-          label="Вид прокси"
-          @update:model-value="pickKind"
-        />
-      </div>
-
-      <label class="am-field am-proxy__addr">
+    <div class="am-settings-fields am-proxy-address">
+      <label class="am-settings-field">
+        <span>Сервер</span>
         <input
           v-model="host"
-          v-tip="'Адрес без схемы: 127.0.0.1 или proxy.local'"
           class="am-input"
           type="text"
-          placeholder="Адрес: 127.0.0.1 или proxy.local"
+          placeholder="127.0.0.1 или proxy.local"
           @change="onHost"
         />
       </label>
-
-      <label class="am-field am-proxy__port">
+      <label class="am-settings-field">
+        <span>Порт</span>
         <input
           v-model="portDraft"
           class="am-input"
           type="text"
           inputmode="numeric"
-          placeholder="Порт"
           @change="onPort"
         />
       </label>
     </div>
 
-    <div class="am-row">
-      <label class="am-field">
-        <input
-          v-model="login"
-          class="am-input"
-          type="text"
-          placeholder="Логин, если прокси его требует"
-          @change="onLogin"
-        />
-      </label>
-
-      <label class="am-field">
-        <input
-          v-model="password"
-          class="am-input"
-          type="password"
-          autocomplete="new-password"
-          :placeholder="passwordSet ? 'Пароль задан — введите новый, чтобы сменить' : 'Пароль'"
-          @change="onPassword"
-        />
-      </label>
-    </div>
-
-    <!-- Обёртка по необходимости: у .am-field рост flex: 1 1 240px, и прямо в колонке панели это дало бы
-         высоту 240px, из которых поле занимает верхушку. Все прочие поля стоят в .am-row. -->
-    <div class="am-row">
-      <label class="am-field">
-        <input
-          v-model="bypass"
-          class="am-input"
-          type="text"
-          placeholder="Без прокси: localhost, 127.0.0.1"
-          @change="onBypass"
-        />
-      </label>
-    </div>
-
-    <p class="am-meta">
-      Адреса в обход прокси — через запятую или с новой строки. Пустое поле значит «через прокси
-      идёт всё».
-    </p>
-
     <p v-if="badConfig" class="am-warn">
-      Прокси включён, но адрес или порт заданы неверно — трафик пойдёт напрямую.
+      Проверьте адрес и порт. Сейчас используется прямое подключение.
     </p>
-
-    <p v-if="passwordSet" class="am-meta">
-      Пароль задан и хранится зашифрованным: показать его программа не может, новый заменит прежний.
-      <button class="am-btn am-btn--ghost" type="button" @click="onPasswordClear">
-        Стереть пароль
+    <p v-if="needsRestart" class="am-warn">Для применения настроек требуется перезапуск.</p>
+    <div class="am-settings-actions">
+      <button class="am-btn" type="button" :disabled="checking" @click="showAdvanced">
+        Дополнительно
       </button>
-    </p>
-
-    <p v-if="socksWithAuth" class="am-warn">
-      SOCKS5 с логином движок окна не поддерживает: страница пойдёт через такой прокси без
-      авторизации и, скорее всего, получит отказ. Запросы AniMori логин и пароль используют, поэтому
-      источники продолжат работать.
-    </p>
-
-    <!-- Строка состояния: подпись сверху, ответ снизу (длинный, переносится). -->
-    <div class="am-proxy__state">
-      <span class="am-proxy__name">Состояние</span>
-      <span class="am-proxy__text">{{ statusText }}</span>
-    </div>
-
-    <p v-if="needsRestart" class="am-warn">
-      Изменения сохранены и дойдут до окна только с новым запуском: ключи запуска движок читает один
-      раз, при создании окна. Перезагрузка страницы здесь не поможет — она обновит разметку, а
-      движок останется с прежним адресом.
-    </p>
-
-    <div class="am-row">
-      <button class="am-btn am-btn--ghost" type="button" :disabled="checking" @click="check">
-        {{ checking ? 'Проверяем…' : 'Проверить сейчас' }}
+      <button ref="checkButton" class="am-btn" type="button" :disabled="checking" @click="check">
+        {{ checking ? 'Проверяем…' : 'Проверить прокси' }}
       </button>
-
-      <button
-        v-if="needsRestart"
-        v-tip="'Перезапустить программу, чтобы новый адрес дошёл до окна'"
-        class="am-btn"
-        type="button"
-        @click="onRestart"
-      >
+      <button v-if="needsRestart" class="am-btn am-btn--soft" type="button" @click="onRestart">
         Перезапустить
       </button>
     </div>
 
-    <p v-if="checkText" :class="checkOk ? 'am-note' : 'am-error'">{{ checkText }}</p>
-    <p v-if="error" class="am-error">{{ error }}</p>
+    <SettingsSheet
+      :open="advanced"
+      v-model:page="advancedPage"
+      :page-count="2"
+      title="Дополнительные настройки прокси"
+      icon="net"
+      detail
+      @close="advanced = false"
+    >
+      <template v-if="advancedPage === 0">
+        <div class="am-settings-actions" role="group" aria-label="Вид прокси">
+          <button
+            v-for="item in KINDS"
+            :key="item.key"
+            class="am-btn"
+            :class="{ 'am-btn--soft': kind === item.key }"
+            :aria-pressed="kind === item.key"
+            type="button"
+            @click="pickKind(item.key)"
+          >
+            {{ item.title }}
+          </button>
+        </div>
+        <div class="am-settings-fields">
+          <label class="am-settings-field">
+            <span>Логин</span>
+            <input v-model="login" class="am-input" type="text" @change="onLogin" />
+          </label>
+          <label class="am-settings-field">
+            <span>{{ passwordSet ? 'Новый пароль' : 'Пароль' }}</span>
+            <input
+              v-model="password"
+              class="am-input"
+              type="password"
+              autocomplete="new-password"
+              @change="onPassword"
+            />
+          </label>
+        </div>
+        <div v-if="passwordSet" class="am-settings-actions">
+          <button class="am-btn" type="button" @click="onPasswordClear">Стереть пароль</button>
+        </div>
+        <p v-if="socksWithAuth" class="am-warn">
+          Страницы приложения поддерживают SOCKS5 без авторизации. В запросах к источникам работают
+          логин и пароль.
+        </p>
+      </template>
+      <template v-else>
+        <label class="am-settings-field">
+          <span>Адреса в обход прокси</span>
+          <input
+            v-model="bypass"
+            class="am-input"
+            type="text"
+            placeholder="localhost, 127.0.0.1"
+            @change="onBypass"
+          />
+        </label>
+        <p class="am-meta">Разделяйте адреса запятыми или переносами строк.</p>
+      </template>
+    </SettingsSheet>
+
+    <SettingsSheet
+      :open="checkResultOpen"
+      :return-focus="() => checkButton"
+      title="Проверка прокси"
+      icon="net"
+      detail
+      compact
+      @close="checkResultOpen = false"
+    >
+      <p v-if="checkText" :class="checkOk ? 'am-note' : 'am-error'" role="status">
+        {{ checkText }}
+      </p>
+      <dl class="am-settings-facts">
+        <div>
+          <dt>Состояние при запуске</dt>
+          <dd>{{ statusText }}</dd>
+        </div>
+      </dl>
+      <p v-if="error" class="am-error" role="alert">{{ error }}</p>
+    </SettingsSheet>
   </div>
 </template>
 
 <style scoped src="../screens/settings-screen.css"></style>
+
+<style scoped>
+.am-proxy-switch__track {
+  display: flex;
+  align-items: center;
+  width: 36px;
+  height: 20px;
+  padding: 2px;
+  background: var(--am-fill-3);
+  border: 1px solid var(--am-line);
+  border-radius: var(--am-r-cap);
+}
+
+.am-proxy-switch__track::before {
+  width: 14px;
+  height: 14px;
+  content: '';
+  background: var(--am-dim);
+  border-radius: 50%;
+}
+
+.am-proxy-switch[aria-checked='true'] .am-proxy-switch__track {
+  justify-content: flex-end;
+  background: var(--am-accent-soft);
+  border-color: var(--am-accent);
+}
+
+.am-proxy-switch[aria-checked='true'] .am-proxy-switch__track::before {
+  background: var(--am-accent);
+}
+
+@media (min-width: 481px) {
+  .am-proxy-address {
+    grid-template-columns: minmax(0, 1fr) minmax(100px, 0.35fr);
+  }
+}
+</style>

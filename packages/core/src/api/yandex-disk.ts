@@ -71,9 +71,9 @@ function problem(status: number, text: string, what: string): string {
   const words = said(text)
   const tail = words === '' ? '' : `: ${words}`
 
-  if (status === 401) return 'Яндекс Диск не принял пропуск: он просрочен или введён с ошибкой'
+  if (status === 401) return 'Яндекс Диск не принял токен. Проверьте токен или получите новый.'
   if (status === 403) {
-    return `Яндекс Диск отказал в доступе: пропуск выдан без права на папку приложения${tail}`
+    return `Токен Яндекс Диска не даёт доступа к папке приложения${tail}`
   }
   if (status === 404) return `На Яндекс Диске этого нет${tail}`
   if (status === 409) return `Яндекс Диск не может это сделать сейчас${tail}`
@@ -93,7 +93,7 @@ function publicProblem(status: number, text: string, what: string): string {
 
   if (status === 404) return 'По этой ссылке ничего нет: проверьте её или опубликуйте копию заново'
   if (status === 429) {
-    return 'Яндекс ограничил скачивание по этой ссылке: повторите позже или заберите копию пропуском'
+    return 'Яндекс ограничил скачивание по этой ссылке: повторите позже'
   }
   if (status >= 500) return `Яндекс Диск ответил ошибкой ${status}: это на их стороне`
 
@@ -185,8 +185,8 @@ const okStatus = (status: number): boolean => status >= 200 && status < 300
  * отсюда больше никуда не уходит. Отсутствие папки — тоже «годен»: её заведёт Диск сам.
  */
 export async function connect(token: string): Promise<DiskResult<true>> {
-  const what = 'Проверка пропуска'
-  if (token.trim() === '') return { ok: false, problem: 'Пропуск Яндекс Диска не введён' }
+  const what = 'Проверка токена'
+  if (token.trim() === '') return { ok: false, problem: 'Введите токен Яндекс Диска' }
 
   try {
     const step = await Bridge.cloud.connect(token)
@@ -214,7 +214,7 @@ export async function disconnect(): Promise<DiskResult<true>> {
 
 /** Проверка сохранённого пропуска: спрашивается папка приложения — самый дешёвый запрос. */
 export async function checkAccess(): Promise<DiskResult<true>> {
-  const what = 'Проверка пропуска'
+  const what = 'Проверка токена'
 
   try {
     const step = await Bridge.cloud.check()

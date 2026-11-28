@@ -1,0 +1,306 @@
+.am-scene {
+  --scene-surface: var(--am-panel);
+  --scene-well: var(--am-fill-1);
+  --scene-line: var(--am-line);
+  --scene-muted: var(--am-dim);
+  --scene-accent: var(--am-accent);
+  --scene-wash: rgb(var(--am-accent-rgb) / 0.14);
+  --scene-duration: 3.1s;
+  --scene-ease: cubic-bezier(0.44, 0, 0.24, 1);
+
+  width: min(100%, 540px, 82vh);
+  min-width: 0;
+  margin: 0;
+}
+
+.am-scene__art {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.am-scene__halo-core {
+  stop-color: var(--scene-accent);
+  stop-opacity: 0.22;
+}
+
+.am-scene__halo-edge {
+  stop-color: var(--scene-accent);
+  stop-opacity: 0;
+}
+
+.am-scene__sky-top {
+  stop-color: color-mix(in srgb, var(--scene-surface) 60%, var(--scene-accent));
+}
+
+.am-scene__sky-bottom {
+  stop-color: color-mix(in srgb, var(--scene-surface) 86%, var(--scene-accent));
+}
+
+.am-scene__grid-dot {
+  fill: var(--scene-accent);
+  opacity: 0.19;
+}
+
+.am-scene__frame-lines,
+.am-scene__edge,
+.am-scene__scene-detail,
+.am-scene__spark,
+.am-scene__icon,
+.am-scene__muted-line,
+.am-scene__track,
+.am-scene__track-active,
+.am-scene__route-guide,
+.am-scene__route-lit {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.am-scene__frame-lines,
+.am-scene__edge {
+  stroke: var(--scene-line);
+  stroke-width: 1.5;
+}
+
+.am-scene__panel,
+.am-scene__well,
+.am-scene__accent-panel,
+.am-scene__slot {
+  stroke: var(--scene-line);
+  stroke-width: 1.5;
+}
+
+.am-scene__panel {
+  fill: var(--scene-surface);
+}
+.am-scene__well {
+  fill: var(--scene-well);
+}
+
+.am-scene__accent-panel {
+  fill: color-mix(in srgb, var(--scene-surface) 79%, var(--scene-accent));
+  stroke: color-mix(in srgb, var(--scene-line) 55%, var(--scene-accent));
+}
+
+.am-scene__slot {
+  fill: var(--scene-well);
+  stroke-dasharray: 4 4;
+}
+
+.am-scene__player-button {
+  fill: color-mix(in srgb, var(--scene-surface) 82%, var(--scene-accent));
+  stroke: var(--scene-accent);
+  stroke-width: 1.5;
+}
+
+.am-scene__thumb,
+.am-scene__accent-wash {
+  fill: var(--scene-wash);
+}
+.am-scene__light {
+  fill: var(--scene-accent);
+}
+.am-scene__moon {
+  fill: var(--scene-accent);
+  opacity: 0.42;
+}
+.am-scene__hill-back {
+  fill: color-mix(in srgb, var(--scene-surface) 69%, var(--scene-accent));
+}
+.am-scene__hill-front {
+  fill: color-mix(in srgb, var(--scene-surface) 87%, var(--scene-accent));
+}
+
+.am-scene__spark,
+.am-scene__scene-detail {
+  stroke: var(--scene-accent);
+  stroke-width: 1.5;
+  opacity: 0.44;
+}
+
+.am-scene__icon {
+  stroke: var(--scene-accent);
+  stroke-width: 2.2;
+}
+
+.am-scene__icon-small {
+  stroke-width: 1.6;
+}
+.am-scene__cloud-icon {
+  stroke-width: 2.7;
+}
+
+.am-scene__muted-line {
+  stroke: var(--scene-muted);
+  stroke-width: 2;
+  opacity: 0.5;
+}
+
+.am-scene__track {
+  stroke: var(--scene-line);
+  stroke-width: 4;
+}
+
+.am-scene__track-active {
+  stroke: var(--scene-accent);
+  stroke-width: 4;
+}
+
+.am-scene__route-guide {
+  stroke: var(--scene-accent);
+  stroke-width: 2;
+  opacity: 0.25;
+}
+
+.am-scene__route-lit {
+  stroke: var(--scene-accent);
+  stroke-width: 2.5;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+}
+
+.am-scene__timeline {
+  transform-box: view-box;
+  transform-origin: 113px 228px;
+  animation: am-scene-timeline var(--scene-duration) var(--scene-ease) infinite alternate both;
+}
+
+.am-scene__playhead {
+  animation: am-scene-playhead var(--scene-duration) var(--scene-ease) infinite alternate both;
+}
+
+.am-scene__saved,
+.am-scene__completed,
+.am-scene__cloud-check {
+  animation: am-scene-confirm var(--scene-duration) ease-out infinite alternate both;
+}
+
+.am-scene__list-card {
+  animation: am-scene-list var(--scene-duration) var(--scene-ease) infinite alternate both;
+}
+
+.am-scene__import-packet {
+  opacity: 0;
+  animation: am-scene-import var(--scene-duration) var(--scene-ease) infinite alternate both;
+}
+
+.am-scene__import-rows {
+  animation: am-scene-rows var(--scene-duration) ease-out infinite alternate both;
+}
+
+.am-scene__save {
+  animation: am-scene-save var(--scene-duration) linear infinite alternate both;
+}
+
+.am-scene__restore {
+  animation: am-scene-restore var(--scene-duration) linear infinite alternate both;
+}
+
+.am-scene__restore--tv {
+  animation-name: am-scene-save;
+}
+
+@keyframes am-scene-timeline {
+  0%,
+  11% {
+    transform: scaleX(0.28);
+  }
+  70%,
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes am-scene-playhead {
+  0%,
+  11% {
+    transform: translateX(-150px);
+  }
+  70%,
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes am-scene-confirm {
+  0%,
+  64% {
+    opacity: 0;
+  }
+  76%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes am-scene-list {
+  0%,
+  16% {
+    transform: translateX(-218px);
+  }
+  68%,
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes am-scene-import {
+  0%,
+  12% {
+    opacity: 0;
+    transform: translateX(-93px);
+  }
+  23% {
+    opacity: 1;
+  }
+  65% {
+    opacity: 1;
+    transform: translateX(10px);
+  }
+  72%,
+  100% {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+}
+
+@keyframes am-scene-rows {
+  0%,
+  58% {
+    clip-path: inset(0 0 100%);
+  }
+  82%,
+  100% {
+    clip-path: inset(0);
+  }
+}
+
+@keyframes am-scene-save {
+  0%,
+  12% {
+    stroke-dashoffset: 1;
+  }
+  45%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes am-scene-restore {
+  0%,
+  47% {
+    stroke-dashoffset: 1;
+  }
+  77%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .am-scene .am-scene__art * {
+    animation: none;
+  }
+}

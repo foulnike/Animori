@@ -20,7 +20,7 @@ import SakuraMark from '../components/SakuraMark.vue'
 import { isWeakPlatform } from '../platform'
 import { syncInsets } from '../insets'
 import { setImmersive, setOrientation } from '../orient'
-import { currentRoute } from '../router'
+import { currentRoute, navigate } from '../router'
 import { SAKURA_PETAL, SAKURA_TURNS } from '../sakura'
 
 import { attachPlayback, type DeadKind, type Playback } from './player-hls'
@@ -1404,8 +1404,10 @@ onBeforeUnmount(() => {
   <section class="am-page">
     <div v-if="mediaId === 0" class="am-empty">
       <span class="am-empty__mark"><EmptyMark name="question" /></span>
-      <span>Смотреть нечего: в адресе нет номера аниме.</span>
-      <span>Откройте карточку и нажмите «Смотреть».</span>
+      <span>Выберите аниме</span>
+      <button class="am-btn am-btn--soft" type="button" @click="navigate('search')">
+        Открыть каталог
+      </button>
     </div>
 
     <!-- В театре узел уезжает в body: рамка приложения перестаёт быть его предком, и её стёкла в кадр больше не попадают. -->
@@ -1491,7 +1493,8 @@ onBeforeUnmount(() => {
                 data-zone="veil"
                 @click="refresh"
               >
-                Переспросить
+                <span aria-hidden="true">↻</span>
+                Повторить
               </button>
             </div>
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Меню отбора для главной. Правит черновик и отдаёт одним «Готово», чтобы нажатия не били в сеть.
-// Группы тэгов закрыты (справочник ~1000), взрослое режется в core/adult, у года свои стрелки.
+// Группы тегов закрыты (справочник ~1000), взрослое режется в core/adult, у года свои стрелки.
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 import { emptyPick, type CatalogPick, type CatalogTag, type FeedSort } from '@/api/anilist-catalog'
@@ -23,7 +23,7 @@ const emit = defineEmits<{
   (e: 'apply', pick: CatalogPick): void
 }>()
 
-/** Сколько находок показывать при поиске по тэгам. */
+/** Сколько находок показывать при поиске по тегам. */
 const HUNT_MAX = 60
 
 /** Глубина выбора года: раньше пятидесятых каталог почти пуст. */
@@ -56,7 +56,7 @@ interface YearSpan {
   till: number | null
 }
 
-/** Группа тэгов в показе. */
+/** Группа тегов в показе. */
 interface TagGroup {
   key: string
   title: string
@@ -125,7 +125,7 @@ const spans = computed<YearSpan[]>(() => {
 /** Жанры под политикой показа взрослого. */
 const genreList = computed<string[]>(() => GENRE_CHOICES.filter((genre) => genreAllowed(genre)))
 
-/** Тэги под политикой показа взрослого: метка сервера, закрытые разделы
+/** Теги под политикой показа взрослого: метка сервера, закрытые разделы
     справочника и свой список имён — всё решается в core/adult. */
 const pool = computed<CatalogTag[]>(() => tags.value.filter((tag) => tagAllowed(tag)))
 
@@ -149,7 +149,7 @@ const groups = computed<TagGroup[]>(() => {
   return Array.from(byKey.values())
 })
 
-/** Находки поиска тэгов: искать можно и по-русски, и по-английски. */
+/** Находки поиска тегов: искать можно и по-русски, и по-английски. */
 const found = computed<CatalogTag[]>(() => {
   const word = hunt.value.trim().toLowerCase()
   if (word === '') return []
@@ -164,11 +164,11 @@ const found = computed<CatalogTag[]>(() => {
   return out
 })
 
-/** Выбранные тэги отдельной строкой: тэг из закрытой группы иначе
+/** Выбранные теги отдельной строкой: тег из закрытой группы иначе
     не виден, и снять его было бы нечем. */
 const chosenTags = computed<string[]>(() => draft.value.tags)
 
-/** Поднимает справочник тэгов. Провал виден пустым разделом:
+/** Поднимает справочник тегов. Провал виден пустым разделом:
     ругаться в меню отбора нечем, остальные разделы работают. */
 async function loadTags(): Promise<void> {
   if (tagsAsked) return
@@ -208,7 +208,7 @@ function toggleGroup(key: string): void {
   openGroup.value = openGroup.value === key ? '' : key
 }
 
-/** Сколько тэгов группы уже в отборе: число на закрытой группе. */
+/** Сколько тегов группы уже в отборе: число на закрытой группе. */
 function groupCount(group: TagGroup): number {
   let num = 0
   for (const tag of group.items) if (draft.value.tags.includes(tag.name)) num++
@@ -512,7 +512,7 @@ onBeforeUnmount(() => {
             </section>
 
             <section class="am-part">
-              <h3 class="am-h3">Тэги</h3>
+              <h3 class="am-h3">Теги</h3>
 
               <div v-if="chosenTags.length > 0" class="am-wrap am-part__chosen">
                 <button
@@ -529,14 +529,12 @@ onBeforeUnmount(() => {
 
               <label class="am-search am-part__hunt">
                 <span class="am-search__mark" aria-hidden="true">⌕</span>
-                <input v-model="hunt" class="am-input" type="search" placeholder="Найти тэг" />
+                <input v-model="hunt" class="am-input" type="search" placeholder="Найти тег" />
               </label>
 
-              <p v-if="tagsBusy" class="am-dim">Поднимаем справочник тэгов…</p>
+              <p v-if="tagsBusy" class="am-dim">Поднимаем справочник тегов…</p>
 
-              <p v-else-if="pool.length === 0" class="am-dim">
-                Справочник тэгов не доехал. Жанры, годы и форматы работают.
-              </p>
+              <p v-else-if="pool.length === 0" class="am-dim">Не удалось загрузить теги</p>
 
               <template v-else-if="hunt.trim() !== ''">
                 <div v-if="found.length > 0" class="am-wrap">
@@ -551,7 +549,7 @@ onBeforeUnmount(() => {
                     {{ tagWord(tag.name) }}
                   </button>
                 </div>
-                <p v-else class="am-dim">Такого тэга нет.</p>
+                <p v-else class="am-dim">Такого тега нет.</p>
               </template>
 
               <ul v-else class="am-folds">
@@ -598,7 +596,7 @@ onBeforeUnmount(() => {
               :disabled="count === 0"
               @click="onReset"
             >
-              Сбросить
+              Сбросить фильтры
             </button>
             <span class="am-bar__gap" />
             <button class="am-btn am-btn--soft" type="button" @click="onApply">Готово</button>
@@ -671,7 +669,7 @@ onBeforeUnmount(() => {
 }
 
 /* Шапка и низ держатся на месте, ездит только середина: иначе «Готово»
-   уезжает за край при длинном справочнике тэгов. */
+   уезжает за край при длинном справочнике тегов. */
 .am-sheet__top,
 .am-sheet__foot {
   display: flex;
@@ -791,7 +789,7 @@ onBeforeUnmount(() => {
   opacity: 0.7;
 }
 
-/* Группы тэгов: закрытая группа — одна строка, открытая отдаёт свои чипы. */
+/* Группы тегов: закрытая группа — одна строка, открытая отдаёт свои чипы. */
 .am-folds {
   display: flex;
   flex-direction: column;

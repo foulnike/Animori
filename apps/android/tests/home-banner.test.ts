@@ -125,6 +125,13 @@ describe('верхний баннер телефона', () => {
     expect(hero.querySelector('.am-home-hero__poster')).toBeNull()
     expect(window.location.hash).toBe('#/home')
 
+    element('button[aria-label="Следующий слайд"]', body).click()
+    await nextTick()
+    expect(slideTitle()).toBe('Тайтл 1')
+    element('button[aria-label="Предыдущий слайд"]', body).click()
+    await nextTick()
+    expect(slideTitle()).toBe('Тайтл 4')
+
     element('.am-home-hero__open', hero).click()
     expect(window.location.hash).toBe('#/media/4')
   })

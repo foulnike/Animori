@@ -128,7 +128,7 @@ cd apps/android-tv && npm run tauri -- android dev
 cd apps/android   && npm run tauri -- android dev   # туннель adb: см. apps/android
 ```
 
-Выпуск делается тегом: `windows-v3.2.3`, `android-tv-v3.2.3` или `android-v3.2.3`.
+Для выпуска 3.3.0 используются теги `windows-v3.3.0`, `android-tv-v3.3.0` и `android-v3.3.0`.
 
 ## Устройство репозитория
 

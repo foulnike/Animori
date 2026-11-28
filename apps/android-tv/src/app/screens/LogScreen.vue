@@ -189,8 +189,28 @@ onBeforeUnmount(() => {
       <h2 class="am-h2">Журнал</h2>
       <span v-tip="'Строк на экране'" class="am-log__num">{{ rows.length }}</span>
       <span class="am-bar__gap" />
-      <button class="am-btn am-btn--soft" type="button" @click="onCopy">Скопировать</button>
-      <button class="am-btn am-btn--ghost" type="button" @click="onClear">Очистить</button>
+      <button
+        v-tip="'Скопировать журнал'"
+        class="am-btn am-btn--soft am-log__copy"
+        type="button"
+        aria-label="Скопировать журнал"
+        @click="onCopy"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          width="18"
+          height="18"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <rect x="8" y="8" width="12" height="12" rx="2" />
+          <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+        </svg>
+      </button>
+      <button class="am-btn am-btn--ghost" type="button" @click="onClear">Очистить журнал</button>
     </div>
 
     <div class="am-log__kinds">
@@ -220,10 +240,10 @@ onBeforeUnmount(() => {
 
     <div class="am-log__tools">
       <button class="am-btn am-btn--soft" type="button" @click="toggleBudget">
-        {{ budgetOn ? 'Скрыть бюджет' : 'Бюджет источников' }}
+        {{ budgetOn ? 'Скрыть лимиты' : 'Лимиты запросов' }}
       </button>
       <button class="am-btn am-btn--soft" type="button" :disabled="storeBusy" @click="onStore">
-        {{ storeBusy ? 'Считаем склад…' : 'Пересчитать склад' }}
+        {{ storeBusy ? 'Обновление…' : 'Обновить данные кэша' }}
       </button>
       <span v-if="storeNote" class="am-meta">{{ storeNote }}</span>
     </div>
@@ -233,11 +253,11 @@ onBeforeUnmount(() => {
         <thead>
           <tr>
             <th>Источник</th>
-            <th>В окне</th>
+            <th>Запросов за минуту</th>
             <th>Осталось</th>
             <th>Темп</th>
             <th>Пауза</th>
-            <th>Ушло всего</th>
+            <th>Запросов за сеанс</th>
           </tr>
         </thead>
         <tbody>
@@ -251,10 +271,6 @@ onBeforeUnmount(() => {
           </tr>
         </tbody>
       </table>
-      <p class="am-meta">
-        Окно учёта — минута. «Ушло всего» считается с запуска программы: это и есть цена сеанса для
-        чужих серверов.
-      </p>
     </div>
 
     <div v-if="store" class="am-log__panel">
@@ -263,7 +279,7 @@ onBeforeUnmount(() => {
           <span>Русские названия</span><b>{{ store.russianTitles }}</b>
         </li>
         <li>
-          <span>Отказы «имени нет»</span><b>{{ store.noRussianNames }}</b>
+          <span>Названия без перевода</span><b>{{ store.noRussianNames }}</b>
         </li>
         <li>
           <span>Облики плиток</span><b>{{ store.looks }}</b>
@@ -281,7 +297,7 @@ onBeforeUnmount(() => {
           <span>Персонажи</span><b>{{ store.characters }}</b>
         </li>
         <li>
-          <span>Персонал</span><b>{{ store.staff }}</b>
+          <span>Авторы</span><b>{{ store.staff }}</b>
         </li>
         <li>
           <span>Темы</span><b>{{ store.themes }}</b>
@@ -308,16 +324,11 @@ onBeforeUnmount(() => {
           <span>Занято</span><b>{{ store.estimatedSize }}</b>
         </li>
       </ul>
-      <p class="am-meta">
-        Каждая запись здесь — запрос, которого мы больше не делаем. Ноль у номеров MAL правдив: стор
-        заведён миграцией, но писать в него некому — пары номеров добываются заново при каждом
-        запуске.
-      </p>
     </div>
 
     <div v-if="rows.length === 0" class="am-empty">
       <span class="am-empty__mark"><EmptyMark name="journal" /></span>
-      <span>Записей нет. Журнал пишется, пока открыто окно.</span>
+      <span>Журнал пуст</span>
     </div>
 
     <ul v-else class="am-log">
@@ -353,6 +364,13 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* Шапка, счётчик и две кнопки в одной полосе: три строки подряд съедали первый экран ради трёх подписей. */
+.am-log__copy {
+  display: grid;
+  place-items: center;
+  min-width: 48px;
+  min-height: 48px;
+}
+
 .am-log__top {
   display: flex;
   flex-wrap: wrap;

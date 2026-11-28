@@ -5,22 +5,14 @@ import { Bridge } from '@/bridge'
 import { Logger } from '@/utils/logger'
 
 import closingPhoto from '../assets/foulnike-joke.jpg'
-import {
-  DOCUMENTS,
-  PROVIDERS,
-  REPOSITORY,
-  SLIDES,
-  TV_FEATURE_SLIDES,
-  type OnboardingAssets,
-} from './content'
+import { PROVIDERS, REPOSITORY, SLIDES, TV_FEATURE_SLIDES, type OnboardingAssets } from './content'
 import { completeOnboarding } from './first-launch'
-import PlayerPreview from './PlayerPreview.vue'
+import FeatureScene from './FeatureScene.vue'
 
 const props = defineProps<OnboardingAssets>()
 const emit = defineEmits<{ complete: [] }>()
 
 const step = ref(0)
-const shot = ref(0)
 const agreed = ref(false)
 const saving = ref(false)
 const saveError = ref('')
@@ -29,24 +21,14 @@ const content = ref<HTMLElement | null>(null)
 const title = ref<HTMLHeadingElement | null>(null)
 const previousButton = ref<HTMLButtonElement | null>(null)
 const nextButton = ref<HTMLButtonElement | null>(null)
+const credits = ref<HTMLElement | null>(null)
 const consent = ref<HTMLInputElement | null>(null)
-const galleryNav = ref<HTMLElement | null>(null)
 
 const slide = computed(() => {
   const current = SLIDES[step.value] ?? SLIDES[0]
   if (!props.television || current.kind !== 'feature') return current
-  return TV_FEATURE_SLIDES[current.gallery] ?? current
+  return TV_FEATURE_SLIDES[current.scene] ?? current
 })
-const playerFrame = computed(() => {
-  const current = slide.value
-  return current.kind === 'feature' && current.gallery === 'player'
-    ? props.mobilePlayerFrame
-    : undefined
-})
-const gallery = computed(() =>
-  slide.value.kind === 'feature' ? props.galleries[slide.value.gallery] : null,
-)
-const picture = computed(() => gallery.value?.[shot.value])
 const last = computed(() => step.value === SLIDES.length - 1)
 const nextDisabled = computed(
   () => saving.value || ((slide.value.kind === 'agreement' || last.value) && !agreed.value),
@@ -73,6 +55,13 @@ function onConsentEnter(event: KeyboardEvent): void {
   if (!event.repeat) agreed.value = !agreed.value
 }
 
+function focusAgreementControl(event: KeyboardEvent, target: HTMLElement | null): void {
+  if (!props.television || !target) return
+  event.preventDefault()
+  event.stopPropagation()
+  target.focus()
+}
+
 function onContentDown(event: KeyboardEvent): void {
   if (!props.television) return
   event.preventDefault()
@@ -85,13 +74,9 @@ function onActionsArrow(event: KeyboardEvent, direction: -1 | 1): void {
   if (!props.television) return
   event.preventDefault()
   event.stopPropagation()
-  if (direction < 0) {
-    const target =
-      consent.value ?? galleryNav.value?.querySelector<HTMLElement>('[aria-current="true"]')
-    if (target) {
-      target.focus()
-      return
-    }
+  if (direction < 0 && consent.value) {
+    consent.value.focus()
+    return
   }
   const body = content.value
   if (body && body.scrollHeight > body.clientHeight) {
@@ -121,35 +106,11 @@ async function move(direction: -1 | 1): Promise<void> {
   const target = step.value + direction
   if (target < 0 || target >= SLIDES.length) return
   step.value = target
-  shot.value = 0
   linkError.value = ''
   saveError.value = ''
   await nextTick()
   if (content.value) content.value.scrollTop = 0
   focusStep(direction)
-}
-
-function moveShot(direction: -1 | 1): void {
-  const length = gallery.value?.length ?? 0
-  if (length > 1) shot.value = (shot.value + direction + length) % length
-}
-
-let touchStart: { x: number; y: number } | null = null
-
-function startTouch(event: TouchEvent): void {
-  const touch = event.touches.length === 1 ? event.touches[0] : undefined
-  touchStart = touch ? { x: touch.clientX, y: touch.clientY } : null
-}
-
-function endTouch(event: TouchEvent): void {
-  const start = touchStart
-  touchStart = null
-  const touch = event.changedTouches[0]
-  if (!start || !touch) return
-  const distance = touch.clientX - start.x
-  if (Math.abs(distance) >= 44 && Math.abs(distance) > Math.abs(touch.clientY - start.y) * 1.4) {
-    moveShot(distance > 0 ? -1 : 1)
-  }
 }
 
 async function openLink(url: string): Promise<void> {
@@ -191,10 +152,7 @@ async function next(): Promise<void> {
     <component :is="desktop.background" v-if="desktop" />
     <div class="am-intro__card">
       <div ref="content" class="am-intro__scroll" @keydown.down="onContentDown">
-        <div
-          class="am-intro__slide"
-          :class="['am-intro__slide--' + slide.kind, { 'am-intro__slide--player': playerFrame }]"
-        >
+        <div class="am-intro__slide" :class="'am-intro__slide--' + slide.kind">
           <img v-if="slide.kind === 'welcome'" class="am-intro__logo" :src="icon" alt="" />
           <div class="am-intro__copy">
             <p v-if="slide.kind === 'feature'" class="am-intro__label">Что мы умеем</p>
@@ -210,13 +168,9 @@ async function next(): Promise<void> {
 
             <template v-else-if="slide.kind === 'feature'">
               <p>{{ slide.description }}</p>
-              <ul v-if="slide.details.length" class="am-intro__details">
-                <li v-for="detail in slide.details" :key="detail">{{ detail }}</li>
-              </ul>
             </template>
 
             <template v-else-if="slide.kind === 'providers'">
-              <p>AniMori обращается к внешним сервисам за каталогом, видео и облачными копиями.</p>
               <ul class="am-intro__providers">
                 <li v-for="provider in PROVIDERS" :key="provider.title">
                   <strong v-if="television">{{ provider.title }}</strong>
@@ -238,27 +192,18 @@ async function next(): Promise<void> {
             </template>
 
             <template v-else-if="slide.kind === 'agreement'">
-              <p v-if="television">Отсканируйте QR-коды телефоном, чтобы прочитать документы.</p>
-              <p v-else>Перед началом работы ознакомьтесь с документами AniMori.</p>
-              <ul v-if="television" class="am-intro__qr-documents">
-                <li v-for="document in DOCUMENTS" :key="document.url">
-                  <img :src="television.codes[document.url]" alt="" />
-                  <span>{{ document.title }}</span>
-                </li>
-              </ul>
-              <ul v-else class="am-intro__documents">
-                <li v-for="document in DOCUMENTS" :key="document.title">
-                  <a :href="document.url" @click.prevent="openLink(document.url)">
-                    {{ document.title }} <span aria-hidden="true">↗</span>
-                  </a>
-                </li>
-              </ul>
+              <div ref="credits" @keydown.down="focusAgreementControl($event, consent)">
+                <component :is="props.credits" />
+              </div>
               <label class="am-intro__consent">
                 <input
                   ref="consent"
                   v-model="agreed"
                   type="checkbox"
                   @keydown.enter="onConsentEnter"
+                  @keydown.up="
+                    focusAgreementControl($event, credits?.querySelector('button') ?? null)
+                  "
                 />
                 <span>
                   Я принимаю Условия использования и подтверждаю, что ознакомился с Политикой
@@ -305,45 +250,13 @@ async function next(): Promise<void> {
             <p v-if="linkError" class="am-intro__error" role="status">{{ linkError }}</p>
           </div>
 
-          <PlayerPreview v-if="playerFrame" :frame="playerFrame" />
-          <figure v-else-if="gallery && picture" class="am-intro__gallery">
-            <div
-              class="am-intro__image"
-              @touchstart.passive="startTouch"
-              @touchend.passive="endTouch"
-              @touchcancel="touchStart = null"
-            >
-              <img :key="picture.src" :src="picture.src" :alt="picture.caption" draggable="false" />
-            </div>
-            <figcaption aria-live="polite">{{ picture.caption }}</figcaption>
-            <div v-if="gallery.length > 1" ref="galleryNav" class="am-intro__gallery-nav">
-              <button
-                class="am-intro__gallery-arrow"
-                type="button"
-                aria-label="Предыдущий скриншот"
-                @click="moveShot(-1)"
-              >
-                ‹
-              </button>
-              <button
-                v-for="(image, index) in gallery"
-                :key="image.src"
-                type="button"
-                class="am-intro__gallery-dot"
-                :aria-current="index === shot ? 'true' : undefined"
-                :aria-label="`Скриншот ${index + 1}: ${image.caption}`"
-                @click="shot = index"
-              />
-              <button
-                class="am-intro__gallery-arrow"
-                type="button"
-                aria-label="Следующий скриншот"
-                @click="moveShot(1)"
-              >
-                ›
-              </button>
-            </div>
-          </figure>
+          <div v-if="slide.kind === 'feature'" class="am-intro__feature-art">
+            <FeatureScene
+              :key="slide.scene"
+              :scene="slide.scene"
+              :television="Boolean(television)"
+            />
+          </div>
         </div>
       </div>
 
@@ -384,20 +297,48 @@ async function next(): Promise<void> {
           <button
             ref="previousButton"
             class="am-btn am-btn--ghost"
+            :class="{ 'am-intro__arrow': television }"
             type="button"
+            :aria-label="television ? 'Предыдущий слайд' : undefined"
             :disabled="step === 0 || saving"
             @click="move(-1)"
           >
-            Предыдущий
+            <svg
+              v-if="television"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M19 12H5 M12 5l-7 7 7 7" />
+            </svg>
+            <template v-else>Предыдущий</template>
           </button>
           <button
             ref="nextButton"
             class="am-intro__next"
+            :class="{ 'am-intro__arrow': television && !last }"
             type="button"
+            :aria-label="television && !last ? 'Следующий слайд' : undefined"
             :disabled="nextDisabled"
             @click="next"
           >
-            {{ last ? 'Открыть AniMori' : 'Следующий' }}
+            <svg
+              v-if="television && !last"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M5 12h14 M12 5l7 7-7 7" />
+            </svg>
+            <template v-else>{{ last ? 'Открыть AniMori' : 'Следующий' }}</template>
           </button>
         </div>
       </footer>

@@ -232,10 +232,45 @@ body {
   margin: 0;
 }
 
-/* Синий прямоугольник под пальцем — системная подсветка попадания. На тач-экране она
-   дублирует нажатие и режет глаз: фокус у кнопок и так виден по-своему. */
+/* Кнопки и ссылки показывают отклик касания в цветах темы. */
 html {
   -webkit-tap-highlight-color: transparent;
+}
+
+@media (any-pointer: coarse) {
+  button:active:not(:disabled, [aria-disabled='true']):not(
+      :has(
+        > :is(
+          .am-tile__art,
+          .am-face__frame,
+          .am-row__art,
+          .am-hist__art,
+          .am-ps-work__art,
+          .am-mate__art,
+          .am-ps-va__art
+        )
+      )
+    ) {
+    box-shadow: inset 0 0 0 2px rgb(var(--am-accent-rgb) / 0.7);
+  }
+
+  button:active:not(:disabled, [aria-disabled='true'])
+    > :is(
+      .am-tile__art,
+      .am-face__frame,
+      .am-row__art,
+      .am-hist__art,
+      .am-ps-work__art,
+      .am-mate__art,
+      .am-ps-va__art
+    ) {
+    outline: 2px solid rgb(var(--am-accent-rgb) / 0.7);
+    outline-offset: -2px;
+  }
+
+  a[href]:active {
+    color: var(--am-accent);
+  }
 }
 
 /* Тач-устройство: кольцо фокуса — свойство пульта и клавиатуры. На телефоне оно

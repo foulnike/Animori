@@ -97,7 +97,7 @@ interface AppliedCopy {
 /** Можно ли идти в облако, или отказ словами. Сам пропуск лежит в оболочке, сюда не попадает. */
 function pass(): CloudDone<true> {
   if (settings.cloudPlace === 'yandex') {
-    if (!settings.cloudConnected) return { ok: false, problem: 'Пропуск Яндекс Диска не введён' }
+    if (!settings.cloudConnected) return { ok: false, problem: 'Введите токен Яндекс Диска' }
 
     return { ok: true, value: true }
   }

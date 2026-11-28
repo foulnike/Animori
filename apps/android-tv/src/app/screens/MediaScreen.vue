@@ -161,7 +161,7 @@ watch(card, (now) => {
   <section class="am-page">
     <div v-if="mediaId === 0" class="am-empty">
       <span class="am-empty__mark"><EmptyMark name="question" /></span>
-      <span>Аниме не выбрано: в адресе нет номера.</span>
+      <span>Выберите аниме</span>
       <span>Откройте карточку из списков или поиска.</span>
     </div>
 
@@ -287,7 +287,7 @@ watch(card, (now) => {
                   <span class="am-skeleton am-about__hold-line" />
                   <span class="am-skeleton am-about__hold-line am-about__hold-line--short" />
                 </div>
-                <p v-else class="am-hero__sub">Описания ни один источник не дал.</p>
+                <p v-else class="am-hero__sub">Описание отсутствует</p>
               </div>
 
               <p v-if="aboutSource !== ''" class="am-about__tail am-about__tail--art">
@@ -320,7 +320,7 @@ watch(card, (now) => {
                 <span class="am-skeleton am-about__hold-line" />
                 <span class="am-skeleton am-about__hold-line am-about__hold-line--short" />
               </div>
-              <p v-else class="am-dim">Описания ни один источник не дал.</p>
+              <p v-else class="am-dim">Описание отсутствует</p>
 
               <p v-if="aboutSource !== ''" class="am-about__tail">
                 Описание отсюда: {{ aboutSource }}

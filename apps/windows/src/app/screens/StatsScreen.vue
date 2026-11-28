@@ -545,8 +545,7 @@ onBeforeUnmount(() => {
 
     <div v-else-if="stats.titles === 0" class="am-empty">
       <span class="am-empty__mark"><EmptyMark name="chart" /></span>
-      <span>Здесь будет статистика по вашему списку.</span>
-      <span>Числа берутся из «Моё»: как только там появятся записи, они приедут сюда.</span>
+      <span>Нет данных для статистики</span>
     </div>
 
     <template v-else>
@@ -742,9 +741,7 @@ onBeforeUnmount(() => {
             {{ percent(formatLegend.tail.share) }}
           </p>
 
-          <p v-if="looksBusy" class="am-stats__note">
-            Добираю виды и длины серий — кольцо и часы достроятся сами
-          </p>
+          <p v-if="looksBusy" class="am-stats__note">Загрузка данных о сериях…</p>
         </section>
       </div>
 

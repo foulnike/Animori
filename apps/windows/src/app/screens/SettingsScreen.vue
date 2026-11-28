@@ -1,8 +1,8 @@
 <script setup lang="ts">
-// Настройки: импорт списка, свои данные, облачная копия, внешность и справка. Панели — в колонках-обёртках (порядок и ширина в settings-screen.css, разметка одна на все размеры окна). AniList и Шикимори — две одинаковые половины со своими ошибками и итогами; прокси — components/ProxyBox.vue, облако — CloudBox.vue, знаки сервисов — brand/*.svg.
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import { Bridge } from '@/bridge'
+import { importResultText } from '@/utils/import-text'
 import { forgetCatalogMemory } from '@/api/anilist-catalog'
 import { clearActivity } from '@/core/activity'
 import {
@@ -16,7 +16,6 @@ import {
   unlinkCollection,
   type MalPullResult,
   type PullMode,
-  type ShikiPullResult,
 } from '@/core/collection'
 import { datasetStatus, initDatasetNames } from '@/core/dataset-names'
 import { clearCache, getDbStats } from '@/core/db'
@@ -45,7 +44,7 @@ import ProxyBox from '../components/ProxyBox.vue'
 import TileMark from '../components/TileMark.vue'
 import { tagWord } from '../tag-words'
 import { pickTextFile } from '../load-file'
-import { navigate } from '../router'
+import { currentRoute, navigate } from '../router'
 import { saveXmlFile } from '../save-file'
 import { dropFeed, purgeAdultPick } from './home-keep'
 import { systemName } from '../host'
@@ -55,10 +54,13 @@ const version = __ANIMORI_VERSION__
 
 const desktop = isDesktop()
 
-const openPanels = ref<Record<string, boolean>>({})
+const adultEntry = currentRoute.value.params.id === 'adult'
+const adultHeading = ref<HTMLElement | null>(null)
+const openPanels = ref<Record<string, boolean>>({ adult: adultEntry })
 
 function togglePanel(name: string): void {
   openPanels.value[name] = !openPanels.value[name]
+  if (name === 'adult' && !openPanels.value.adult) closeAge()
 }
 
 const system = systemName()
@@ -77,18 +79,6 @@ const REPO_URL = 'https://github.com/foulnike/Animori'
 
 function onRepoLink(): void {
   void Bridge.shell.openExternal(REPO_URL)
-}
-
-// Правовые документы: адреса общие для всех точек входа в UI, живут рядом с ссылкой на репозиторий.
-const PRIVACY_URL = 'https://github.com/foulnike/Animori/blob/main/docs/PRIVACY.md'
-const TERMS_URL = 'https://github.com/foulnike/Animori/blob/main/docs/TERMS.md'
-
-function onPrivacy(): void {
-  void Bridge.shell.openExternal(PRIVACY_URL)
-}
-
-function onTerms(): void {
-  void Bridge.shell.openExternal(TERMS_URL)
 }
 
 /**
@@ -290,8 +280,7 @@ function onLogout(): void {
     login.value = null
     await readState()
 
-    note.value =
-      left > 0 ? `Счёт отключён. Список остался здесь местным: записей ${left}.` : 'Счёт отключён.'
+    note.value = left > 0 ? `Аккаунт отключён. Записей в списке: ${left}.` : 'Аккаунт отключён.'
   })
 }
 
@@ -314,16 +303,7 @@ function onPull(mode: PullMode): void {
     const done = await refreshFromServer(mode)
     await readState()
 
-    // Способ берётся из ответа, а не из просьбы: смена счёта переключает перенос на замену сама, и сказать надо о том, что случилось на деле.
-    if (done.mode === 'replace') {
-      note.value = `Список замещён списком с AniList: записей ${done.total}.`
-      return
-    }
-
-    note.value =
-      `Списки слиты: всего ${done.total}, новых ${done.added}, ` +
-      `обновлено ${done.updated}, своих правок сохранено ${done.kept}, ` +
-      `только здесь ${done.onlyHere}.`
+    note.value = importResultText(done)
   })
 }
 
@@ -356,22 +336,6 @@ function onShikiCancel(): void {
   askingShiki.value = false
 }
 
-/** Потери словами: тайтлы, которых нет у AniList, в список не попадают — молчать нельзя, человек решит, что съело половину.
- * Источник потерь не важен (Шикимори по нику или файл MAL): форма фразы одна — счётчик и имена. */
-function lostText(done: { lost: number; lostTitles: string[] }): string {
-  if (done.lost === 0) return ''
-  if (done.lostTitles.length === 0) return ` Без пары на AniList: ${done.lost}.`
-
-  const more = done.lost > done.lostTitles.length ? ' и другие' : ''
-  return ` Без пары на AniList ${done.lost}: ${done.lostTitles.join(', ')}${more}.`
-}
-
-/** Даты просмотра словами: ноль здесь не поломка, а «просмотров не было» — у запланированного дат и не бывает. */
-function datesText(done: ShikiPullResult): string {
-  if (done.dated === 0) return ' Дат просмотра в журнале Шикимори не нашлось.'
-  return ` Даты просмотра перенесены в ${done.dated} записей.`
-}
-
 /** Перенос списка с Шикимори по нику: способы те же два, и замена вычищает всё, включая перенесённое с AniList. */
 function onShikiPull(mode: PullMode): void {
   askingShiki.value = false
@@ -388,16 +352,7 @@ function onShikiPull(mode: PullMode): void {
       const done = await pullFromShikimori(shikiNick.value, mode)
       await readState()
 
-      shikiNote.value =
-        done.mode === 'replace'
-          ? `Список замещён списком ${done.nick} с Шикимори: записей ${done.total}.` +
-            lostText(done) +
-            datesText(done)
-          : `Списки слиты: всего ${done.total}, новых ${done.added}, ` +
-            `обновлено ${done.updated}, своих правок сохранено ${done.kept}, ` +
-            `только здесь ${done.onlyHere}.` +
-            lostText(done) +
-            datesText(done)
+      shikiNote.value = importResultText(done)
     } catch (e) {
       shikiError.value = describe(e)
     } finally {
@@ -453,13 +408,7 @@ function onMalPull(mode: PullMode): void {
       const done: MalPullResult = await pullFromMalFile(file.text, mode)
       await readState()
 
-      malNote.value =
-        done.mode === 'replace'
-          ? `Список замещён списком из файла: записей ${done.total}.` + lostText(done)
-          : `Списки слиты: всего ${done.total}, новых ${done.added}, ` +
-            `обновлено ${done.updated}, своих правок сохранено ${done.kept}, ` +
-            `только здесь ${done.onlyHere}.` +
-            lostText(done)
+      malNote.value = importResultText(done)
     } catch (e) {
       malError.value = describe(e)
     } finally {
@@ -646,7 +595,7 @@ function onClear(): void {
     dropFeed()
     cleared.value = true
     await readState()
-    note.value = 'Память очищена. Названия, описания и постеры загрузятся заново.'
+    note.value = 'Кэш очищен'
   })
 }
 
@@ -688,44 +637,31 @@ function ageText(days: number): string {
   return `${days} ${word} назад`
 }
 
-/** Граница «полного экрана»: та же, что у раскладки в settings-screen.css. */
-const WIDE_AT = '(min-width: 1400px)'
+const wideWindow = window.matchMedia('(min-width: 1400px)')
+const wide = ref(wideWindow.matches)
 
-/** Широкое ли окно: от этого зависит, где живёт панель прокси. */
-const wide = ref(false)
-
-let watchWide: MediaQueryList | null = null
-
-function onWide(event: MediaQueryListEvent): void {
+function updateWide(event: MediaQueryListEvent): void {
   wide.value = event.matches
 }
 
 onMounted(() => {
-  const mq = window.matchMedia(WIDE_AT)
-  wide.value = mq.matches
-  mq.addEventListener('change', onWide)
-  watchWide = mq
+  wideWindow.addEventListener('change', updateWide)
+  if (adultEntry) void nextTick(() => adultHeading.value?.focus())
 
   void guard(refreshAuth)
   void readState()
 })
 
-onBeforeUnmount(() => {
-  watchWide?.removeEventListener('change', onWide)
-  watchWide = null
-})
+onBeforeUnmount(() => wideWindow.removeEventListener('change', updateWide))
 </script>
 
 <template>
   <section class="am-page">
-    <!-- Две стопки: каждая набирает свои панели встык, и высота соседней ей безразлична.
-         Порядок и ширина под каждый размер окна живут в settings-screen.css. -->
     <div class="am-set">
-      <!-- Левая стопка: Данные и справка; на полном экране CSS раскладывает её по столбцам. -->
-      <div class="am-set__col am-set__col--left">
-        <div class="am-set__col am-set__col--main">
+      <div class="am-set__col am-set__col--split">
+        <div id="am-set-main" class="am-set__col">
           <!-- Импорт списка: две половины одного вида. У каждой знак сервиса,
-             название, строка состояния, кнопки и свои ответы. -->
+         название, строка состояния, кнопки и свои ответы. -->
           <div class="am-panel am-box" :class="{ 'am-panel--closed': !openPanels.import }">
             <h3
               class="am-h3 am-panel__title"
@@ -740,7 +676,7 @@ onBeforeUnmount(() => {
             </h3>
 
             <!-- AniList. Знак берёт components/BrandMark.vue из файла
-               src/app/brand/anilist.svg: фирменный вектор, а не наш рисунок. -->
+           src/app/brand/anilist.svg: фирменный вектор, а не наш рисунок. -->
             <div class="am-serv">
               <div class="am-serv__head">
                 <BrandMark class="am-serv__logo" name="anilist" />
@@ -787,29 +723,11 @@ onBeforeUnmount(() => {
                     Ввести токен
                   </button>
 
-                  <!-- Правовые документы рядом с входом: применение условий — до нажатия, а не после. -->
-                  <p v-if="!authStatus.authorized" class="am-meta">
-                    При входе применяются
-                    <button class="am-link" type="button" @click="onPrivacy">
-                      Политика обработки персональных данных
-                    </button>
-                    и
-                    <button class="am-link" type="button" @click="onTerms">
-                      Условия использования</button
-                    >.
-                  </p>
-                  <template v-else>
-                    <button
-                      v-tip="'Забрать список с AniList: слиянием или с заменой'"
-                      class="am-btn"
-                      type="button"
-                      :disabled="busy"
-                      @click="onAsk"
-                    >
-                      {{ busy ? 'Переносим…' : 'Перенести список' }}
+                  <template v-if="authStatus.authorized">
+                    <button class="am-btn" type="button" :disabled="busy" @click="onAsk">
+                      {{ busy ? 'Импорт…' : 'Импортировать' }}
                     </button>
                     <button
-                      v-tip="'Разорвать связь с AniList. Список останется здесь'"
                       class="am-btn am-btn--ghost"
                       type="button"
                       :disabled="busy"
@@ -821,9 +739,11 @@ onBeforeUnmount(() => {
                 </div>
 
                 <!-- Вопрос перед переносом: одно число и два способа рядом. Разницу говорят подписи
-                   кнопок, поэтому абзац объяснений здесь убран — он повторял их втрое длиннее. -->
+               кнопок, поэтому абзац объяснений здесь убран — он повторял их втрое длиннее. -->
                 <div v-if="asking" class="am-ask">
-                  <p class="am-ask__text">Записей: {{ listCount }}.</p>
+                  <p class="am-ask__text">
+                    При замене текущие записи ({{ listCount }}) будут удалены.
+                  </p>
 
                   <div class="am-row">
                     <button class="am-btn" type="button" :disabled="busy" @click="onPull('merge')">
@@ -835,7 +755,7 @@ onBeforeUnmount(() => {
                       :disabled="busy"
                       @click="onPull('replace')"
                     >
-                      Заменить целиком
+                      Заменить текущий список
                     </button>
                     <button class="am-btn am-btn--ghost" type="button" @click="onCancel">
                       Отмена
@@ -844,7 +764,7 @@ onBeforeUnmount(() => {
                 </div>
 
                 <!-- Показывается только после нажатия: до него окна входа нет
-                   и ждать человеку нечего. -->
+               и ждать человеку нечего. -->
                 <p v-if="login && !authStatus.authorized" class="am-meta">
                   Окно AniList открыто, после разрешения оно закроется само. Ожидание —
                   {{ waitText(login.waitSecs) }}.
@@ -880,7 +800,6 @@ onBeforeUnmount(() => {
 
                 <span class="am-serv__text">
                   <span class="am-serv__name">Шикимори</span>
-                  <span class="am-serv__note">Профиль на Шикимори должен быть открытым.</span>
                 </span>
               </div>
 
@@ -890,24 +809,30 @@ onBeforeUnmount(() => {
                     v-model="shikiNick"
                     class="am-input"
                     type="text"
-                    placeholder="Ник на Шикимори"
+                    aria-label="Имя открытого профиля Шикимори"
+                    placeholder="Имя открытого профиля"
                     :disabled="shikiBusy"
                     @change="onShikiNick"
                   />
                 </label>
                 <button
                   v-tip="'Забрать список с Шикимори: слиянием или с заменой'"
-                  class="am-btn"
+                  class="am-btn am-shiki-import"
                   type="button"
                   :disabled="shikiBusy || !shikiNick.trim()"
+                  :aria-busy="shikiBusy"
                   @click="onShikiAsk"
                 >
-                  {{ shikiBusy ? 'Переносим…' : 'Перенести список' }}
+                  <span v-if="shikiBusy" class="am-shiki-import__spin" aria-hidden="true" />
+                  {{ shikiBusy ? 'Переносим…' : 'Импортировать' }}
                 </button>
               </div>
+              <p v-if="shikiBusy" class="am-meta" role="status">
+                Идёт перенос, не закрывайте окно.
+              </p>
 
               <!-- Вопрос тот же, что у AniList, и по той же причине: замена вычищает список целиком,
-                 включая перенесённое и набранное руками. -->
+             включая перенесённое и набранное руками. -->
               <div v-if="askingShiki" class="am-ask">
                 <p class="am-ask__text">Записей: {{ listCount }}.</p>
 
@@ -926,7 +851,7 @@ onBeforeUnmount(() => {
                     :disabled="shikiBusy"
                     @click="onShikiPull('replace')"
                   >
-                    Заменить целиком
+                    Заменить текущий список
                   </button>
                   <button class="am-btn am-btn--ghost" type="button" @click="onShikiCancel">
                     Отмена
@@ -939,7 +864,7 @@ onBeforeUnmount(() => {
             </div>
 
             <!-- MyAnimeList: знак из src/app/brand/myanimelist.svg; список приезжает файлом
-               выгрузки; тот же файл отдаёт Шикимори — формат MAL до тега. -->
+           выгрузки; тот же файл отдаёт Шикимори — формат MAL до тега. -->
             <div class="am-serv">
               <div class="am-serv__head">
                 <BrandMark class="am-serv__logo" name="myanimelist" />
@@ -964,12 +889,12 @@ onBeforeUnmount(() => {
                   :disabled="malBusy"
                   @click="onMalPick"
                 >
-                  {{ malBusy ? 'Переносим…' : 'Выбрать файл' }}
+                  {{ malBusy ? 'Импорт…' : 'Импортировать XML' }}
                 </button>
               </div>
 
               <!-- Вопрос тот же, что у AniList и Шикимори, и по той же причине: замена вычищает
-                 список целиком. -->
+             список целиком. -->
               <div v-if="askingMal && malFile" class="am-ask">
                 <p class="am-ask__text">
                   Файл: {{ malFile.name }}, записей в нём {{ malFile.count }}. Записей у вас:
@@ -991,7 +916,7 @@ onBeforeUnmount(() => {
                     :disabled="malBusy"
                     @click="onMalPull('replace')"
                   >
-                    Заменить целиком
+                    Заменить текущий список
                   </button>
                   <button class="am-btn am-btn--ghost" type="button" @click="onMalCancel">
                     Отмена
@@ -1034,8 +959,8 @@ onBeforeUnmount(() => {
             </ul>
 
             <!-- Необратимое одной строкой: сброс памяти, стирание истории и удаление списка стоят
-               рядом, потому что все трое про то, что лежит на этом диске. Каждый спрашивает
-               отдельно: объём у них разный, и один вопрос на троих соврал бы. -->
+           рядом, потому что все трое про то, что лежит на этом диске. Каждый спрашивает
+           отдельно: объём у них разный, и один вопрос на троих соврал бы. -->
             <div class="am-row">
               <button
                 v-tip="'Убрать сохранённые названия, описания и обложки'"
@@ -1085,7 +1010,7 @@ onBeforeUnmount(() => {
             </div>
 
             <!-- Выгрузка отдельным узлом: место и действие рядом, строка папки нажимается целиком.
-               Класс свой, am-dir, а не am-pick: в styles/theme.css им одет нативный select. -->
+           Класс свой, am-dir, а не am-pick: в styles/theme.css им одет нативный select. -->
             <div v-if="canPickDir" class="am-out">
               <button
                 v-if="canPickDir"
@@ -1099,7 +1024,7 @@ onBeforeUnmount(() => {
                 <span class="am-dir__text">
                   <span class="am-dir__name">Папка выгрузок</span>
                   <span class="am-dir__path" :class="{ 'am-dir__path--none': !exportDir }">
-                    {{ exportDir || 'Не выбрана — файл уйдёт в загрузки окна' }}
+                    {{ exportDir || 'Загрузки' }}
                   </span>
                 </span>
                 <span class="am-dir__act">{{ exportDir ? 'Сменить' : 'Выбрать' }}</span>
@@ -1107,7 +1032,7 @@ onBeforeUnmount(() => {
             </div>
 
             <!-- Сброс памяти тоже спрашиваем: он вычищает склад целиком. Вопрос коротким —
-               подпись кнопки под ним и есть весь ответ, как у соседнего удаления списка. -->
+           подпись кнопки под ним и есть весь ответ, как у соседнего удаления списка. -->
             <div v-if="askingClear" class="am-ask">
               <p class="am-ask__text">Очистить сохранённые названия, описания и обложки?</p>
 
@@ -1122,7 +1047,7 @@ onBeforeUnmount(() => {
             </div>
 
             <!-- История необратима: спрашиваем всегда, тем же вопросом, что и удаление списка рядом.
-               Выбор озвучки остаётся — он не часть истории. -->
+           Выбор озвучки остаётся — он не часть истории. -->
             <div v-if="askingWipe" class="am-ask">
               <p class="am-ask__text">
                 Стереть календарь активности и историю просмотра? Действие необратимо.
@@ -1139,9 +1064,9 @@ onBeforeUnmount(() => {
             </div>
 
             <!-- Удаление списка необратимо для местных записей: спрашиваем всегда.
-               Вопрос коротким: подпись кнопки под ним и есть весь ответ. -->
+           Вопрос коротким: подпись кнопки под ним и есть весь ответ. -->
             <div v-if="askingDrop" class="am-ask">
-              <p class="am-ask__text">Удалить список с этого устройства?</p>
+              <p class="am-ask__text">Удалить список? Действие необратимо.</p>
 
               <div class="am-row">
                 <button class="am-btn" type="button" :disabled="busy" @click="onDropList">
@@ -1156,9 +1081,7 @@ onBeforeUnmount(() => {
             <p v-if="note" class="am-note">{{ note }}</p>
           </div>
         </div>
-
-        <!-- Оформление и справка: то, что смотрят, а не то, чем правят. -->
-        <div class="am-set__col am-set__col--look">
+        <div class="am-set__col">
           <div class="am-panel am-box" :class="{ 'am-panel--closed': !openPanels.look }">
             <h3
               class="am-h3 am-panel__title"
@@ -1169,7 +1092,7 @@ onBeforeUnmount(() => {
               @keydown.enter.prevent="togglePanel('look')"
               @keydown.space.prevent="togglePanel('look')"
             >
-              <TileMark name="look" /> Оформление и Взрослое
+              <TileMark name="look" /> Оформление
             </h3>
 
             <div class="am-skins">
@@ -1190,7 +1113,7 @@ onBeforeUnmount(() => {
             <div
               class="am-family am-family--settings"
               role="group"
-              aria-label="Семейство интерфейса"
+              aria-label="Оформление интерфейса"
             >
               <button
                 class="am-family__btn"
@@ -1211,8 +1134,21 @@ onBeforeUnmount(() => {
                 Lain
               </button>
             </div>
+          </div>
 
-            <h3 class="am-h3 am-adult-heading"><TileMark name="adult" /> Взрослое</h3>
+          <div class="am-panel am-box" :class="{ 'am-panel--closed': !openPanels.adult }">
+            <h3
+              ref="adultHeading"
+              class="am-h3 am-panel__title"
+              role="button"
+              tabindex="0"
+              :aria-expanded="Boolean(openPanels.adult)"
+              @click="togglePanel('adult')"
+              @keydown.enter.prevent="togglePanel('adult')"
+              @keydown.space.prevent="togglePanel('adult')"
+            >
+              <TileMark name="adult" /> Контент 18+
+            </h3>
 
             <div class="am-adult-control" role="radiogroup" aria-label="Фильтрация контента 18+">
               <button
@@ -1299,7 +1235,7 @@ onBeforeUnmount(() => {
             </div>
 
             <!-- Вопрос о возрасте стоит под тумблером, а не отдельным окном: уход с экрана его
-               закрывает. Поле даты своё: системное на тёмных темах выбивалось из стекла. -->
+           закрывает. Поле даты своё: системное на тёмных темах выбивалось из стекла. -->
             <div v-if="askingAge" class="am-age">
               <p class="am-age__ask">Укажите ваш возраст</p>
 
@@ -1321,144 +1257,143 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <div class="am-panel am-box" :class="{ 'am-panel--closed': !openPanels.about }">
+          <Teleport defer to="#am-set-right" :disabled="wide">
+            <div class="am-panel am-box" :class="{ 'am-panel--closed': !openPanels.about }">
+              <h3
+                class="am-h3 am-panel__title"
+                role="button"
+                tabindex="0"
+                :aria-expanded="Boolean(openPanels.about)"
+                @click="togglePanel('about')"
+                @keydown.enter.prevent="togglePanel('about')"
+                @keydown.space.prevent="togglePanel('about')"
+              >
+                <TileMark name="about" /> О программе
+              </h3>
+
+              <ul class="am-facts">
+                <li class="am-fact">
+                  <span class="am-fact__name">Версия</span>
+                  <span class="am-fact__value">{{ version }}</span>
+                </li>
+                <li class="am-fact">
+                  <span class="am-fact__name">Система</span>
+                  <span class="am-fact__value">{{ system }}</span>
+                </li>
+                <li class="am-fact">
+                  <span class="am-fact__name">Датасет названий</span>
+                  <span class="am-fact__value" :class="{ 'am-fact__value--stale': datasetStale }">
+                    {{ datasetText }}
+                  </span>
+                </li>
+              </ul>
+
+              <!-- Плашка репозитория: не строка заметок, а приглашение — свой фон и своё сердце,
+           нажимается вся плашка. Почему именно здесь и так — у REPO_URL в скрипте. -->
+              <button class="am-repo" type="button" @click="onRepoLink">
+                <svg
+                  class="am-repo__heart"
+                  viewBox="0 0 16 16"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <!-- Градиент сердцу задан классами: stop-color через var() в атрибуте не читается,
+               только css-свойством; оттенок из темы, на всех трёх темах сердце своё. -->
+                  <defs>
+                    <linearGradient
+                      id="am-repo-heart"
+                      x1="2.4"
+                      y1="2.4"
+                      x2="13.6"
+                      y2="13.6"
+                      gradientUnits="userSpaceOnUse"
+                    >
+                      <stop class="am-repo__stop" offset="0" />
+                      <stop class="am-repo__stop am-repo__stop--end" offset="1" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    fill="url(#am-repo-heart)"
+                    d="M8 14.1S1.9 10.3 1.9 6.1C1.9 3.9 3.7 2.4 5.5 2.4 6.8 2.4 7.6 3.1 8 4c.4-.9 1.2-1.6 2.5-1.6 1.8 0 3.6 1.5 3.6 3.7 0 4.2-6.1 8-6.1 8Z"
+                  />
+                </svg>
+
+                <span class="am-repo__text">
+                  AniMori — бесплатное приложение без рекламы и телеметрии. Поддержите проект
+                  звёздочкой на GitHub. Там же можно сообщить об ошибке.
+                </span>
+              </button>
+
+              <!-- Свежесть датасета — единственное, за чем человеку приходится следить
+           руками, поэтому про просрочку говорим словами, а не одной цифрой выше. -->
+              <p v-if="datasetStale" class="am-stale">
+                База названий устарела.
+                <button class="am-link" type="button" @click="onDatasetLink">
+                  Открыть animori-data
+                </button>
+              </p>
+
+              <!-- Источники и права — последнее в панели: дальше читать нечего. -->
+              <CreditsBox />
+            </div>
+          </Teleport>
+        </div>
+      </div>
+
+      <div id="am-set-right" class="am-set__col">
+        <CloudBox :list="listCount" :device="system" @changed="onCloudChanged" />
+        <ProxyBox />
+
+        <Teleport defer to="#am-set-main" :disabled="!wide">
+          <div class="am-panel am-box" :class="{ 'am-panel--closed': !openPanels.debug }">
             <h3
               class="am-h3 am-panel__title"
               role="button"
               tabindex="0"
-              :aria-expanded="Boolean(openPanels.about)"
-              @click="togglePanel('about')"
-              @keydown.enter.prevent="togglePanel('about')"
-              @keydown.space.prevent="togglePanel('about')"
+              :aria-expanded="Boolean(openPanels.debug)"
+              @click="togglePanel('debug')"
+              @keydown.enter.prevent="togglePanel('debug')"
+              @keydown.space.prevent="togglePanel('debug')"
             >
-              <TileMark name="about" /> О программе
+              <TileMark name="debug" /> Отладка
             </h3>
 
-            <ul class="am-facts">
-              <li class="am-fact">
-                <span class="am-fact__name">Версия</span>
-                <span class="am-fact__value">{{ version }}</span>
-              </li>
-              <li class="am-fact">
-                <span class="am-fact__name">Система</span>
-                <span class="am-fact__value">{{ system }}</span>
-              </li>
-              <li class="am-fact">
-                <span class="am-fact__name">Датасет названий</span>
-                <span class="am-fact__value" :class="{ 'am-fact__value--stale': datasetStale }">
-                  {{ datasetText }}
-                </span>
-              </li>
-            </ul>
-
-            <!-- Плашка репозитория: не строка заметок, а приглашение — свой фон и своё сердце,
-               нажимается вся плашка. Почему именно здесь и так — у REPO_URL в скрипте. -->
-            <button class="am-repo" type="button" @click="onRepoLink">
-              <svg class="am-repo__heart" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-                <!-- Градиент сердцу задан классами: stop-color через var() в атрибуте не читается,
-                   только css-свойством; оттенок из темы, на всех трёх темах сердце своё. -->
-                <defs>
-                  <linearGradient
-                    id="am-repo-heart"
-                    x1="2.4"
-                    y1="2.4"
-                    x2="13.6"
-                    y2="13.6"
-                    gradientUnits="userSpaceOnUse"
-                  >
-                    <stop class="am-repo__stop" offset="0" />
-                    <stop class="am-repo__stop am-repo__stop--end" offset="1" />
-                  </linearGradient>
-                </defs>
-                <path
-                  fill="url(#am-repo-heart)"
-                  d="M8 14.1S1.9 10.3 1.9 6.1C1.9 3.9 3.7 2.4 5.5 2.4 6.8 2.4 7.6 3.1 8 4c.4-.9 1.2-1.6 2.5-1.6 1.8 0 3.6 1.5 3.6 3.7 0 4.2-6.1 8-6.1 8Z"
-                />
-              </svg>
-
-              <span class="am-repo__text">
-                AniMori — бесплатное приложение, без рекламы и телеметрии. Если вам понравилось —
-                поставьте звездочку, если что-то сломалось — оставьте issue в репозитории.
-              </span>
-            </button>
-
-            <!-- Свежесть датасета — единственное, за чем человеку приходится следить
-               руками, поэтому про просрочку говорим словами, а не одной цифрой выше. -->
-            <p v-if="datasetStale" class="am-stale">
-              Датасет не обновлялся больше {{ STALE_DAYS }} дней. Названия, которых в нём нет,
-              программа добирает из сети по одному — это медленно. Загляните в
-              <button class="am-link" type="button" @click="onDatasetLink">animori-data</button>
-              и запустите сборку кнопкой.
+            <p class="am-meta am-fine">
+              Журнал пишет ошибки, запросы и склад этого запуска. Когда что-то сломалось, пришлите
+              копию оттуда: версия, система и маршрут в ней уже есть.
             </p>
 
-            <!-- Источники и права — последнее в панели: дальше читать нечего. -->
-            <CreditsBox />
+            <div class="am-row">
+              <button
+                v-tip="'Ошибки, запросы и склад этого запуска'"
+                class="am-btn am-btn--ghost"
+                type="button"
+                @click="toLog"
+              >
+                Журнал отладки
+              </button>
+
+              <!-- Консоль движка: F12 в установленном приложении не работает, а из журнала её не
+               видно — там только то, что приложение записало само. -->
+              <button
+                v-tip="'Окно WebView2: Console, Network, ошибки движка'"
+                class="am-btn am-btn--ghost"
+                type="button"
+                :disabled="busy"
+                @click="onDevtools"
+              >
+                Консоль разработчика
+              </button>
+            </div>
+
+            <!-- Тумблер журнала: пока он включён, пишутся ошибки, запросы и склад, а при выключенном
+             журнал молчит и человек решает, что поломок не было. -->
+            <label class="am-switch">
+              <input v-model="loggerOn" type="checkbox" class="am-switch__box" @change="onLogger" />
+              <span class="am-switch__name">Записывать журнал отладки</span>
+            </label>
           </div>
-
-          <ProxyBox v-if="wide" />
-        </div>
-      </div>
-
-      <!-- Правая стопка: копия и прокси; на полном экране остаётся копией одной. -->
-      <div class="am-set__col am-set__col--right">
-        <CloudBox :list="listCount" :device="system" @changed="onCloudChanged" />
-
-        <!--
-          Журнал отладки — плиткой под облачной копией: он про поломки, а не про содержимое
-          списка, и после «что-то сломалось» человек идёт сюда, а не в «О программе». Отдельная
-          плитка нужна и по раскладке: на узком окне стопки растворяются, и порядок плиток задаёт
-          CSS по номерам детей.
-        -->
-        <div class="am-panel am-box" :class="{ 'am-panel--closed': !openPanels.debug }">
-          <h3
-            class="am-h3 am-panel__title"
-            role="button"
-            tabindex="0"
-            :aria-expanded="Boolean(openPanels.debug)"
-            @click="togglePanel('debug')"
-            @keydown.enter.prevent="togglePanel('debug')"
-            @keydown.space.prevent="togglePanel('debug')"
-          >
-            <TileMark name="debug" /> Отладка
-          </h3>
-
-          <p class="am-meta am-fine">
-            Журнал пишет ошибки, запросы и склад этого запуска. Когда что-то сломалось, пришлите
-            копию оттуда: версия, система и маршрут в ней уже есть.
-          </p>
-
-          <div class="am-row">
-            <button
-              v-tip="'Ошибки, запросы и склад этого запуска'"
-              class="am-btn am-btn--ghost"
-              type="button"
-              @click="toLog"
-            >
-              Журнал отладки
-            </button>
-
-            <!-- Консоль движка: F12 в установленном приложении не работает, а из журнала её не
-                 видно — там только то, что приложение записало само. -->
-            <button
-              v-tip="'Окно WebView2: Console, Network, ошибки движка'"
-              class="am-btn am-btn--ghost"
-              type="button"
-              :disabled="busy"
-              @click="onDevtools"
-            >
-              Консоль разработчика
-            </button>
-          </div>
-
-          <!-- Тумблер журнала: пока он включён, пишутся ошибки, запросы и склад, а при выключенном
-               журнал молчит и человек решает, что поломок не было. -->
-          <label class="am-switch">
-            <input v-model="loggerOn" type="checkbox" class="am-switch__box" @change="onLogger" />
-            <span class="am-switch__name">Записывать журнал отладки</span>
-          </label>
-        </div>
-
-        <ProxyBox v-if="!wide" />
+        </Teleport>
       </div>
     </div>
   </section>

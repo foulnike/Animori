@@ -536,9 +536,9 @@ onBeforeUnmount(() => {
 
           <!-- Недоезд говорится прямо и лечится кнопкой: молчаливый постер
                заставлял перезагружать всё окно. -->
-          <div v-if="cardFailed || ruFailed" class="am-ps-fail">
+          <div v-if="cardFailed || (ruFailed && !biography)" class="am-ps-fail">
             <p class="am-ps-fail__word">
-              {{ cardFailed ? 'Карточку загрузить не удалось.' : 'Русское описание не доехало.' }}
+              {{ cardFailed ? 'Не удалось загрузить карточку' : 'Не удалось загрузить описание' }}
             </p>
             <button class="am-btn am-btn--ghost" type="button" @click="retry">Повторить</button>
           </div>
@@ -558,6 +558,17 @@ onBeforeUnmount(() => {
             </button>
           </div>
 
+          <p v-if="shownTab() === 'desc' && biography && !biography.fromShiki" class="am-ps-lang">
+            Описание AniList
+          </p>
+          <p
+            v-else-if="
+              !busy && !ruWait && !cardFailed && !ruFailed && !biography && shownTab() === 'desc'
+            "
+            class="am-ps-lang"
+          >
+            Описание отсутствует
+          </p>
           <div
             v-if="shownTab() === 'desc' && biography"
             class="am-ps-desc"
@@ -687,6 +698,12 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.am-ps-lang {
+  margin: 0;
+  color: var(--am-dim);
+  font-size: 12px;
+}
+
 .am-sheet {
   position: fixed;
   inset: 0;

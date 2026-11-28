@@ -128,8 +128,8 @@ function layoutSpray(): void {
 /** Области показа календаря: подписи, подсказки и порядок. Второй пункт назван «Популярное» нарочно:
  * глобального показа у AniList нет вовсе, и подпись, обещающая это, врала бы при каждом открытии. */
 const CALENDAR_SCOPES: ReadonlyArray<{ key: CalendarScope; title: string; hint: string }> = [
-  { key: 'mine', title: 'Моё', hint: 'Всё из списка, кроме брошенного' },
-  { key: 'popular', title: 'Популярное', hint: 'Выходы верхушки идущих за эту неделю' },
+  { key: 'mine', title: 'Мой список', hint: 'Все записи, кроме брошенных' },
+  { key: 'popular', title: 'Популярное', hint: 'Популярные аниме недели' },
 ]
 
 /** Скольким плиткам добирать русские названия и по скольку за заход. */
@@ -210,6 +210,15 @@ const {
   setScope: setCalendarScope,
   load: loadCalendar,
 } = useHomeCalendar()
+
+const calendarIndex = computed(() =>
+  calendarDays.value.findIndex((day) => day.key === calendarDay.value?.key),
+)
+
+function stepCalendar(direction: -1 | 1): void {
+  const target = calendarDays.value[calendarIndex.value + direction]
+  if (target) pickDay(target.key)
+}
 
 /** Выходы показанного дня. Отдельным computed, а не выражением в разметке: решать,
  * рисовать ли полку, должен скрипт. Потолка у списка нет: полка едет вбок и в высоту не растёт. */
@@ -296,7 +305,7 @@ let heroSuppressClickUntil = 0
 function startHeroSwipe(event: TouchEvent): void {
   heroTouch = null
   if (event.touches.length !== 1) return
-  if (event.target instanceof Element && event.target.closest('.am-home-hero__dots')) return
+  if (event.target instanceof Element && event.target.closest('.am-home-hero__pager')) return
   const touch = event.touches[0]
   if (touch) heroTouch = { x: touch.clientX, y: touch.clientY }
 }
@@ -1296,19 +1305,61 @@ watch(
             </div>
             <div
               v-if="heroSlides.length > 1"
-              class="am-home-hero__dots"
-              :style="{ '--am-hero-dot-count': heroSlides.length }"
+              class="am-home-hero__pager"
               role="group"
               aria-label="Выбор слайда"
             >
               <button
-                v-for="(item, index) in heroSlides"
-                :key="item.mediaId"
+                class="am-home-hero__arrow"
                 type="button"
-                :aria-label="`Слайд ${index + 1}`"
-                :aria-current="item.mediaId === heroId ? 'true' : undefined"
-                @click="heroId = item.mediaId"
-              />
+                aria-label="Предыдущий слайд"
+                @click="changeHero(-1)"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m10 4-4 4 4 4" />
+                </svg>
+              </button>
+              <div class="am-home-hero__dots" :style="{ '--am-hero-dot-count': heroSlides.length }">
+                <button
+                  class="am-home-hero__dot"
+                  v-for="(item, index) in heroSlides"
+                  :key="item.mediaId"
+                  type="button"
+                  :aria-label="`Слайд ${index + 1}`"
+                  :aria-current="item.mediaId === heroId ? 'true' : undefined"
+                  @click="heroId = item.mediaId"
+                />
+              </div>
+              <button
+                class="am-home-hero__arrow"
+                type="button"
+                aria-label="Следующий слайд"
+                @click="changeHero(1)"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 16 16"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m6 4 4 4-4 4" />
+                </svg>
+              </button>
             </div>
           </div>
           <ul v-if="heroCard?.genres.length" class="am-home-hero__genres" aria-label="Жанры">
@@ -1327,9 +1378,9 @@ watch(
      приложение открывают завтра. Полоса дней рисуется сразу — дни это календарь, а не данные. -->
     <section v-if="calendarDays.length > 0" class="am-cal">
       <div class="am-cal__bar">
-        <h2 class="am-h2">Выход серий</h2>
+        <h2 class="am-h2">Календарь выходов</h2>
 
-        <div class="am-seg" role="group" aria-label="Чья неделя">
+        <div class="am-seg" role="group" aria-label="Показывать в календаре">
           <button
             v-for="item in CALENDAR_SCOPES"
             :key="item.key"
@@ -1345,7 +1396,53 @@ watch(
         </div>
 
         <span class="am-bar__gap" />
-        <span class="am-cal__span">{{ calendarSpan }}</span>
+        <div class="am-cal__nav" role="group" aria-label="Листание календаря">
+          <button
+            class="am-btn am-cal__arrow"
+            type="button"
+            aria-label="Предыдущий день"
+            v-tip="'Предыдущий день'"
+            :aria-disabled="calendarIndex <= 0"
+            @click="stepCalendar(-1)"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m10 4-4 4 4 4" />
+            </svg>
+          </button>
+          <span class="am-cal__span">{{ calendarSpan }}</span>
+          <button
+            class="am-btn am-cal__arrow"
+            type="button"
+            aria-label="Следующий день"
+            v-tip="'Следующий день'"
+            :aria-disabled="calendarIndex >= calendarDays.length - 1"
+            @click="stepCalendar(1)"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 4 4 4-4 4" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div class="am-cal__strip" role="group" aria-label="Дни недели">
@@ -1376,10 +1473,12 @@ watch(
       </div>
 
       <p v-if="calendarBusy && (calendarDay?.rows.length ?? 0) === 0" class="am-cal__note">
-        Спрашиваю расписание…
+        Загрузка расписания…
       </p>
 
-      <p v-else-if="calendarFailed" class="am-cal__note">Расписание не пришло — проверьте связь.</p>
+      <p v-else-if="calendarFailed" class="am-cal__note">
+        Не удалось загрузить расписание. Проверьте подключение.
+      </p>
 
       <!-- День — полка постеров в один ряд с боковой прокруткой, а не список строк. Час и номер серии ушли
      в подпись под названием. Метку доступности календарь добывает сам, всем днём разом.
@@ -1407,7 +1506,7 @@ watch(
       <!-- Пустой день — тоже пустое состояние, и знак у него тот же, что у крупных: лист календаря. -->
       <p v-else class="am-cal__note am-cal__note--none">
         <span class="am-cal__mark"><EmptyMark name="calendar" /></span>
-        <span>В этот день выходов нет.</span>
+        <span>В этот день ничего не выходит</span>
       </p>
     </section>
 
@@ -1415,9 +1514,27 @@ watch(
      data-am-row: вход на ряд сверху или снизу встаёт на «Фильтры» — она самая левая, и по геометрии
      фокус вставал бы на чип, минуя кнопку, с которой начинают набор условий (dpad.ts). -->
     <div class="am-sift" data-am-row>
-      <button class="am-btn am-sift__open" type="button" @click="sheetOpen = true">
-        Фильтры
-        <span v-if="pickCount > 0" class="am-sift__num">{{ pickCount }}</span>
+      <button
+        v-tip="'Фильтры'"
+        class="am-btn am-sift__open"
+        type="button"
+        :aria-label="pickCount ? 'Фильтры, активно ' + pickCount : 'Фильтры'"
+        @click="sheetOpen = true"
+      >
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4 6h16M7 12h10m-7 6h4" />
+        </svg>
+        <span v-if="pickCount > 0" class="am-sift__num" aria-hidden="true">{{ pickCount }}</span>
       </button>
 
       <div class="am-choose">
@@ -1584,17 +1701,16 @@ watch(
 
         <div v-else class="am-empty">
           <span class="am-empty__mark"><EmptyMark name="sieve" /></span>
-          <span>По такому отбору ничего не нашлось.</span>
-          <span>Снимите пару условий — подбор станет шире.</span>
+          <span>Нет результатов</span>
 
           <div class="am-empty__acts">
-            <button class="am-btn" type="button" @click="resetPick">Сбросить отбор</button>
+            <button class="am-btn" type="button" @click="resetPick">Сбросить фильтры</button>
           </div>
         </div>
 
         <div v-if="!feedDone && feedRows.length > 0" class="am-more">
           <button class="am-btn am-btn--soft" type="button" :disabled="feedBusy" @click="onMore">
-            {{ feedBusy ? 'Грузим…' : 'Показать ещё' }}
+            {{ feedBusy ? 'Загрузка…' : 'Показать ещё' }}
           </button>
         </div>
       </section>
@@ -1832,22 +1948,26 @@ watch(
   cursor: pointer;
 }
 .am-home-hero__open:focus-visible,
-.am-home-hero__dots button:focus-visible {
+.am-home-hero__pager button:focus-visible {
   outline: 2px solid var(--am-accent);
   outline-offset: -3px;
 }
-.am-home-hero__dots {
+.am-home-hero__pager {
   position: relative;
   z-index: 2;
   display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) 48px;
+  width: min(100%, 240px);
+}
+.am-home-hero__dots {
+  display: grid;
   grid-template-columns: repeat(var(--am-hero-dot-count), minmax(0, 1fr));
-  width: min(100%, calc(var(--am-hero-dot-count) * 32px));
   min-width: 0;
 }
-.am-home-hero__dots button {
+.am-home-hero__pager button {
   display: grid;
   min-width: 0;
-  height: var(--am-touch, 44px);
+  height: 48px;
   padding: 0;
   place-items: center;
   border: 0;
@@ -1856,7 +1976,7 @@ watch(
   color: var(--am-dim);
   cursor: pointer;
 }
-.am-home-hero__dots button::before {
+.am-home-hero__dot::before {
   width: 5px;
   height: 5px;
   border-radius: 999px;
@@ -2109,6 +2229,25 @@ watch(
   align-items: center;
 }
 
+.am-cal__nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.am-cal__arrow {
+  display: grid;
+  place-items: center;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0;
+}
+
+.am-cal__arrow[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.45;
+}
+
 .am-cal__span {
   font-size: 12.5px;
   color: var(--am-faint);
@@ -2231,6 +2370,8 @@ watch(
 }
 
 .am-sift__open {
+  min-width: 48px;
+  min-height: 48px;
   flex: 0 0 auto;
 }
 

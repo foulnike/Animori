@@ -1,6 +1,6 @@
 [package]
 name = "animori"
-version = "3.2.3"
+version = "3.3.0"
 description = "AniMori — Toolkit for AniList, shell for Android TV"
 authors = ["foulnike"]
 license = "MIT"

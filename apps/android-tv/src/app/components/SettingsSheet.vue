@@ -1,340 +1,429 @@
 <script setup lang="ts">
-// Окно настроек: одна плита мозаики — одно окно. Рамка одна на шесть окон, содержимое приходит слотом. Заголовка у рамки нет: его несёт панель внутри — одно и то же слово стояло бы дважды.
-
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 import { pushBackStop } from '../back-stop'
+import SettingMark from './SettingMark.vue'
 
-const props = defineProps<{
-  /** Открыто ли окно. */
-  open: boolean
-  /** Имя окна для читалок: на экране его несёт заголовок панели. */
-  title: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    open: boolean
+    title: string
+    icon?: InstanceType<typeof SettingMark>['$props']['name']
+    initialFocus?: string
+    closeLabel?: string
+    detail?: boolean
+    compact?: boolean
+    page?: number
+    pageCount?: number
+    returnFocus?: () => HTMLElement | null
+  }>(),
+  {
+    icon: undefined,
+    initialFocus: undefined,
+    returnFocus: undefined,
+    closeLabel: 'Готово',
+    page: 0,
+    pageCount: 1,
+  },
+)
 
-const emit = defineEmits<{ close: [] }>()
-
-/** Коробка окна: её ищет above() среди всех открытых диалогов. */
+const emit = defineEmits<{ close: []; 'update:page': [number] }>()
 const sheet = ref<HTMLElement | null>(null)
-
-/** Тело окна: запасная цель, когда в панели не нашлось ни кнопки, ни поля. */
 const body = ref<HTMLElement | null>(null)
+const done = ref<HTMLButtonElement | null>(null)
+const previous = ref<HTMLButtonElement | null>(null)
+const next = ref<HTMLButtonElement | null>(null)
+let opener: HTMLElement | null = null
+let stopBack: (() => void) | undefined
 
-/** Крестик шапки: видимая цель, когда панель пуста — у тела подсветки нет. */
-const close = ref<HTMLElement | null>(null)
-
-/// Поле ввода, кроме галочки: у поля программный фокус поднимает экранную клавиатуру, у галочки — нет.
-function isTextField(el: HTMLElement): el is HTMLInputElement | HTMLTextAreaElement {
-  if (el instanceof HTMLTextAreaElement) return true
-  if (el instanceof HTMLInputElement) return el.type !== 'checkbox' && el.type !== 'radio'
-  return false
-}
-
-/** Годная цель в `box` по порядку разметки. Текстовые поля просим отдельно: у поля
- *  программный фокус без блокировки поднимает экранную клавиатуру, у кнопки — нет. */
-function pick(box: HTMLElement, withText: boolean): HTMLElement | null {
-  const all = box.querySelectorAll<HTMLElement>(
-    'a[href], button, input, select, textarea, [tabindex]',
+function topDialog(): HTMLElement | null {
+  const dialogs = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"]'))
+  return (
+    dialogs.reverse().find((dialog) => {
+      if (dialog.classList.contains('am-settings-window__box')) return true
+      if (typeof dialog.checkVisibility === 'function') {
+        return dialog.checkVisibility({ checkVisibilityCSS: true })
+      }
+      return !dialog.hidden && getComputedStyle(dialog).visibility !== 'hidden'
+    }) ?? null
   )
+}
 
-  for (const el of all) {
-    if (el.hasAttribute('disabled')) continue
-    if (el.tabIndex < 0) continue
-    if (!withText && isTextField(el)) continue
-    const rect = el.getBoundingClientRect()
-    if (rect.width === 0 || rect.height === 0) continue
-    return el
+function canFocus(el: HTMLElement | null): el is HTMLElement {
+  return el !== null && el.isConnected && !el.matches(':disabled') && el.tabIndex >= 0
+}
+
+function controls(box: HTMLElement): HTMLElement[] {
+  return Array.from(
+    box.querySelectorAll<HTMLElement>(
+      'a[href], button, input, select, textarea, [tabindex]:not([data-am-seed])',
+    ),
+  ).filter((el) => canFocus(el) && el.closest('[hidden], [inert], [aria-hidden="true"]') === null)
+}
+
+function isTextField(el: HTMLElement): el is HTMLInputElement | HTMLTextAreaElement {
+  return (
+    el instanceof HTMLTextAreaElement ||
+    (el instanceof HTMLInputElement && el.type !== 'checkbox' && el.type !== 'radio')
+  )
+}
+
+function focusInitial(): void {
+  const box = body.value
+  if (!props.open || box === null || topDialog() !== sheet.value) return
+  const items = controls(box)
+  const preferred = props.initialFocus
+    ? (sheet.value?.querySelector<HTMLElement>(props.initialFocus) ?? null)
+    : null
+  const target = [
+    preferred,
+    ...items.filter((el) => !isTextField(el)),
+    ...items,
+    previous.value,
+    next.value,
+    done.value,
+  ].find(canFocus)
+  if (target && isTextField(target)) {
+    target.setAttribute('data-am-held', '')
+    target.readOnly = true
   }
-
-  return null
+  ;(target ?? box).focus({ preventScroll: true })
 }
 
-function onClose(): void {
-  emit('close')
+function detach(): void {
+  document.removeEventListener('keydown', onKey)
+  stopBack?.()
+  stopBack = undefined
 }
 
-/** Есть ли открытое окно поверх этого: справка «Копии списка» лежит выше, и Escape её, а не этой.
- * Верхнее —
- *  последнее в разметке, как в обходе пульта: оба окна уходят из DOM по закрытии. */
-function above(): boolean {
-  const all = document.querySelectorAll<HTMLElement>('[role="dialog"]')
-  for (let i = all.length - 1; i >= 0; i--) {
-    const node = all[i]
-    if (node === undefined) continue
-    if (node === sheet.value) return false
-    const shown =
-      typeof node.checkVisibility === 'function'
-        ? node.checkVisibility({ checkVisibilityCSS: true })
-        : getComputedStyle(node).visibility !== 'hidden'
-    if (shown) return true
+function onKey(event: KeyboardEvent): void {
+  const dialog = sheet.value
+  if (event.defaultPrevented || dialog === null || topDialog() !== dialog) return
+
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    emit('close')
+  } else if (event.key === 'Tab') {
+    const items = controls(dialog)
+    const at = items.indexOf(document.activeElement as HTMLElement)
+    if (at === -1 || (event.shiftKey ? at === 0 : at === items.length - 1)) {
+      event.preventDefault()
+      const target = event.shiftKey ? items[items.length - 1] : items[0]
+      target?.focus()
+    }
   }
-  return false
 }
 
-/** Escape: окно поверх экрана без него на компьютере не закрыть — там нет ни крестика
- *  в углу пульта, ни аппаратной кнопки. Слушатель живёт только пока окно открыто. */
-function onKey(e: KeyboardEvent): void {
-  if (e.key !== 'Escape') return
-  if (above()) return
-  onClose()
+function changePage(page: number): void {
+  if (page < 0 || page >= props.pageCount) return
+  const current = document.activeElement
+  emit('update:page', page)
+  void nextTick(() => {
+    if (body.value) body.value.scrollTop = 0
+    if (current instanceof HTMLElement && !canFocus(current)) {
+      const other = current === next.value ? previous.value : next.value
+      ;(canFocus(other) ? other : done.value)?.focus({ preventScroll: true })
+    }
+  })
 }
 
-// Шаг «Назад» ставится только на время окна: компонент живёт всё время работы экрана.
-let stopBack: (() => void) | null = null
+// На малом экране или при длинном сообщении тело может прокручиваться отдельно.
+// Когда фокус уже в подвале, стрелки всё равно позволяют дочитать текст.
+function scrollOverflow(event: KeyboardEvent): void {
+  const box = body.value
+  const holder = event.target
+  if (box === null || !(holder instanceof HTMLElement)) return
+  const footer = holder.closest('.am-settings-window__foot') !== null
+  const down = event.key === 'PageDown' || (footer && event.key === 'ArrowDown')
+  const up = event.key === 'PageUp' || (footer && event.key === 'ArrowUp' && box.scrollTop > 0)
+  if (!up && !down) return
+  const edge = box.scrollHeight - box.clientHeight
+  if (edge <= 1 || (down ? box.scrollTop >= edge - 1 : box.scrollTop <= 0)) return
+  box.scrollTop += (down ? 1 : -1) * Math.max(48, Math.round(box.clientHeight * 0.75))
+  event.preventDefault()
+  event.stopPropagation()
+}
 
 watch(
   () => props.open,
-  (open) => {
+  (open, wasOpen) => {
     if (open) {
-      if (stopBack === null) {
-        stopBack = pushBackStop(function () {
-          onClose()
-          return true
-        })
-      }
-
-      document.addEventListener('keydown', onKey)
-
-      // Фокус переезжает в окно: обход пульта ограничил бы себя окном, а фокус стоял бы снаружи. Проверяем,
-      // а не верим: отказ `focus()` оставил бы окно пустым для обхода.
-      void nextTick(() => {
-        const box = body.value
-        if (box === null) return
-
-        // Порядок входа: первое действие панели → текстовое поле → крестик шапки → тело. Крестик важнее тела:
-        // у тела подсветки нет. Поле ввода ждёт вторым — с фокуса на нём WebView поднимает клавиатуру.
-        const control = pick(box, false) ?? pick(box, true) ?? close.value
-        if (control !== null) {
-          if (isTextField(control)) {
-            // Блокировка та же, что у обхода пульта: без неё WebView открывает клавиатуру сразу.
-            control.setAttribute('data-am-held', '')
-            control.readOnly = true
-          }
-          control.focus({ preventScroll: true })
-          if (document.activeElement === control) return
-        }
-
-        box.focus({ preventScroll: true })
+      const active = document.activeElement
+      opener = active instanceof HTMLElement && active !== document.body ? active : null
+      stopBack = pushBackStop(() => {
+        emit('close')
+        return true
       })
-      return
-    }
-
-    document.removeEventListener('keydown', onKey)
-
-    if (stopBack !== null) {
-      stopBack()
-      stopBack = null
+      document.addEventListener('keydown', onKey)
+      void nextTick(focusInitial)
+    } else {
+      detach()
+      if (!wasOpen) return
+      const origin = opener
+      opener = null
+      void nextTick(() => {
+        const top = topDialog()
+        const target = [props.returnFocus?.() ?? null, origin].find(
+          (el): el is HTMLElement => canFocus(el) && (top === null || top.contains(el)),
+        )
+        target?.focus({ preventScroll: true })
+      })
     }
   },
   { immediate: true },
 )
 
-onBeforeUnmount(() => {
-  document.removeEventListener('keydown', onKey)
-  stopBack?.()
-  stopBack = null
-})
+onBeforeUnmount(detach)
 </script>
 
 <template>
   <Teleport to="body">
-    <Transition name="am-sheet">
-      <div v-if="open" class="am-sheet">
-        <!-- Занавес — кнопка: клик мимо коробки закрывает, и это доступно с клавиатуры. -->
-        <button class="am-sheet__veil" type="button" aria-label="Закрыть" @click="onClose" />
+    <div v-if="open" class="am-settings-window" :class="{ 'am-settings-window--detail': detail }">
+      <div class="am-settings-window__veil" aria-hidden="true" @click="emit('close')" />
 
-        <div ref="sheet" class="am-sheet__box" role="dialog" aria-modal="true" :aria-label="title">
-          <!-- Крест один во всей рамке: заголовок несёт панель, шапке остаётся выход. -->
-          <header class="am-sheet__top">
-            <span class="am-bar__gap" />
-            <button
-              ref="close"
-              class="am-sheet__close"
-              type="button"
-              data-am-last
-              aria-label="Закрыть"
-              @click="onClose"
-            >
-              ✕
-            </button>
-          </header>
+      <div
+        ref="sheet"
+        class="am-settings-window__box"
+        :class="{ 'am-settings-window__box--compact': compact }"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="title"
+        @keydown="scrollOverflow"
+      >
+        <header class="am-settings-window__head">
+          <span v-if="icon" class="am-settings-window__icon"><SettingMark :name="icon" /></span>
+          <h2>{{ title }}</h2>
+        </header>
 
-          <!-- tabindex у тела: с фокусом на нём пульт видит, что находится внутри окна,
-             и не считает окно пустым. Метка `data-am-seed` — тело контейнер, а не цель: ходить
-             по нему нельзя, его прямоугольник перекрывает всю панель, и фокус вставал бы туда,
-             где подсветки нет. -->
-          <div ref="body" class="am-sheet__body" tabindex="0" data-am-seed>
-            <slot />
-          </div>
-
-          <!-- «Готово» — общий выход: панель правят по месту, подтверждать нечего. -->
-          <footer class="am-sheet__foot">
-            <button class="am-btn am-btn--soft am-sheet__go" type="button" @click="onClose">
-              Готово
-            </button>
-          </footer>
+        <div ref="body" class="am-settings-window__body" tabindex="0" data-am-seed data-am-scroll>
+          <slot />
         </div>
+
+        <footer class="am-settings-window__foot">
+          <template v-if="pageCount > 1">
+            <span class="am-settings-window__page" aria-live="polite">
+              Страница {{ page + 1 }} из {{ pageCount }}
+            </span>
+            <button
+              ref="previous"
+              class="am-btn am-settings-window__arrow"
+              type="button"
+              aria-label="Предыдущая страница"
+              :disabled="page === 0"
+              @click="changePage(page - 1)"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M19 12H5 M12 5l-7 7 7 7" />
+              </svg>
+            </button>
+            <button
+              ref="next"
+              class="am-btn am-settings-window__arrow"
+              type="button"
+              aria-label="Следующая страница"
+              :disabled="page + 1 === pageCount"
+              @click="changePage(page + 1)"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M5 12h14 M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          </template>
+          <slot name="actions">
+            <button
+              ref="done"
+              class="am-btn am-settings-window__done"
+              :class="{ 'am-btn--soft': detail }"
+              type="button"
+              @click="emit('close')"
+            >
+              <svg
+                v-if="!detail"
+                class="am-settings-window__back"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M19 12H5 M12 5l-7 7 7 7" />
+              </svg>
+              {{ closeLabel }}
+            </button>
+          </slot>
+        </footer>
       </div>
-    </Transition>
+    </div>
   </Teleport>
 </template>
 
 <style scoped>
-/* Окно поверх всего: мозаика под ним остаётся на месте, чтобы возврат не сбрасывал прокрутку. */
-.am-sheet {
+.am-settings-window {
   position: fixed;
   inset: 0;
   z-index: 60;
-  display: flex;
+  display: grid;
   align-items: center;
-  justify-content: center;
-  padding: clamp(12px, 3vw, 32px);
+  justify-items: center;
+  padding: clamp(10px, 3vmin, 32px);
 }
 
-.am-sheet__veil {
+.am-settings-window--detail {
+  z-index: 61;
+}
+
+.am-settings-window__veil {
   position: absolute;
   inset: 0;
-  padding: 0;
-  cursor: default;
-  background: var(--am-veil);
-  border: 0;
-  backdrop-filter: blur(6px);
-  animation: am-sheet-veil var(--am-mid) var(--am-ease) both;
+  background: color-mix(in srgb, var(--am-bg) 76%, transparent);
 }
 
-.am-sheet__box {
+.am-settings-window__box {
   position: relative;
   display: flex;
   flex-direction: column;
-  width: min(880px, 100%);
-  max-height: min(90vh, 940px);
-  overflow: hidden;
+  gap: 12px;
+  width: min(720px, 100%);
+  max-height: calc(100vh - 2 * clamp(10px, 3vmin, 32px));
+  max-height: calc(100dvh - 2 * clamp(10px, 3vmin, 32px));
+  min-height: 0;
+  padding: clamp(12px, 2.6vmin, 24px);
   background: var(--am-panel);
   border: 1px solid var(--am-line);
-  border-radius: var(--am-r-drop);
-  box-shadow:
-    var(--am-sh-2),
-    inset 0 1px 0 var(--am-edge);
-  animation: am-sheet-in var(--am-mid) var(--am-ease-soft) both;
+  border-radius: var(--am-r-m);
+  box-shadow: var(--am-sh-2);
+  animation: am-settings-open var(--am-fast) var(--am-ease-soft) both;
 }
 
-@keyframes am-sheet-veil {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+.am-settings-window__box--compact {
+  width: min(540px, 100%);
 }
 
-@keyframes am-sheet-in {
-  from {
-    opacity: 0;
-    transform: translateY(14px) scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* Шапка тонкая: она держит один выход, и высота окна уходит содержимому. */
-.am-sheet__top {
+.am-settings-window__head,
+.am-settings-window__foot {
   display: flex;
   flex: 0 0 auto;
-  gap: 10px;
   align-items: center;
-  padding: 10px 12px 0 clamp(14px, 1.8vw, 22px);
+  gap: 10px;
 }
 
-.am-sheet__close {
+.am-settings-window__head {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--am-line-soft);
+}
+
+.am-settings-window__head h2 {
+  margin: 0;
+  font-size: clamp(19px, 3.4vmin, 28px);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.am-settings-window__icon {
   display: grid;
-  flex: none;
+  flex: 0 0 36px;
   place-items: center;
-  width: 36px;
   height: 36px;
-  padding: 0;
-  font: inherit;
-  font-size: 15px;
-  line-height: 1;
-  color: var(--am-dim);
-  cursor: pointer;
-  background: var(--am-fill-1);
-  border: 1px solid var(--am-line-soft);
-  border-radius: var(--am-r-cap);
-  transition:
-    color var(--am-fast) var(--am-ease),
-    background-color var(--am-fast) var(--am-ease),
-    border-color var(--am-fast) var(--am-ease);
+  color: var(--am-accent);
+  background: var(--am-accent-soft);
+  border-radius: var(--am-r-s);
 }
 
-.am-sheet__close:hover:where(:not(.am-lite *)),
-.am-sheet__close:focus-visible {
-  color: var(--am-text);
-  background: var(--am-hover);
-  border-color: rgb(var(--am-accent-rgb) / 0.45);
+.am-settings-window__icon :deep(svg) {
+  width: 23px;
+  height: 23px;
 }
 
-/* Тело едет, шапка и низ стоят: «Готово» не уезжает за край длинной панели. min-height: 0
-   обязателен: в гибкой колонке блок по умолчанию не сжимается ниже содержимого. */
-.am-sheet__body {
-  display: flex;
+.am-settings-window__body {
+  display: grid;
   flex: 1 1 auto;
-  flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   min-height: 0;
-  padding: 12px clamp(14px, 1.8vw, 22px) 16px;
-  overflow-y: auto;
+  padding: 4px;
+  margin: -4px;
+  overflow: auto;
+  overflow-wrap: anywhere;
   overscroll-behavior: contain;
 }
 
-/* Тело берёт фокус, но подсветки на нём быть не должно: правило .am-lite :focus-visible
-   залило бы акцентом всю панель. */
-.am-sheet__body:focus-visible {
+.am-settings-window .am-settings-window__body:focus-visible {
   outline: none;
   box-shadow: none;
 }
 
-.am-sheet__foot {
-  display: flex;
-  flex: 0 0 auto;
-  padding: 12px clamp(14px, 1.8vw, 22px) 14px;
+.am-lite .am-settings-window__box :deep(button:focus-visible),
+.am-lite .am-settings-window__box :deep(input:focus-visible) {
+  box-shadow: 0 0 0 3px var(--am-accent-soft);
+}
+
+.am-settings-window__foot {
+  flex-wrap: wrap;
+  padding-top: 10px;
   border-top: 1px solid var(--am-line-soft);
 }
 
-/* Главная кнопка тянется: на пульте попасть в широкую цель легче, чем в узкую. */
-.am-sheet__go {
-  flex: 1 1 auto;
+.am-settings-window__foot > :deep(.am-btn) {
+  min-height: 44px;
+  padding-inline: 14px;
 }
 
-/* Телевизор: у пульта нет Escape, и крест — выход из окна. Тридцати шести пикселей
-   для цели с трёх метров мало. */
-.am-lite .am-sheet__close {
-  width: 52px;
-  height: 52px;
-  font-size: 24px;
+.am-settings-window__foot > .am-settings-window__arrow {
+  width: 44px;
+  padding-inline: 0;
 }
 
-/* На узком экране окно становится нижним листом: строка на всю ширину читается лучше коробки по центру. */
-@media (max-width: 640px) {
-  .am-sheet {
-    align-items: flex-end;
-    padding: 0;
-  }
+.am-settings-window__arrow svg,
+.am-settings-window__back {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+}
 
-  .am-sheet__box {
-    width: 100%;
-    max-height: 92vh;
-    border-right: 0;
-    border-bottom: 0;
-    border-left: 0;
-    border-radius: var(--am-r-drop) var(--am-r-drop) 0 0;
+.am-settings-window__box :deep(button:disabled) {
+  color: var(--am-dim);
+  cursor: default;
+  background: var(--am-fill-1);
+  border-color: var(--am-line-soft);
+  opacity: 0.36;
+}
+
+.am-settings-window--detail .am-settings-window__foot {
+  justify-content: flex-end;
+}
+
+.am-settings-window__page {
+  margin-inline-end: auto;
+  color: var(--am-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes am-settings-open {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .am-sheet__veil,
-  .am-sheet__box {
+  .am-settings-window__box {
     animation: none;
   }
 }

@@ -41,7 +41,10 @@ export function parseHash(hash: string): Route {
 
   const params: Record<string, string> = {}
   const tail = parts[1]
-  if (SCREENS_WITH_ID.includes(head) && tail !== undefined) {
+  if (
+    tail !== undefined &&
+    (SCREENS_WITH_ID.includes(head) || (head === 'settings' && tail === 'adult'))
+  ) {
     try {
       params.id = decodeURIComponent(tail)
     } catch {

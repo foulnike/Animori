@@ -102,7 +102,7 @@ export function attachPlayback(video: HTMLVideoElement, hooks: PlaybackHooks): P
     }
 
     Logger('ERROR', `Плеер: тег остановил воспроизведение (код ${code})`)
-    hooks.onFatal('Поток оборвался. Проверьте сеть и нажмите «Переспросить».', 'net')
+    hooks.onFatal('Воспроизведение прервано. Проверьте подключение.', 'net')
   }
 
   /** Разбор отказа: сеть и звук лечатся на месте, остальное — наверх. */
@@ -135,7 +135,7 @@ export function attachPlayback(video: HTMLVideoElement, hooks: PlaybackHooks): P
 
     // Сеть своё отработала выше; остальное лечим новым адресом — самая частая причина.
     if (kind === Hls.ErrorTypes.NETWORK_ERROR) {
-      hooks.onFatal('Поток оборвался. Проверьте сеть и нажмите «Переспросить».', 'net')
+      hooks.onFatal('Воспроизведение прервано. Проверьте подключение.', 'net')
       return
     }
 

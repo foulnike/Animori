@@ -39,10 +39,10 @@ async function onCheck(): Promise<void> {
 
   try {
     updateOffer.value = await checkUpdate()
-    if (updateOffer.value === null) said.value = 'Обновлений нет — это последняя версия.'
+    if (updateOffer.value === null) said.value = 'Установлена последняя версия.'
   } catch {
     updateOffer.value = null
-    said.value = 'Спросить не удалось: GitHub не ответил. Попробуйте позже.'
+    said.value = 'Не удалось проверить обновления. Повторите позже.'
   } finally {
     busy.value = false
   }
@@ -113,21 +113,15 @@ onBeforeUnmount(() => {
 
           <!-- tabindex у тела: с фокусом на кнопке обход пульта видит, что находится внутри окна. -->
           <div class="am-modal__body" tabindex="0" data-am-seed>
-            <p v-if="busy">Спрашиваю GitHub…</p>
+            <p v-if="busy">Проверяем обновления…</p>
 
             <template v-else-if="updateOffer">
-              <p class="am-up__lead">
-                Выпуск новее установленного. Файл скачивается в кэш приложения, установку
-                подтверждает система.
-              </p>
-
               <!-- Переносы в описании выпуска сохранены: его пишут списком, и склеенный в строку список не читается. -->
               <p v-if="updateOffer.notes" class="am-up__notes">{{ updateOffer.notes }}</p>
 
               <div v-if="away" class="am-up__warn">
-                Скачивания не было: у приложения нет права устанавливать пакеты. Откройте настройки
-                Android, разрешите установку из неизвестных источников для AniMori и вернитесь —
-                нажмите «Установить» снова.
+                Разрешите AniMori устанавливать приложения в настройках Android, затем повторите
+                установку.
               </div>
             </template>
 
@@ -276,10 +270,6 @@ onBeforeUnmount(() => {
 
 .am-modal__body p {
   margin: 0;
-}
-
-.am-up__lead {
-  color: var(--am-text);
 }
 
 /* Описание выпуска — как его написали: переносы сохранены, шрифт ровный, без моноширинной сетки. */

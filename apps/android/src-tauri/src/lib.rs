@@ -79,14 +79,11 @@ async fn animori_open_external(
         };
         let dialog = app
             .dialog()
-            .message(format!(
-                "Вы переходите на сторонний сайт. Он может быть небезопасен.\n\n{}",
-                validated.origin().ascii_serialization()
-            ))
+            .message(validated.origin().ascii_serialization())
             .title("Открыть сторонний сайт?")
             .kind(MessageDialogKind::Warning)
             .buttons(MessageDialogButtons::OkCancelCustom(
-                "Открыть в браузере".to_string(),
+                "Открыть".to_string(),
                 "Отмена".to_string(),
             ));
         #[cfg(desktop)]

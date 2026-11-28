@@ -509,7 +509,7 @@ onBeforeUnmount(() => {
             type="button"
             @click="onRemove"
           >
-            {{ removing ? 'Нажмите ещё раз' : 'Убрать из списка' }}
+            {{ removing ? 'Подтвердить удаление' : 'Удалить из списка' }}
           </button>
 
           <span class="am-bar__gap" />

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { installMockBridge, type MockBridgeHandle } from '@core-tests/bridge-module'
 import { assets } from '@/app/onboarding'
-import { DOCUMENTS } from '../../../packages/onboarding/src/content'
+import { DOCUMENTS } from '../../../packages/onboarding/src/legal'
 import { needsOnboarding } from '../../../packages/onboarding/src/first-launch'
 import { showOnboarding } from '../../../packages/onboarding/src/launch'
 
@@ -19,7 +19,7 @@ describe('первый запуск AniMori', () => {
     expect(await needsOnboarding()).toBe(false)
   })
 
-  it('открывает галереи, требует согласие и закрывается после сохранения', async () => {
+  it('показывает анимированные сцены, требует согласие и закрывается после сохранения', async () => {
     const root = document.createElement('div')
     const shown = vi.fn()
     const write = vi.spyOn(mock.bridge.storage, 'set').mockRejectedValueOnce(new Error('disk'))
@@ -39,38 +39,40 @@ describe('первый запуск AniMori', () => {
     await nextTick()
     expect(heading()).toBe('Смотрите аниме')
     expect(root.querySelector('.am-intro__copy > p:not(.am-intro__label)')?.textContent).toBe(
-      'AniMori запомнит, где вы остановились.',
+      'Продолжайте с того места, где остановились.',
     )
-    expect(root.querySelector('.am-intro__details')).toBeNull()
-    expect(root.querySelector('figure img')?.getAttribute('src')).toBe(
-      assets.galleries.player[0].src,
-    )
-    expect(root.querySelector('.am-intro__gallery-nav')).toBeNull()
+    const scene = () => root.querySelector<HTMLElement>('.am-scene')!
+    expect(scene().dataset.scene).toBe('player')
+    expect(root.querySelector('.am-intro__feature-art button')).toBeNull()
 
-    next.click()
-    await nextTick()
-    expect(heading()).toBe('Ведите свой список')
-
-    const firstShot = root.querySelector('figure img')?.getAttribute('src')
-    root.querySelector<HTMLButtonElement>('[aria-label="Следующий скриншот"]')!.click()
-    await nextTick()
-    expect(root.querySelector('figure img')?.getAttribute('src')).not.toBe(firstShot)
-
-    for (const single of [assets.galleries.transfer[0], assets.galleries.cloud[0]]) {
+    for (const name of ['lists', 'transfer', 'cloud']) {
       next.click()
       await nextTick()
-      expect(root.querySelector('figure img')?.getAttribute('src')).toBe(single.src)
-      expect(root.querySelector('.am-intro__gallery-nav')).toBeNull()
+      expect(scene().dataset.scene).toBe(name)
+      expect(scene().querySelector('img')).toBeNull()
     }
+    expect(scene().querySelectorAll('[data-cloud-route]')).toHaveLength(2)
+    expect(scene().querySelectorAll('[data-cloud-device]')).toHaveLength(2)
+
     next.click()
     await nextTick()
+    expect(heading()).toBe('Источники данных')
     next.click()
     await nextTick()
     expect(heading()).toBe('Условия использования')
     expect(next.disabled).toBe(true)
     expect(await needsOnboarding()).toBe(true)
 
-    root.querySelector<HTMLAnchorElement>('.am-intro__documents a')!.click()
+    expect(root.querySelector('.am-credits__docs')).toBeNull()
+    const credits = root.querySelector<HTMLButtonElement>('.am-credits__head')!
+    credits.click()
+    await nextTick()
+    const documents = root.querySelectorAll<HTMLButtonElement>('.am-credits__docs button')
+    expect(documents).toHaveLength(2)
+    documents[0]!.click()
+    expect(next.disabled).toBe(true)
+    credits.click()
+    await nextTick()
     expect(mock.bridge.shell.openExternal).toHaveBeenCalledWith(DOCUMENTS[0]?.url)
     const consent = root.querySelector<HTMLInputElement>('input[type="checkbox"]')!
     consent.checked = true

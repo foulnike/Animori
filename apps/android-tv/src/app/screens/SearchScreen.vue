@@ -333,7 +333,8 @@ onBeforeUnmount(() => {
         v-model="word"
         class="am-hunt__field"
         type="search"
-        placeholder="Русский, Английский или Ромадзи"
+        aria-label="Название аниме"
+        placeholder="Название аниме"
         @input="onType"
         @keyup.enter="onEnter"
       />
@@ -358,8 +359,7 @@ onBeforeUnmount(() => {
 
     <div v-else-if="short" class="am-empty">
       <span class="am-empty__mark"><EmptyMark name="keyboard" /></span>
-      <span>Слишком короткое слово.</span>
-      <span>Наберите {{ MIN_WORD_LEN }} знака или нажмите Enter.</span>
+      <span>Введите от {{ MIN_WORD_LEN }} символов или нажмите Enter для поиска.</span>
     </div>
 
     <div v-else-if="rows.length === 0 && !busy" class="am-empty">
@@ -393,7 +393,7 @@ onBeforeUnmount(() => {
 
     <div v-if="hasNext" class="am-more">
       <button class="am-btn am-btn--soft" type="button" :disabled="busy" @click="onMore">
-        {{ busy ? 'Грузим…' : 'Показать ещё' }}
+        {{ busy ? 'Загрузка…' : 'Показать ещё' }}
       </button>
     </div>
   </section>

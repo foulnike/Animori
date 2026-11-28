@@ -254,7 +254,6 @@ const allowed = computed<WatchRow[]>(() => rows.value.filter((row) => !restricte
 const shown = computed<WatchRow[]>(() => allowed.value.slice(0, limit.value))
 const days = computed<Day[]>(() => group(shown.value))
 const hasMore = computed<boolean>(() => allowed.value.length > limit.value)
-const restCount = computed<number>(() => Math.max(0, allowed.value.length - limit.value))
 
 /** Сборка показа из памяти. Сети не требует вовсе. */
 function redraw(): void {
@@ -390,7 +389,7 @@ onBeforeUnmount(() => {
         type="button"
         @click="askWipe"
       >
-        {{ wipeArmed ? 'Нажмите ещё раз' : 'Очистить' }}
+        {{ wipeArmed ? 'Удалить историю' : 'Очистить историю' }}
       </button>
     </div>
 
@@ -404,7 +403,7 @@ onBeforeUnmount(() => {
 
     <div v-else-if="rows.length === 0" class="am-empty">
       <span class="am-empty__mark"><EmptyMark name="clock" /></span>
-      <span>Здесь появится то, что вы смотрели.</span>
+      <span>История просмотра пуста</span>
     </div>
 
     <template v-else>
@@ -464,7 +463,7 @@ onBeforeUnmount(() => {
 
       <div class="am-hist__more">
         <button v-if="hasMore" class="am-btn am-btn--soft" type="button" @click="showMore">
-          Показать ещё · осталось {{ restCount }}
+          Показать ещё
         </button>
       </div>
 

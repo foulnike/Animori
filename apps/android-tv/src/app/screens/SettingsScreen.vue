@@ -1,6 +1,4 @@
 <script setup lang="ts">
-// На приставке нет входа в AniList, выгрузки в XML и плашки со звездой. Панели спрятаны за плитами мозаики: обход пульта получает шесть остановок, а панель открывается окном поверх экрана.
-
 import { computed, onMounted, ref } from 'vue'
 
 import { Bridge } from '@/bridge'
@@ -20,8 +18,8 @@ import { copyAdultTagRules, saveSetting, settings } from '@/core/settings'
 
 import { APPEARANCES, appearance, setAppearance, setVisualTheme, visualTheme } from '../appearance'
 import { checkUpdate, installUpdate, updateOffer } from '../update'
-import BrandMark from '../components/BrandMark.vue'
 import CloudBox from '../components/CloudBox.vue'
+import { currentRoute } from '../router'
 import CreditsBox from '../components/CreditsBox.vue'
 import DateField from '../components/DateField.vue'
 import ProxyBox from '../components/ProxyBox.vue'
@@ -30,12 +28,8 @@ import SettingsSheet from '../components/SettingsSheet.vue'
 import { tagWord } from '../tag-words'
 import { restoreFocus } from '../focus-return'
 import { canOpenOutside } from '../platform'
-import { SAKURA_ROSETTE, SAKURA_ROSETTE_BOX } from '../sakura'
 
 const version = __ANIMORI_VERSION__
-
-/** Слабая ли площадка — то есть телевизор. По ней строка-тумблер берёт фокус сама,
- * а галочка внутри уходит из обхода: см. разметку тумблера. */
 
 /// Человеку важна его система, а не имя нашей сборки: слово «app» ему не говорит ничего.
 function systemName(): string {
@@ -70,10 +64,6 @@ const busy = ref(false)
 const note = ref('')
 const cleared = ref(false)
 
-/** Спросено ли подтверждение удаления списка. Спрашивается всегда: местные записи
- * вернуть потом неоткуда, их нет ни на каком сервере. */
-const askingDrop = ref(false)
-
 /** Кнопка очистки памяти: запасная цель возврата фокуса после удаления списка —
  *  «Удалить» рядом с ней исчезает вместе с пустым списком. */
 const clearBtn = ref<HTMLButtonElement | null>(null)
@@ -86,14 +76,21 @@ const shikiNick = ref(settings.shikiNick)
  *  вопроса, с которых его начали, к этому времени нет в разметке. */
 const shikiBtn = ref<HTMLButtonElement | null>(null)
 
-/** Спрошено ли подтверждение переноса с Шикимори. Спрашивается по тем же причинам. */
-const askingShiki = ref(false)
-
 /** Занятость и ответы Шикимори держатся отдельно от общих busy/error/note. Перенос
  * списка идёт минутами, и общая занятость гасила бы кнопки своих данных. */
 const shikiBusy = ref(false)
-const shikiNote = ref('')
 const shikiError = ref('')
+const shikiReport = ref<ShikiPullResult | null>(null)
+const shikiReportButton = ref<HTMLButtonElement | null>(null)
+const reportPage = ref(0)
+const REPORT_TITLES_PER_PAGE = 3
+const reportPages = computed(
+  () => 1 + Math.ceil((shikiReport.value?.lostTitles.length ?? 0) / REPORT_TITLES_PER_PAGE),
+)
+const reportTitles = computed(() => {
+  const start = (reportPage.value - 1) * REPORT_TITLES_PER_PAGE
+  return shikiReport.value?.lostTitles.slice(start, start + REPORT_TITLES_PER_PAGE) ?? []
+})
 
 const listCount = ref(0)
 const usedSize = ref('')
@@ -109,8 +106,7 @@ const datasetStale = ref(false)
  * пропущенные недельные сборки: одна могла упасть случайно, три значат, что расписание уснуло. */
 const STALE_DAYS = 30
 
-/// Проверка обновления идёт прямо в панели «О программе»: окно поверх окна на пульте негде развернуть.
-/// Состояние своё, а не общее с окном из рельса: рельс своё окно открывает сам.
+// Состояние проверки в разделе «О программе».
 const upBusy = ref(false)
 
 /** Кнопка проверки обновления: запасная цель возврата фокуса, когда её саму не стало
@@ -129,10 +125,10 @@ async function onUpCheck(): Promise<void> {
 
   try {
     updateOffer.value = await checkUpdate()
-    if (updateOffer.value === null) upNote.value = 'Обновлений нет — это последняя версия.'
+    if (updateOffer.value === null) upNote.value = 'Установлена последняя версия.'
   } catch {
     updateOffer.value = null
-    upNote.value = 'Спросить не удалось: GitHub не ответил. Попробуйте позже.'
+    upNote.value = 'Не удалось проверить обновления. Повторите позже.'
   } finally {
     upBusy.value = false
     // Кнопка гасла disabled, и пульт стоял на крестике: возвращаем его к ответу, который теперь читается строкой ниже.
@@ -157,10 +153,24 @@ const adultMode = ref(settings.adultMode)
 const ageVerified = ref(settings.adultAgeVerified)
 const adultTagRules = ref(copyAdultTagRules(settings.adultTagRules))
 const pendingAdultMode = ref<typeof settings.adultMode | null>(null)
+const adultModes: ReadonlyArray<{
+  value: typeof settings.adultMode
+  title: string
+  chip: 'muted' | 'blue' | 'red'
+}> = [
+  { value: 'full', title: 'Скрыто', chip: 'muted' },
+  { value: 'partial', title: 'Частично', chip: 'blue' },
+  { value: 'none', title: 'Показано', chip: 'red' },
+]
 
-/** Открыт ли вопрос о возрасте. Взрослое включается не нажатием, а ответом на этот
- * вопрос: до него тумблер стоит выключенным. */
-const askingAge = ref(false)
+const tagPage = ref(0)
+const tagButton = ref<HTMLButtonElement | null>(null)
+const TAGS_PER_PAGE = 3
+const tagPages = computed(() => Math.ceil(Object.keys(adultTagRules.value).length / TAGS_PER_PAGE))
+const shownTags = computed(() => {
+  const start = tagPage.value * TAGS_PER_PAGE
+  return Object.entries(adultTagRules.value).slice(start, start + TAGS_PER_PAGE)
+})
 
 /** Дата рождения из поля ввода. Живёт только до ответа и никуда не пишется. */
 const birth = ref('')
@@ -169,21 +179,50 @@ const birth = ref('')
 const ageError = ref('')
 
 /** Плита мозаики: за каждой своё окно. */
-type Door = 'list' | 'look' | 'data' | 'cloud' | 'net' | 'about'
+type Door = 'list' | 'look' | 'adult' | 'data' | 'cloud' | 'net' | 'about'
+type Detail = 'import' | 'report' | 'import-error' | 'clear' | 'drop' | 'tags' | 'age'
 
 /** Открытая плита. null — мозаика на виду. */
-const openDoor = ref<Door | null>(null)
+const adultEntry = currentRoute.value.params.id === 'adult'
+const openDoor = ref<Door | null>(adultEntry ? 'adult' : null)
+const doorFocus = computed(() => {
+  if (openDoor.value === 'adult') return '.am-adult-mode--active'
+  if (openDoor.value === 'look') return '.am-skins__btn--on'
+  return undefined
+})
+const detail = ref<Detail | null>(null)
+const doorGrid = ref<HTMLElement | null>(null)
 
-/** Плиты мозаики: под каждой своё окно, и имя его называет. Подпись под именем убрана:
- *  плита держится на знаке и имени, а мелкая строка под заголовком на пульте только шумит. */
-const doors = computed<ReadonlyArray<{ name: Door; title: string }>>(() => [
+function closeDoor(): void {
+  const door = openDoor.value
+  closeAge()
+  openDoor.value = null
+  if (door !== null) {
+    restoreFocus(
+      null,
+      () => doorGrid.value?.querySelector<HTMLButtonElement>(`[data-door="${door}"]`) ?? null,
+    )
+  }
+}
+
+const doors: ReadonlyArray<{ name: Door; title: string }> = [
   { name: 'list', title: 'Импорт списка' },
-  { name: 'look', title: 'Оформление' },
   { name: 'data', title: 'Данные' },
+  { name: 'look', title: 'Оформление' },
+  { name: 'adult', title: 'Контент 18+' },
   { name: 'cloud', title: 'Копия списка' },
   { name: 'net', title: 'Прокси' },
   { name: 'about', title: 'О программе' },
-])
+]
+
+function focusLookOption(event: KeyboardEvent, selector: string): void {
+  if (event.currentTarget instanceof HTMLElement) {
+    event.currentTarget
+      .closest('[role="dialog"]')
+      ?.querySelector<HTMLElement>(selector)
+      ?.focus({ preventScroll: true })
+  }
+}
 
 function describe(e: unknown): string {
   return e instanceof Error ? e.message : String(e)
@@ -248,43 +287,29 @@ function onShikiNick(): void {
 
 /** Нажатие на перенос с Шикимори: сначала вопрос, действие потом. */
 function onShikiAsk(): void {
-  shikiNote.value = ''
   shikiError.value = ''
-  askingShiki.value = true
+  detail.value = 'import'
 }
 
-function onShikiCancel(): void {
-  askingShiki.value = false
+function showReport(): void {
+  reportPage.value = 0
+  detail.value = 'report'
 }
 
-/** Потери словами. Тайтлы, которых нет у AniList, в список не попадают вовсе, и молчать
- * об этом нельзя: человек считает записи глазами и решит, что программа съела половину. */
-function lostText(done: ShikiPullResult): string {
-  if (done.lost === 0) return ''
-  if (done.lostTitles.length === 0) return ` Без пары на AniList: ${done.lost}.`
-
-  const more = done.lost > done.lostTitles.length ? ' и другие' : ''
-  return ` Без пары на AniList ${done.lost}: ${done.lostTitles.join(', ')}${more}.`
-}
-
-/** Даты просмотра словами. Ноль здесь не поломка, а «просмотров не было»: у запланированного
- * тайтла дат и не бывает, и говорить об этом надо так, чтобы человек не пошёл искать ошибку. */
-function datesText(done: ShikiPullResult): string {
-  if (done.dated === 0) return ' Дат просмотра в журнале Шикимори не нашлось.'
-  return ` Даты просмотра перенесены в ${done.dated} записей.`
+function showTags(): void {
+  tagPage.value = 0
+  detail.value = 'tags'
 }
 
 /** Перенос списка с Шикимори по нику. Способы те же два, и вопрос тот же: замена вычищает
  * всё, включая перенесённое с AniList и добавленное руками. */
 function onShikiPull(mode: PullMode): void {
-  // Держатель — кнопка вопроса: она уходит из разметки в ту же секунду, вместе с вопросом, и без запоминания фокус после многоминутного переноса остался бы на крестике окна.
-  const from = document.activeElement
-  askingShiki.value = false
+  if (shikiBusy.value) return
+  detail.value = null
 
   void (async () => {
     shikiBusy.value = true
     shikiError.value = ''
-    shikiNote.value = ''
 
     try {
       // Ник сохраняется до переноса, а не после: перенос долгий, и уйти с экрана посреди него человек вправе.
@@ -293,21 +318,13 @@ function onShikiPull(mode: PullMode): void {
       const done = await pullFromShikimori(shikiNick.value, mode)
       await readState()
 
-      shikiNote.value =
-        done.mode === 'replace'
-          ? `Список замещён списком ${done.nick} с Шикимори: записей ${done.total}.` +
-            lostText(done) +
-            datesText(done)
-          : `Списки слиты: всего ${done.total}, новых ${done.added}, ` +
-            `обновлено ${done.updated}, своих правок сохранено ${done.kept}, ` +
-            `только здесь ${done.onlyHere}.` +
-            lostText(done) +
-            datesText(done)
+      shikiReport.value = done
+      if (openDoor.value === 'list' && detail.value === null) showReport()
     } catch (e) {
       shikiError.value = describe(e)
+      if (openDoor.value === 'list' && detail.value === null) detail.value = 'import-error'
     } finally {
       shikiBusy.value = false
-      restoreFocus(from, () => shikiBtn.value)
     }
   })()
 }
@@ -316,17 +333,13 @@ function onShikiPull(mode: PullMode): void {
 function onAskDrop(): void {
   note.value = ''
   error.value = ''
-  askingDrop.value = true
-}
-
-function onCancelDrop(): void {
-  askingDrop.value = false
+  detail.value = 'drop'
 }
 
 /** Удаление своего списка по прямой просьбе. Счёт при этом не трогается: список можно
  * стереть и перенести заново. На AniList это не отражается: удаляем только то, что у нас. */
 function onDropList(): void {
-  askingDrop.value = false
+  detail.value = null
 
   void guard(
     async () => {
@@ -357,7 +370,7 @@ function setAdultMode(next: typeof settings.adultMode): void {
     pendingAdultMode.value = next
     birth.value = ''
     ageError.value = ''
-    askingAge.value = true
+    detail.value = 'age'
     return
   }
   applyAdultMode(next)
@@ -408,20 +421,25 @@ function toggleAdultTagRule(name: string): void {
 
 /** Отказ от вопроса: тумблер остаётся выключенным, и это его настоящее состояние. */
 function closeAge(): void {
-  askingAge.value = false
+  detail.value = null
+  pendingAdultMode.value = null
   birth.value = ''
   ageError.value = ''
 }
 
 // Память сбрасывается только руками. Перезагрузка не делается сама: человек может быть в середине правок.
 function onClear(): void {
-  void guard(async () => {
-    note.value = ''
-    await clearCache()
-    cleared.value = true
-    await readState()
-    note.value = 'Память очищена. Названия и описания загрузятся заново.'
-  })
+  detail.value = null
+  void guard(
+    async () => {
+      note.value = ''
+      await clearCache()
+      cleared.value = true
+      await readState()
+      note.value = 'Кэш очищен'
+    },
+    () => clearBtn.value,
+  )
 }
 
 function onReload(): void {
@@ -456,194 +474,152 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="am-page">
-    <!-- Мозаика плит: шесть плит вместо длинной колонки панелей. Обход пульта получает шесть
-     остановок вместо пятнадцати, а знакомая панель открывается окном поверх экрана. -->
-    <div class="am-doors">
+  <section class="am-page am-settings-page">
+    <h1 class="am-settings-title">Настройки</h1>
+    <div ref="doorGrid" class="am-doors">
       <button
         v-for="item in doors"
         :key="item.name"
         class="am-door"
         type="button"
+        :data-door="item.name"
         @click="openDoor = item.name"
       >
-        <!-- Цветок-подложка: та же розетка, что на плитках статистики ПК-билда, под
-             подписью и срезанная углом плитки (см. settings-screen.css). -->
-        <span class="am-door__flower" aria-hidden="true">
-          <svg :viewBox="SAKURA_ROSETTE_BOX"><path :d="SAKURA_ROSETTE" /></svg>
-        </span>
         <span class="am-door__mark"><SettingMark :name="item.name" /></span>
         <span class="am-door__name">{{ item.title }}</span>
       </button>
     </div>
 
-    <!-- Окна: по одному на плиту, поднимаются по нажатию. Панели внутри — те же, что стояли колонкой,
-     и заголовок окну даёт заголовок панели. -->
-    <SettingsSheet :open="openDoor === 'list'" title="Импорт списка" @close="openDoor = null">
-      <!-- Импорт списка. Из двух источников осталась Шикимори: AniList требует входа через окно
-     браузера, а браузера на телевизоре нет. Знак берёт components/BrandMark.vue из brand/shikimori.svg. -->
-      <div class="am-panel am-box">
-        <h3 class="am-h3">Импорт списка</h3>
-
-        <div class="am-serv">
-          <div class="am-serv__head">
-            <BrandMark class="am-serv__logo" name="shikimori" />
-
-            <span class="am-serv__text">
-              <span class="am-serv__name">Шикимори</span>
-              <span class="am-serv__note">Профиль на Шикимори должен быть открытым.</span>
-            </span>
-
-            <span class="am-flag">
-              <span class="am-flag__dot" aria-hidden="true" />
-              вход не нужен
-            </span>
+    <SettingsSheet
+      :open="openDoor !== null"
+      :title="doors.find((item) => item.name === openDoor)?.title ?? ''"
+      :icon="openDoor ?? undefined"
+      :initial-focus="doorFocus"
+      close-label="К разделам"
+      @close="closeDoor"
+    >
+      <template v-if="openDoor === 'list'">
+        <dl class="am-settings-facts">
+          <div>
+            <dt>Источник</dt>
+            <dd>Шикимори</dd>
           </div>
-
-          <div class="am-row">
-            <label class="am-field">
-              <input
-                v-model="shikiNick"
-                class="am-input"
-                type="text"
-                placeholder="Ник на Шикимори"
-                :disabled="shikiBusy"
-                @change="onShikiNick"
-              />
-            </label>
-            <button
-              v-tip="'Забрать список с Шикимори: слиянием или с заменой'"
-              ref="shikiBtn"
-              class="am-btn"
-              type="button"
-              :disabled="shikiBusy || !shikiNick.trim()"
-              @click="onShikiAsk"
-            >
-              {{ shikiBusy ? 'Переносим…' : 'Перенести список' }}
-            </button>
+          <div>
+            <dt>Текущий список</dt>
+            <dd>{{ listCount }} записей</dd>
           </div>
+        </dl>
 
-          <!-- Вопрос перед переносом: замена вычищает список целиком, включая набранное руками, — такое не делают одним промахом пульта. -->
-          <div v-if="askingShiki" class="am-ask">
-            <p class="am-ask__text">Записей: {{ listCount }}.</p>
-
-            <div class="am-row">
-              <button
-                class="am-btn"
-                type="button"
-                :disabled="shikiBusy"
-                @click="onShikiPull('merge')"
-              >
-                Добавить недостающее
-              </button>
-              <button
-                class="am-btn am-btn--ghost"
-                type="button"
-                :disabled="shikiBusy"
-                @click="onShikiPull('replace')"
-              >
-                Заменить целиком
-              </button>
-              <button class="am-btn am-btn--ghost" type="button" @click="onShikiCancel">
-                Отмена
-              </button>
-            </div>
-          </div>
-
-          <p v-if="shikiNote" class="am-note">{{ shikiNote }}</p>
-          <p v-if="shikiError" class="am-error">{{ shikiError }}</p>
-        </div>
-      </div>
-    </SettingsSheet>
-
-    <SettingsSheet :open="openDoor === 'data'" title="Данные" @close="openDoor = null">
-      <!-- Данные: что лежит на этом диске и что с этим можно сделать. -->
-      <div class="am-panel am-box">
-        <h3 class="am-h3">Данные</h3>
-
-        <ul class="am-facts">
-          <li class="am-fact">
-            <span class="am-fact__name">Записей в списке</span>
-            <span class="am-fact__value">{{ listCount }}</span>
-          </li>
-          <li v-if="usedSize" class="am-fact">
-            <span class="am-fact__name">Занято на диске</span>
-            <span class="am-fact__value">{{ usedSize }}</span>
-          </li>
-        </ul>
-
-        <!-- Необратимое одной строкой: сброс памяти и удаление списка стоят рядом, потому что оба про этот диск. -->
-        <div class="am-row">
+        <div class="am-settings-form">
+          <label class="am-settings-field">
+            <span>Имя пользователя</span>
+            <input
+              v-model="shikiNick"
+              class="am-input"
+              type="text"
+              :disabled="shikiBusy"
+              @change="onShikiNick"
+            />
+          </label>
           <button
-            v-tip="'Убрать сохранённые названия, описания и обложки'"
+            ref="shikiBtn"
+            class="am-btn am-btn--soft am-shiki-import"
+            type="button"
+            :disabled="shikiBusy || !shikiNick.trim()"
+            :aria-busy="shikiBusy"
+            @click="onShikiAsk"
+          >
+            <span v-if="shikiBusy" class="am-shiki-import__spin" aria-hidden="true" />
+            {{ shikiBusy ? 'Переносим…' : 'Перенести список' }}
+          </button>
+        </div>
+
+        <p v-if="shikiBusy" class="am-meta" role="status">Идёт перенос, не закрывайте окно.</p>
+        <div v-if="shikiReport || shikiError" class="am-settings-actions">
+          <button
+            v-if="shikiReport"
+            ref="shikiReportButton"
+            class="am-btn"
+            type="button"
+            @click="showReport"
+          >
+            Последний отчёт
+          </button>
+          <button
+            v-if="shikiError"
+            class="am-btn am-settings-danger"
+            type="button"
+            @click="detail = 'import-error'"
+          >
+            Ошибка переноса
+          </button>
+        </div>
+      </template>
+
+      <template v-else-if="openDoor === 'data'">
+        <dl class="am-settings-facts">
+          <div>
+            <dt>Записей в списке</dt>
+            <dd>{{ listCount }}</dd>
+          </div>
+          <div v-if="usedSize">
+            <dt>Занято на диске</dt>
+            <dd>{{ usedSize }}</dd>
+          </div>
+        </dl>
+        <div class="am-settings-actions">
+          <button
             ref="clearBtn"
-            class="am-btn am-btn--ghost"
+            class="am-btn"
             type="button"
             :disabled="busy"
-            @click="onClear"
+            @click="detail = 'clear'"
           >
-            Очистить память
+            Очистить кэш
           </button>
-
           <button
             v-if="listCount > 0"
-            v-tip="'Удалить свой список с этого устройства'"
-            class="am-btn am-btn--ghost"
+            class="am-btn am-settings-danger"
             type="button"
             :disabled="busy"
             @click="onAskDrop"
           >
-            Удалить мой список
+            Удалить список
           </button>
-
-          <button v-if="cleared" class="am-btn am-btn--ghost" type="button" @click="onReload">
+          <button v-if="cleared" class="am-btn" type="button" @click="onReload">
             Перезагрузить
           </button>
         </div>
+        <p v-if="note" class="am-note" role="status">{{ note }}</p>
+        <p v-if="error" class="am-error" role="alert">{{ error }}</p>
+      </template>
 
-        <!-- Удаление списка необратимо для местных записей: спрашиваем всегда. Вопрос коротким: подпись кнопки под ним и есть ответ. -->
-        <div v-if="askingDrop" class="am-ask">
-          <p class="am-ask__text">Удалить список с этого устройства?</p>
-
-          <div class="am-row">
-            <button class="am-btn" type="button" :disabled="busy" @click="onDropList">
-              Удалить список
-            </button>
-            <button class="am-btn am-btn--ghost" type="button" @click="onCancelDrop">Отмена</button>
-          </div>
-        </div>
-
-        <p v-if="note" class="am-note">{{ note }}</p>
-        <p v-if="error" class="am-error">{{ error }}</p>
-      </div>
-    </SettingsSheet>
-
-    <!-- Копия списка: на телевизоре от неё остался один путь — забрать копию по ссылке. -->
-    <SettingsSheet :open="openDoor === 'cloud'" title="Копия списка" @close="openDoor = null">
-      <CloudBox :list="listCount" @changed="onCloudChanged" />
-    </SettingsSheet>
-
-    <SettingsSheet :open="openDoor === 'look'" title="Оформление" @close="openDoor = null">
-      <div class="am-panel am-box">
-        <h3 class="am-h3">Оформление</h3>
-
-        <div class="am-skins">
+      <template v-else-if="openDoor === 'look'">
+        <div
+          class="am-skins"
+          role="group"
+          aria-label="Цветовая тема"
+          @keydown.down.stop.prevent="focusLookOption($event, '.am-family__btn--on')"
+        >
           <button
             v-for="item in APPEARANCES"
             :key="item.name"
-            v-tip="item.hint"
             class="am-skins__btn"
             :class="{ 'am-skins__btn--on': item.name === appearance }"
             type="button"
+            :aria-pressed="item.name === appearance"
             @click="setAppearance(item.name)"
           >
             <span class="am-skins__mark" aria-hidden="true">{{ item.mark }}</span>
             <span class="am-skins__name">{{ item.title }}</span>
           </button>
         </div>
-
-        <h3 class="am-h3 am-family-heading">Семейство интерфейса</h3>
-        <div class="am-family" role="group" aria-label="Семейство интерфейса">
+        <div
+          class="am-family"
+          role="group"
+          aria-label="Скин"
+          @keydown.up.stop.prevent="focusLookOption($event, '.am-skins__btn--on')"
+        >
           <button
             class="am-family__btn"
             :class="{ 'am-family__btn--on': visualTheme === 'standard' }"
@@ -663,169 +639,300 @@ onMounted(() => {
             Lain
           </button>
         </div>
+      </template>
 
-        <h3 class="am-h3 am-adult-heading"><SettingMark name="adult" /> Взрослое</h3>
-
+      <template v-else-if="openDoor === 'adult'">
         <div class="am-adult-control" role="radiogroup" aria-label="Фильтрация контента 18+">
           <button
+            v-for="mode in adultModes"
+            :key="mode.value"
             class="am-adult-mode"
-            :class="{ 'am-adult-mode--active': adultMode === 'full' }"
+            :class="{ 'am-adult-mode--active': adultMode === mode.value }"
             type="button"
             role="radio"
-            :aria-checked="adultMode === 'full'"
-            @click="setAdultMode('full')"
+            :aria-checked="adultMode === mode.value"
+            @click="setAdultMode(mode.value)"
           >
-            <span class="am-adult-mode__chip am-adult-mode__chip--muted">18+</span>
-            <span><strong>Скрыто</strong></span>
-          </button>
-          <button
-            class="am-adult-mode"
-            :class="{ 'am-adult-mode--active': adultMode === 'partial' }"
-            type="button"
-            role="radio"
-            :aria-checked="adultMode === 'partial'"
-            @click="setAdultMode('partial')"
-          >
-            <span class="am-adult-mode__chip am-adult-mode__chip--blue">18+</span>
-            <span><strong>Частично</strong></span>
-          </button>
-          <button
-            class="am-adult-mode"
-            :class="{ 'am-adult-mode--active': adultMode === 'none' }"
-            type="button"
-            role="radio"
-            :aria-checked="adultMode === 'none'"
-            @click="setAdultMode('none')"
-          >
-            <span class="am-adult-mode__chip am-adult-mode__chip--red">18+</span>
-            <span><strong>Показано</strong></span>
+            <span class="am-adult-chip" :class="`am-adult-chip--${mode.chip}`" aria-hidden="true"
+              >18+</span
+            >
+            {{ mode.title }}
           </button>
         </div>
 
-        <div v-if="ageVerified && adultMode !== 'full'" class="am-adult-note">
-          <p>
-            <span class="am-adult-chip am-adult-chip--red">18+</span> — Хентай и сексуальный контент
-            по версии AniList.
+        <template v-if="ageVerified && adultMode !== 'full'">
+          <p class="am-meta">
+            {{
+              adultMode === 'partial'
+                ? 'Тайтлы с красной меткой скрыты. Для синих тегов действуют выбранные правила и пороги.'
+                : 'Тайтлы с обеими метками доступны.'
+            }}
           </p>
-          <p>
-            <span class="am-adult-chip am-adult-chip--blue">18+</span> — Теги, которые могут
-            содержать потенциально неприемлемый контент. Порог скрытия определяется долей тега в
-            тайтле. Можно настроить.
-          </p>
-        </div>
-        <div v-if="adultMode === 'partial' && ageVerified" class="am-adult-options">
-          <p class="am-adult-options__title">Настройка тегов</p>
-          <p class="am-adult-options__hint">Для каждого тега выберите показ и настройте порог.</p>
-          <div v-for="(rule, name) in adultTagRules" :key="name" class="am-adult-tag">
-            <span class="am-adult-tag__name">{{ tagWord(name) }}</span>
-            <button
-              class="am-adult-tag__toggle"
-              :class="{ 'am-adult-tag__toggle--on': rule.hideInPartial }"
-              type="button"
-              :aria-pressed="rule.hideInPartial"
-              @click="toggleAdultTagRule(name)"
-            >
-              {{ rule.hideInPartial ? 'Скрывается' : 'Показывается' }}
-            </button>
-            <span class="am-adult-tag__threshold-label">Порог</span>
-            <button
-              class="am-adult-tag__step"
-              type="button"
-              :aria-label="`Уменьшить порог: ${tagWord(name)}`"
-              @click="adjustAdultTagThreshold(name, -5)"
-            >
-              −
-            </button>
-            <output class="am-adult-tag__value">{{ rule.threshold }}%</output>
-            <button
-              class="am-adult-tag__step"
-              type="button"
-              :aria-label="`Увеличить порог: ${tagWord(name)}`"
-              @click="adjustAdultTagThreshold(name, 5)"
-            >
-              +
+          <div class="am-adult-note">
+            <p>
+              <span class="am-adult-chip am-adult-chip--red" aria-label="Красная метка 18+"
+                >18+</span
+              >
+              <span>Хентай и сексуальный контент по метке AniList.</span>
+            </p>
+            <p>
+              <span class="am-adult-chip am-adult-chip--blue" aria-label="Синяя метка 18+"
+                >18+</span
+              >
+              <span>Теги потенциально неприемлемого контента. Например, нагота.</span>
+            </p>
+          </div>
+          <div v-if="adultMode === 'partial'" class="am-settings-actions">
+            <button ref="tagButton" class="am-btn" type="button" @click="showTags">
+              Настроить теги
             </button>
           </div>
+        </template>
+      </template>
+
+      <CloudBox v-else-if="openDoor === 'cloud'" :list="listCount" @changed="onCloudChanged" />
+      <ProxyBox v-else-if="openDoor === 'net'" />
+
+      <template v-else-if="openDoor === 'about'">
+        <dl class="am-settings-facts">
+          <div>
+            <dt>Версия</dt>
+            <dd>{{ version }}</dd>
+          </div>
+          <div>
+            <dt>Система</dt>
+            <dd>{{ system }}</dd>
+          </div>
+          <div>
+            <dt>База названий</dt>
+            <dd :class="{ 'am-fact__value--stale': datasetStale }">{{ datasetText }}</dd>
+          </div>
+        </dl>
+        <div class="am-settings-actions">
+          <button
+            ref="upBtn"
+            class="am-btn"
+            :class="{ 'am-btn--soft': updateOffer !== null }"
+            type="button"
+            :disabled="upBusy"
+            @click="updateOffer !== null ? onUpInstall() : onUpCheck()"
+          >
+            {{
+              upBusy
+                ? 'Проверяем обновления…'
+                : updateOffer
+                  ? `Обновление до ${updateOffer.version}`
+                  : 'Проверить обновления'
+            }}
+          </button>
+          <CreditsBox />
         </div>
+        <p v-if="upNote" class="am-note" role="status">{{ upNote }}</p>
+        <p v-if="datasetStale" class="am-stale">
+          База названий устарела.
+          <button v-if="outside" class="am-link" type="button" @click="onDatasetLink">
+            Открыть animori-data
+          </button>
+        </p>
+      </template>
 
-        <div v-if="askingAge" class="am-age">
-          <p class="am-age__ask">Укажите ваш возраст</p>
-
-          <DateField :value="birth" title="Дата рождения" @pick="onBirth" />
-
-          <p v-if="ageError" class="am-error">{{ ageError }}</p>
-
-          <button class="am-btn am-btn--soft am-age__back" type="button" @click="closeAge">
+      <SettingsSheet
+        :open="detail === 'import'"
+        title="Перенос с Шикимори"
+        icon="list"
+        initial-focus=".am-settings-cancel"
+        detail
+        @close="detail = null"
+      >
+        <dl class="am-settings-facts">
+          <div>
+            <dt>Профиль</dt>
+            <dd>{{ shikiNick.trim() }}</dd>
+          </div>
+          <div>
+            <dt>Текущий список</dt>
+            <dd>{{ listCount }} записей</dd>
+          </div>
+        </dl>
+        <p class="am-meta">При замене текущий список будет удалён.</p>
+        <template #actions>
+          <button class="am-btn am-settings-cancel" type="button" @click="detail = null">
             Отмена
           </button>
-        </div>
-      </div>
-    </SettingsSheet>
+          <button class="am-btn am-settings-danger" type="button" @click="onShikiPull('replace')">
+            Заменить список
+          </button>
+          <button class="am-btn am-btn--soft" type="button" @click="onShikiPull('merge')">
+            Дополнить список
+          </button>
+        </template>
+      </SettingsSheet>
 
-    <!-- Прокси: у панели своё состояние и свой разговор с оболочкой, потому и своё окно. -->
-    <SettingsSheet :open="openDoor === 'net'" title="Прокси" @close="openDoor = null">
-      <ProxyBox />
-    </SettingsSheet>
+      <SettingsSheet
+        :open="detail === 'report'"
+        v-model:page="reportPage"
+        :page-count="reportPages"
+        :return-focus="() => shikiReportButton"
+        title="Отчёт о переносе"
+        icon="list"
+        detail
+        @close="detail = null"
+      >
+        <template v-if="shikiReport">
+          <dl v-if="reportPage === 0" class="am-settings-facts">
+            <div>
+              <dt>Профиль Шикимори</dt>
+              <dd>{{ shikiReport.nick }}</dd>
+            </div>
+            <div>
+              <dt>Записей в списке</dt>
+              <dd>{{ shikiReport.total }}</dd>
+            </div>
+            <div v-if="shikiReport.mode === 'merge'">
+              <dt>Добавлено / обновлено</dt>
+              <dd>{{ shikiReport.added }} / {{ shikiReport.updated }}</dd>
+            </div>
+            <div v-else>
+              <dt>Результат</dt>
+              <dd>Список заменён</dd>
+            </div>
+            <div>
+              <dt>Перенесено дат просмотра</dt>
+              <dd>{{ shikiReport.dated }}</dd>
+            </div>
+            <div>
+              <dt>Без соответствия в AniList</dt>
+              <dd>{{ shikiReport.lost }}</dd>
+            </div>
+          </dl>
+          <template v-else>
+            <p class="am-meta">Без соответствия в AniList</p>
+            <ul class="am-settings-list">
+              <li v-for="(title, index) in reportTitles" :key="index">{{ title }}</li>
+            </ul>
+            <p
+              v-if="
+                reportPage + 1 === reportPages && shikiReport.lost > shikiReport.lostTitles.length
+              "
+              class="am-meta"
+            >
+              Других записей без соответствия:
+              {{ shikiReport.lost - shikiReport.lostTitles.length }}
+            </p>
+          </template>
+        </template>
+      </SettingsSheet>
 
-    <!-- О программе — последнее окно: здесь только то, что читают один раз, — версия, система,
-     датасет и лицензия. -->
-    <SettingsSheet :open="openDoor === 'about'" title="О программе" @close="openDoor = null">
-      <div class="am-panel am-box">
-        <h3 class="am-h3">О программе</h3>
+      <SettingsSheet
+        :open="detail === 'import-error'"
+        :return-focus="() => shikiBtn"
+        title="Ошибка переноса"
+        detail
+        compact
+        @close="detail = null"
+      >
+        <p class="am-error" role="alert">{{ shikiError }}</p>
+      </SettingsSheet>
 
-        <ul class="am-facts">
-          <li class="am-fact">
-            <span class="am-fact__name">Версия</span>
-            <span class="am-fact__value">{{ version }}</span>
-          </li>
-          <li class="am-fact">
-            <span class="am-fact__name">Система</span>
-            <span class="am-fact__value">{{ system }}</span>
-          </li>
-          <li class="am-fact">
-            <span class="am-fact__name">Датасет названий</span>
-            <span class="am-fact__value" :class="{ 'am-fact__value--stale': datasetStale }">
-              {{ datasetText }}
-            </span>
-          </li>
-        </ul>
-
-        <!-- Проверка обновления кнопкой прямо в панели, а не отдельным окном: окно поверх окна
-     на пульте негде развернуть. Одна кнопка ведёт и проверку, и установку — по состоянию. -->
-        <button
-          ref="upBtn"
-          class="am-btn am-btn--soft am-up"
-          :class="{ 'am-up--new': updateOffer !== null }"
-          type="button"
-          :disabled="upBusy"
-          @click="updateOffer !== null ? onUpInstall() : onUpCheck()"
-        >
-          {{
-            upBusy
-              ? 'Спрашиваем GitHub…'
-              : updateOffer
-                ? `Обновление до ${updateOffer.version}`
-                : 'Проверить обновление'
-          }}
-        </button>
-
-        <p v-if="upNote" class="am-note">{{ upNote }}</p>
-
-        <!-- Плашки с просьбой о звезде здесь больше нет: она вела на GitHub, а ссылку наружу на телевизоре открыть нечем. -->
-
-        <!-- Свежесть датасета — единственное, за чем человеку приходится следить руками, поэтому про просрочку говорим словами. -->
-        <p v-if="datasetStale" class="am-stale">
-          Датасет не обновлялся больше {{ STALE_DAYS }} дней. Названия, которых в нём нет, программа
-          добирает из сети по одному — это медленно. Загляните в
-          <button v-if="outside" class="am-link" type="button" @click="onDatasetLink">
-            animori-data</button
-          ><span v-else class="am-meta">animori-data</span>
-          и запустите сборку кнопкой.
+      <SettingsSheet
+        :open="detail === 'clear' || detail === 'drop'"
+        :title="detail === 'drop' ? 'Удалить список?' : 'Очистить кэш?'"
+        initial-focus=".am-settings-cancel"
+        detail
+        compact
+        @close="detail = null"
+      >
+        <p v-if="detail === 'drop'" class="am-meta">
+          Будет удалено записей: {{ listCount }}. Действие необратимо.
         </p>
+        <p v-else class="am-meta">Постеры и описания загрузятся заново.</p>
+        <template #actions>
+          <button class="am-btn am-settings-cancel" type="button" @click="detail = null">
+            Отмена
+          </button>
+          <button
+            v-if="detail === 'drop'"
+            class="am-btn am-settings-danger"
+            type="button"
+            :disabled="busy"
+            @click="onDropList"
+          >
+            Удалить список
+          </button>
+          <button
+            v-else
+            class="am-btn am-btn--soft"
+            type="button"
+            :disabled="busy"
+            @click="onClear"
+          >
+            Очистить
+          </button>
+        </template>
+      </SettingsSheet>
 
-        <!-- Источники и права — последнее в окне: дальше читать нечего. -->
-        <CreditsBox />
-      </div>
+      <SettingsSheet
+        :open="detail === 'tags'"
+        v-model:page="tagPage"
+        :page-count="tagPages"
+        :return-focus="() => tagButton"
+        title="Настройка тегов"
+        icon="adult"
+        detail
+        @close="detail = null"
+      >
+        <p class="am-adult-tag-hint">
+          <span class="am-adult-chip am-adult-chip--blue">18+</span>
+          <span>Тайтл скрывается, когда доля выбранного тега достигает порога.</span>
+        </p>
+        <div class="am-adult-tag-list">
+          <div v-for="[name, rule] in shownTags" :key="name" class="am-adult-tag">
+            <span class="am-adult-tag__name">{{ tagWord(name) }}</span>
+            <div class="am-adult-tag__controls">
+              <button
+                class="am-btn am-adult-tag__toggle"
+                :aria-pressed="rule.hideInPartial"
+                :aria-label="`${tagWord(name)}: ${rule.hideInPartial ? 'скрывать' : 'показывать'}`"
+                type="button"
+                @click="toggleAdultTagRule(name)"
+              >
+                {{ rule.hideInPartial ? 'Скрывать' : 'Показывать' }}
+              </button>
+              <button
+                class="am-btn am-adult-tag__step"
+                type="button"
+                :aria-label="`Уменьшить порог: ${tagWord(name)}`"
+                @click="adjustAdultTagThreshold(name, -5)"
+              >
+                −
+              </button>
+              <output>{{ rule.threshold }}%</output>
+              <button
+                class="am-btn am-adult-tag__step"
+                type="button"
+                :aria-label="`Увеличить порог: ${tagWord(name)}`"
+                @click="adjustAdultTagThreshold(name, 5)"
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </div>
+      </SettingsSheet>
+
+      <SettingsSheet
+        :open="detail === 'age'"
+        title="Подтверждение возраста"
+        icon="adult"
+        initial-focus="input"
+        close-label="Отмена"
+        detail
+        compact
+        @close="closeAge"
+      >
+        <DateField :value="birth" title="Дата рождения" @pick="onBirth" />
+        <p v-if="ageError" class="am-error" role="alert">{{ ageError }}</p>
+      </SettingsSheet>
     </SettingsSheet>
   </section>
 </template>

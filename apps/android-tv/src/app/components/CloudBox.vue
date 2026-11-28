@@ -4,24 +4,12 @@
 
 import { ref } from 'vue'
 
-import { Bridge } from '@/bridge'
 import { linkInfo, pullByLink, type CloudLink } from '@/core/cloud'
 import type { PullMode } from '@/core/collection'
 
 import { restoreFocus } from '../focus-return'
-import { canOpenOutside } from '../platform'
-import BrandMark from './BrandMark.vue'
 import CloudHelp from './CloudHelp.vue'
-
-/** Есть ли куда уводить ссылки: на приставке браузера нет, адрес показывается текстом. */
-const canDocs = canOpenOutside()
-
-/** Адрес Политики: один источник правды — файл в репозитории. */
-const DOCS = { privacy: 'https://github.com/foulnike/Animori/blob/main/docs/PRIVACY.md' }
-
-function onDoc(url: string): void {
-  void Bridge.shell.openExternal(url)
-}
+import SettingsSheet from './SettingsSheet.vue'
 
 defineProps<{
   /** Записей в списке сейчас: это число стоит в вопросе перед заменой. */
@@ -39,6 +27,8 @@ const linkFound = ref<CloudLink | null>(null)
 
 /** Открыта ли справка; состояние здесь, а не внутри неё — нажимают отсюда. */
 const helpOpen = ref(false)
+const resultOpen = ref(false)
+const findButton = ref<HTMLButtonElement | null>(null)
 
 // Своя заметка и своя ошибка: отказ облака не должен красить соседние панели
 // настроек и затирать их ответы.
@@ -53,6 +43,7 @@ function describe(e: unknown): string {
 /// Ошибки показываются рядом с кнопкой, а не глотаются: молчаливый catch
 /// здесь означал бы кнопку, которая не делает ничего и не говорит почему.
 async function cloudGuard(action: () => Promise<void>): Promise<void> {
+  if (cloudBusy.value) return
   // Держатель запоминается до busy: кнопка гаснет disabled и отдаёт фокус, а после работы
   // обход оставил бы пульт на крестике окна — мимо строки с ответом.
   const from = document.activeElement
@@ -64,7 +55,8 @@ async function cloudGuard(action: () => Promise<void>): Promise<void> {
     cloudError.value = describe(e)
   } finally {
     cloudBusy.value = false
-    restoreFocus(from)
+    if (cloudError.value || cloudNote.value) resultOpen.value = true
+    else if (linkFound.value === null) restoreFocus(from, () => findButton.value)
   }
 }
 
@@ -84,6 +76,7 @@ function sizeText(bytes: number): string {
 /** Поиск копии по ссылке. Пропуска не требует — на этом и держится первый запуск
  * на устройстве без клавиатуры. Показать размер и время, и лишь затем предлагать замену. */
 function onLinkFind(): void {
+  if (!linkDraft.value.trim()) return
   void cloudGuard(async () => {
     cloudNote.value = ''
     linkFound.value = null
@@ -148,98 +141,94 @@ function pullText(got: {
 </script>
 
 <template>
-  <div class="am-panel am-box">
-    <div class="am-bar">
-      <h3 class="am-h3">Копия списка</h3>
-      <span class="am-bar__gap" />
+  <div class="am-settings-content">
+    <div class="am-settings-form">
+      <label class="am-settings-field">
+        <span>Ссылка или код копии с Яндекс Диска</span>
+        <input
+          v-model="linkDraft"
+          class="am-input"
+          type="text"
+          :disabled="cloudBusy"
+          @keyup.enter="onLinkFind"
+        />
+      </label>
       <button
-        v-tip="'Откуда взять ссылку и что набирать'"
-        class="am-icon"
+        ref="findButton"
+        class="am-btn am-btn--soft"
         type="button"
-        aria-label="Как получить ссылку"
-        @click="helpOpen = true"
+        :disabled="cloudBusy || !linkDraft.trim()"
+        @click="onLinkFind"
       >
-        i
+        {{ cloudBusy ? 'Подождите…' : 'Найти копию' }}
+      </button>
+    </div>
+    <div class="am-settings-actions">
+      <button class="am-btn" type="button" :disabled="cloudBusy" @click="helpOpen = true">
+        Перенос списка на телевизор
+      </button>
+      <button
+        v-if="cloudNote || cloudError"
+        class="am-btn"
+        type="button"
+        :disabled="cloudBusy"
+        @click="resultOpen = true"
+      >
+        Результат восстановления
       </button>
     </div>
 
-    <!-- Строкой сервиса: знак, название, короткая заметка, под ними поле и кнопка. Знак рисует
-         BrandMark.vue из src/app/brand/yandex-disk.svg — красная плита Яндекса с глифом диска. -->
-    <div class="am-serv">
-      <div class="am-serv__head">
-        <BrandMark class="am-serv__logo" name="yandex-disk" />
-
-        <span class="am-serv__text">
-          <span class="am-serv__name">Яндекс Диск</span>
-          <span class="am-serv__note">Ссылку создаёт компьютер, здесь набирают её хвост.</span>
-        </span>
-      </div>
-
-      <!-- Правовые документы: на приставке браузера нет — адрес показывается текстом. -->
-      <p class="am-meta">
-        Условия обработки данных копии — в
-        <template v-if="canDocs">
-          <button class="am-link" type="button" @click="onDoc(DOCS.privacy)">
-            Политике обработки персональных данных
-          </button>
-        </template>
-        <template v-else>{{ DOCS.privacy }}</template>.
-      </p>
-
-      <div class="am-row">
-        <label class="am-field">
-          <input
-            v-model="linkDraft"
-            class="am-input"
-            type="text"
-            placeholder="Ссылка на копию или её хвост"
-            :disabled="cloudBusy"
-            @keyup.enter="onLinkFind"
-          />
-        </label>
-        <button
-          v-tip="'Спросить, что лежит по ссылке. Список пока не меняется'"
-          class="am-btn"
-          type="button"
-          :disabled="cloudBusy || !linkDraft.trim()"
-          @click="onLinkFind"
-        >
-          {{ cloudBusy ? 'Смотрим…' : 'Найти копию' }}
-        </button>
-      </div>
-
-      <!-- Сперва показываем, что нашлось: размер и время говорят, свежее там или старее, решение — за человеком. -->
-      <div v-if="linkFound" class="am-ask">
-        <p class="am-ask__text">
-          По ссылке лежит копия: {{ sizeText(linkFound.bytes)
-          }}<template v-if="linkFound.modified">
-            · {{ whenText(Date.parse(linkFound.modified)) }}</template
-          >. Здесь записей: {{ list }}.
-        </p>
-
-        <div class="am-row">
-          <button class="am-btn" type="button" :disabled="cloudBusy" @click="onLinkPull('merge')">
-            Добавить недостающее
-          </button>
-          <button
-            v-tip="'Заменить свой список копией по ссылке целиком'"
-            class="am-btn am-btn--ghost"
-            type="button"
-            :disabled="cloudBusy"
-            @click="onLinkPull('replace')"
-          >
-            Заменить целиком
-          </button>
-          <button class="am-btn am-btn--ghost" type="button" @click="onLinkCancel">Отмена</button>
-        </div>
-      </div>
-
-      <p v-if="cloudError" class="am-error">{{ cloudError }}</p>
-      <p v-if="cloudNote" class="am-note">{{ cloudNote }}</p>
-    </div>
-
-    <!-- Справка отдельным узлом и модалкой: читать её будут один раз, когда впервые переносят список. -->
     <CloudHelp :open="helpOpen" @close="helpOpen = false" />
+
+    <SettingsSheet
+      :open="linkFound !== null"
+      :return-focus="() => findButton"
+      title="Восстановление списка"
+      icon="cloud"
+      initial-focus=".am-settings-cancel"
+      detail
+      @close="onLinkCancel"
+    >
+      <dl v-if="linkFound" class="am-settings-facts">
+        <div>
+          <dt>Размер копии</dt>
+          <dd>{{ sizeText(linkFound.bytes) }}</dd>
+        </div>
+        <div v-if="linkFound.modified">
+          <dt>Дата копии</dt>
+          <dd>{{ whenText(Date.parse(linkFound.modified)) }}</dd>
+        </div>
+        <div>
+          <dt>Текущий список</dt>
+          <dd>{{ list }} записей</dd>
+        </div>
+      </dl>
+      <p class="am-meta">При замене текущий список будет удалён.</p>
+      <template #actions>
+        <button class="am-btn am-settings-cancel" type="button" @click="onLinkCancel">
+          Отмена
+        </button>
+        <button class="am-btn am-settings-danger" type="button" @click="onLinkPull('replace')">
+          Заменить список
+        </button>
+        <button class="am-btn am-btn--soft" type="button" @click="onLinkPull('merge')">
+          Дополнить список
+        </button>
+      </template>
+    </SettingsSheet>
+
+    <SettingsSheet
+      :open="resultOpen"
+      :return-focus="() => findButton"
+      :title="cloudError ? 'Ошибка восстановления' : 'Список восстановлен'"
+      icon="cloud"
+      detail
+      compact
+      @close="resultOpen = false"
+    >
+      <p v-if="cloudError" class="am-error" role="alert">{{ cloudError }}</p>
+      <p v-else class="am-meta" role="status">{{ cloudNote }}</p>
+    </SettingsSheet>
   </div>
 </template>
 

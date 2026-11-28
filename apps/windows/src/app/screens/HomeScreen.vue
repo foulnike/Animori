@@ -168,8 +168,8 @@ function triggerSakuraDeviation(): void {
 /** Области показа календаря. «Популярное», а не «Глобально»: глобального показа у AniList нет,
  *  и подпись, обещающая его, врала бы. */
 const CALENDAR_SCOPES: ReadonlyArray<{ key: CalendarScope; title: string; hint: string }> = [
-  { key: 'mine', title: 'Моё', hint: 'Всё из списка, кроме брошенного' },
-  { key: 'popular', title: 'Популярное', hint: 'Выходы верхушки идущих за эту неделю' },
+  { key: 'mine', title: 'Мой список', hint: 'Все записи, кроме брошенных' },
+  { key: 'popular', title: 'Популярное', hint: 'Популярные аниме недели' },
 ]
 
 /** Скольким плиткам добирать русские названия и по скольку за заход. */
@@ -327,6 +327,15 @@ const {
   setScope: setCalendarScope,
   load: loadCalendar,
 } = useHomeCalendar()
+
+const calendarIndex = computed(() =>
+  calendarDays.value.findIndex((day) => day.key === calendarDay.value?.key),
+)
+
+function stepCalendar(direction: -1 | 1): void {
+  const target = calendarDays.value[calendarIndex.value + direction]
+  if (target) pickDay(target.key)
+}
 
 /** Выходы показанного дня; потолка нет: полка постеров едет вбок и в высоту не растёт. */
 const dayRows = computed(() => calendarDay.value?.rows ?? [])
@@ -1436,9 +1445,9 @@ watch(
     <!-- Календарь выхода выше отбора: он отвечает на вопрос, ради которого приложение открывают завтра. -->
     <section v-if="calendarDays.length > 0" class="am-cal">
       <div class="am-cal__bar">
-        <h2 class="am-h2">Выход серий</h2>
+        <h2 class="am-h2">Календарь выходов</h2>
 
-        <div class="am-seg" role="group" aria-label="Чья неделя">
+        <div class="am-seg" role="group" aria-label="Показывать в календаре">
           <button
             v-for="item in CALENDAR_SCOPES"
             :key="item.key"
@@ -1454,7 +1463,53 @@ watch(
         </div>
 
         <span class="am-bar__gap" />
-        <span class="am-cal__span">{{ calendarSpan }}</span>
+        <div class="am-cal__nav" role="group" aria-label="Листание календаря">
+          <button
+            class="am-btn am-cal__arrow"
+            type="button"
+            aria-label="Предыдущий день"
+            v-tip="'Предыдущий день'"
+            :aria-disabled="calendarIndex <= 0"
+            @click="stepCalendar(-1)"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m10 4-4 4 4 4" />
+            </svg>
+          </button>
+          <span class="am-cal__span">{{ calendarSpan }}</span>
+          <button
+            class="am-btn am-cal__arrow"
+            type="button"
+            aria-label="Следующий день"
+            v-tip="'Следующий день'"
+            :aria-disabled="calendarIndex >= calendarDays.length - 1"
+            @click="stepCalendar(1)"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="m6 4 4 4-4 4" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div class="am-cal__strip" role="group" aria-label="Дни недели">
@@ -1495,10 +1550,12 @@ watch(
       </div>
 
       <p v-if="calendarBusy && (calendarDay?.rows.length ?? 0) === 0" class="am-cal__note">
-        Спрашиваю расписание…
+        Загрузка расписания…
       </p>
 
-      <p v-else-if="calendarFailed" class="am-cal__note">Расписание не пришло — проверьте связь.</p>
+      <p v-else-if="calendarFailed" class="am-cal__note">
+        Не удалось загрузить расписание. Проверьте подключение.
+      </p>
 
       <!-- День — полка постеров с боковой прокруткой, а не список строк: иначе суббота вытесняла
            полки за край. Метку доступности календарь добывает сам всем днём, поэтому v-seen нет. -->
@@ -1518,15 +1575,33 @@ watch(
       <!-- Пустой день — пустое состояние со знаком. -->
       <p v-else class="am-cal__note am-cal__note--none">
         <span class="am-cal__mark"><EmptyMark name="calendar" /></span>
-        <span>В этот день выходов нет.</span>
+        <span>В этот день ничего не выходит</span>
       </p>
     </section>
 
     <!-- Ряд отбора: кнопка меню, быстрые жанры и сброс; внутренний ряд — для центровки. -->
     <div class="am-sift">
-      <button class="am-btn am-sift__open" type="button" @click="sheetOpen = true">
-        Фильтры
-        <span v-if="pickCount > 0" class="am-sift__num">{{ pickCount }}</span>
+      <button
+        v-tip="'Фильтры'"
+        class="am-btn am-sift__open"
+        type="button"
+        :aria-label="pickCount ? 'Фильтры, активно ' + pickCount : 'Фильтры'"
+        @click="sheetOpen = true"
+      >
+        <svg
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4 6h16M7 12h10m-7 6h4" />
+        </svg>
+        <span v-if="pickCount > 0" class="am-sift__num" aria-hidden="true">{{ pickCount }}</span>
       </button>
 
       <div class="am-choose" @wheel="onGenreWheel">
@@ -1679,17 +1754,16 @@ watch(
 
         <div v-else class="am-empty">
           <span class="am-empty__mark"><EmptyMark name="sieve" /></span>
-          <span>По такому отбору ничего не нашлось.</span>
-          <span>Снимите пару условий — подбор станет шире.</span>
+          <span>Нет результатов</span>
 
           <div class="am-empty__acts">
-            <button class="am-btn" type="button" @click="resetPick">Сбросить отбор</button>
+            <button class="am-btn" type="button" @click="resetPick">Сбросить фильтры</button>
           </div>
         </div>
 
         <div v-if="!feedDone && feedRows.length > 0" class="am-more">
           <button class="am-btn am-btn--soft" type="button" :disabled="feedBusy" @click="onMore">
-            {{ feedBusy ? 'Грузим…' : 'Показать ещё' }}
+            {{ feedBusy ? 'Загрузка…' : 'Показать ещё' }}
           </button>
         </div>
       </section>
@@ -2094,6 +2168,25 @@ html[data-am-family='lain'] .am-hey__line:nth-child(4)::after {
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+}
+
+.am-cal__nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.am-cal__arrow {
+  display: grid;
+  place-items: center;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+}
+
+.am-cal__arrow[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.45;
 }
 
 .am-cal__span {

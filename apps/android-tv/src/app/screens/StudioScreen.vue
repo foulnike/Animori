@@ -416,7 +416,6 @@ watch(studioId, () => {
       <div v-else-if="rows.length === 0 && !busy && trouble === ''" class="am-empty">
         <span class="am-empty__mark"><EmptyMark name="studio" /></span>
         <span>У студии пока ничего не числится.</span>
-        <span>Так и в AniList: добавить работы отсюда нельзя.</span>
       </div>
 
       <!-- Отметка показа на каждой плитке: только о попавших в окно спрашиваются источники видео. -->
@@ -444,7 +443,7 @@ watch(studioId, () => {
 
       <div v-if="hasNext" class="am-more">
         <button class="am-btn am-btn--soft" type="button" :disabled="busy" @click="onMore">
-          {{ busy ? 'Грузим…' : 'Показать ещё' }}
+          {{ busy ? 'Загрузка…' : 'Показать ещё' }}
         </button>
       </div>
     </template>

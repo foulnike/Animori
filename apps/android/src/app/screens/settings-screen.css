@@ -2,8 +2,7 @@
    и плеера. Подключается атрибутом src у style scoped; тот же файл берут CloudBox.vue
    и ProxyBox.vue. Правила для пульта (`.am-lite`) собраны в конце файла одним блоком. */
 
-/* Мозаика плит: шесть плит в три столбца. Прежде панели стояли колонками, и до нижней
-   обход пульта шёл пятнадцать шагов через все панели; теперь остановок шесть. */
+/* Мозаика разделов настроек. */
 .am-doors {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -42,6 +41,10 @@
     background-color var(--am-fast) var(--am-ease),
     border-color var(--am-fast) var(--am-ease),
     transform var(--am-fast) var(--am-ease);
+}
+
+.am-door[data-door='about'] {
+  grid-column: 1 / -1;
 }
 
 .am-door:hover:where(:not(.am-lite *)) {
@@ -150,6 +153,35 @@
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+}
+
+.am-shiki-import {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.am-shiki-import__spin {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: am-shiki-import-spin 0.8s linear infinite;
+}
+
+@keyframes am-shiki-import-spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .am-shiki-import__spin {
+    animation: none;
+  }
 }
 
 .am-field {
@@ -642,7 +674,7 @@ code {
    ПУЛЬТ. Окно телевизора 960×540, и смотрят с трёх метров: мишени крупнее. Знак и подпись
    плиты растут вместе с ней: ровное поле плиты мелочь читало бы хуже. */
 .am-lite .am-doors {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   /* Мозаика на линии рельса: его верх и низ стоят по 14px от кромки (.am-side, фикс),
      и плиты становятся на те же линии. Верх берёт своё поле вместо поля .am-view — той же
      формулой, что у padding-top в .am-view (см. AppShell). Низ отыгрывает у .am-view его
@@ -652,6 +684,10 @@ code {
   margin-top: calc(14px - clamp(16px, 1.6vw, 30px));
   height: calc(100vh - 28px);
   margin-bottom: calc(clamp(16px, 1.6vw, 30px) - 14px);
+}
+
+.am-lite .am-door[data-door='about'] {
+  grid-column: span 2;
 }
 
 .am-lite .am-door {
@@ -772,9 +808,7 @@ code {
   padding: 11px 0;
 }
 
-/* Телефон: экран настроек встаёт в кадр без прокрутки — страница держит высоту,
-   мозаика делит остаток на две колонки по три ряда. Режим слабой платформы
-   (три колонки на всю высоту) сменяется: правило той же специфике и позднее. */
+/* На телефоне семь плит занимают четыре ряда, последний — на всю ширину. */
 @media (max-width: 640px) {
   .am-set {
     display: flex;
@@ -785,12 +819,22 @@ code {
 
   .am-lite .am-doors {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(4, minmax(76px, 1fr));
     flex: 1 1 auto;
     width: 100%;
     height: auto;
     min-height: 0;
     margin: 0;
+  }
+
+  .am-lite .am-door {
+    gap: 6px;
+    padding-block: 9px;
+  }
+
+  .am-lite .am-door__mark {
+    width: 36px;
+    height: 36px;
   }
 }
 
@@ -977,11 +1021,6 @@ code {
 .am-duo__name {
   font-size: 13px;
   font-weight: 600;
-}
-
-.am-duo__note {
-  font-size: 11px;
-  color: var(--am-dim);
 }
 
 /* Подзаголовок внутри панели с волосяной линией до края. */
@@ -1356,12 +1395,6 @@ code {
 }
 
 /* Final adult control polish: explicit contrast and diagonal disabled chip. */
-.am-adult-heading {
-  margin: 16px 0 0;
-  font-size: 14px;
-  font-weight: 750;
-  color: var(--am-text);
-}
 .am-adult-mode__chip {
   position: relative;
   overflow: hidden;
@@ -1398,22 +1431,6 @@ code {
 }
 .am-adult-chip--red {
   background: #e94b58;
-}
-
-.am-adult-heading {
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  font-size: inherit !important;
-}
-.am-adult-heading .am-tile-mark,
-.am-adult-heading .am-setmark {
-  color: var(--am-faint);
-}
-
-.am-family-heading {
-  margin: 4px 0 -4px;
-  font-size: 13px;
-  color: var(--am-text);
 }
 
 .am-family {
@@ -1455,21 +1472,6 @@ code {
 /* Mobile adult settings: keep the heading compact and make every threshold row
    fit the sheet width without horizontal scrolling. */
 @media (max-width: 640px) {
-  .am-adult-heading {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    min-height: 28px;
-    margin-top: 2px !important;
-    font-size: 18px !important;
-  }
-
-  .am-adult-heading .am-setmark {
-    flex: none;
-    width: 24px;
-    height: 24px;
-  }
-
   .am-adult-control {
     gap: 7px;
     margin-top: 8px;
@@ -1547,4 +1549,13 @@ code {
     min-width: 42px;
     font-size: 12px;
   }
+}
+
+.am-cloud-icon {
+  min-width: 48px;
+  min-height: 48px;
+}
+
+.am-cloud-copy.am-copied {
+  color: var(--am-accent);
 }

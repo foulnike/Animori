@@ -15,7 +15,7 @@ import {
 import { Logger } from '@/utils/logger'
 
 import EmptyMark from '../components/EmptyMark.vue'
-import { currentRoute } from '../router'
+import { currentRoute, navigate } from '../router'
 
 import { attachCast, type Cast, type CastState } from './player-cast'
 import { attachPlayback, type DeadKind, type Playback } from './player-hls'
@@ -1096,8 +1096,10 @@ onBeforeUnmount(() => {
   <section class="am-page">
     <div v-if="mediaId === 0" class="am-empty">
       <span class="am-empty__mark"><EmptyMark name="question" /></span>
-      <span>Смотреть нечего: в адресе нет номера аниме.</span>
-      <span>Откройте карточку и нажмите «Смотреть».</span>
+      <span>Выберите аниме</span>
+      <button class="am-btn am-btn--soft" type="button" @click="navigate('search')">
+        Открыть каталог
+      </button>
     </div>
 
     <!-- В театре узел уезжает в body: рамка приложения перестаёт быть его
@@ -1151,7 +1153,8 @@ onBeforeUnmount(() => {
               <span v-if="veilSpin" class="am-play__spin" aria-hidden="true" />
               <p v-if="veilWord" class="am-play__word">{{ veilWord }}</p>
               <button v-if="trouble && !busy" class="am-play__act" type="button" @click="refresh">
-                Переспросить
+                <span aria-hidden="true">↻</span>
+                Повторить
               </button>
             </div>
 
